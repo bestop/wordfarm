@@ -1,0 +1,1122 @@
+    60→  zombieSpeedBoostEnd: number;
+    61→  usedWordIndices: Set<number>;
+    62→  shakeTimer: number;
+    63→  comboCount: number;
+    64→}
+    65→
+    66→// ============ Helpers ============
+    67→let _idCounter = 0;
+    68→const uid = () => `e${++_idCounter}`;
+    69→
+    70→const shuffle = <T,>(arr: T[]): T[] => {
+    71→  const a = [...arr];
+    72→  for (let i = a.length - 1; i > 0; i--) {
+    73→    const j = Math.floor(Math.random() * (i + 1));
+    74→    [a[i], a[j]] = [a[j], a[i]];
+    75→  }
+    76→  return a;
+    77→};
+    78→
+    79→// ============ Canvas Drawing Helpers ============
+    80→const R = (r: number) => Math.max(0.5, r);
+    81→
+    82→// --- Plant Drawing (bigger, rounder, cuter) ---
+    83→function drawPeashooter(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, anim: number) {
+    84→  const bob = Math.sin(anim) * 3;
+    85→  const tilt = Math.sin(anim * 0.7) * 0.03;
+    86→  ctx.save(); ctx.translate(x, y + s * 0.08); ctx.rotate(tilt); ctx.translate(-x, -y - s * 0.08);
+    87→  // Pot/soil base
+    88→  ctx.fillStyle = '#8D6E4C';
+    89→  ctx.beginPath(); ctx.ellipse(x, y + s * 0.42, s * 0.22, s * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+    90→  ctx.fillStyle = '#6D4C2A';
+    91→  ctx.beginPath(); ctx.ellipse(x, y + s * 0.42, s * 0.22, s * 0.05, 0, 0, Math.PI * 2); ctx.fill();
+    92→  // Thick stem
+    93→  const sg = ctx.createLinearGradient(x - s * 0.04, 0, x + s * 0.04, 0);
+    94→  sg.addColorStop(0, '#2E7D32'); sg.addColorStop(0.5, '#4CAF50'); sg.addColorStop(1, '#2E7D32');
+    95→  ctx.fillStyle = sg;
+    96→  ctx.beginPath(); ctx.roundRect(x - s * 0.05, y + s * 0.1, s * 0.1, s * 0.35, 4); ctx.fill();
+    97→  // Big round leaves
+    98→  ctx.fillStyle = '#66BB6A';
+    99→  ctx.save(); ctx.translate(x - s * 0.05, y + s * 0.3); ctx.rotate(-0.5);
+   100→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.18, s * 0.06, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+   101→  ctx.fillStyle = '#4CAF50';
+   102→  ctx.save(); ctx.translate(x + s * 0.05, y + s * 0.33); ctx.rotate(0.4);
+   103→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.16, s * 0.055, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+   104→  // Big round head
+   105→  const hg = ctx.createRadialGradient(x - s * 0.08, y - s * 0.18 + bob, s * 0.05, x, y - s * 0.12 + bob, s * 0.42);
+   106→  hg.addColorStop(0, '#A5D6A7'); hg.addColorStop(0.5, '#66BB6A'); hg.addColorStop(1, '#2E7D32');
+   107→  ctx.fillStyle = hg;
+   108→  ctx.beginPath(); ctx.arc(x, y - s * 0.12 + bob, s * 0.38, 0, Math.PI * 2); ctx.fill();
+   109→  // Cheek blush
+   110→  ctx.fillStyle = 'rgba(255,138,128,0.3)';
+   111→  ctx.beginPath(); ctx.ellipse(x - s * 0.22, y - s * 0.06 + bob, s * 0.08, s * 0.05, -0.2, 0, Math.PI * 2); ctx.fill();
+   112→  ctx.beginPath(); ctx.ellipse(x + s * 0.22, y - s * 0.06 + bob, s * 0.08, s * 0.05, 0.2, 0, Math.PI * 2); ctx.fill();
+   113→  // Big cute eyes
+   114→  ctx.fillStyle = '#fff';
+   115→  ctx.beginPath(); ctx.ellipse(x - s * 0.12, y - s * 0.2 + bob, s * 0.12, s * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+   116→  ctx.beginPath(); ctx.ellipse(x + s * 0.1, y - s * 0.22 + bob, s * 0.1, s * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+   117→  ctx.fillStyle = '#333';
+   118→  ctx.beginPath(); ctx.arc(x - s * 0.07, y - s * 0.19 + bob, s * 0.065, 0, Math.PI * 2); ctx.fill();
+   119→  ctx.beginPath(); ctx.arc(x + s * 0.14, y - s * 0.21 + bob, s * 0.055, 0, Math.PI * 2); ctx.fill();
+   120→  ctx.fillStyle = '#fff';
+   121→  ctx.beginPath(); ctx.arc(x - s * 0.05, y - s * 0.21 + bob, s * 0.03, 0, Math.PI * 2); ctx.fill();
+   122→  ctx.beginPath(); ctx.arc(x + s * 0.16, y - s * 0.23 + bob, s * 0.025, 0, Math.PI * 2); ctx.fill();
+   123→  // Cute smile
+   124→  ctx.strokeStyle = '#1B5E20'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+   125→  ctx.beginPath(); ctx.arc(x + s * 0.02, y - s * 0.06 + bob, s * 0.08, 0.1, Math.PI - 0.1); ctx.stroke();
+   126→  // Big cannon tube
+   127→  const cg = ctx.createRadialGradient(x + s * 0.3, y - s * 0.12 + bob, s * 0.05, x + s * 0.38, y - s * 0.12 + bob, s * 0.16);
+   128→  cg.addColorStop(0, '#4CAF50'); cg.addColorStop(1, '#1B5E20');
+   129→  ctx.fillStyle = cg;
+   130→  ctx.beginPath(); ctx.ellipse(x + s * 0.38, y - s * 0.12 + bob, s * 0.2, s * 0.15, 0, 0, Math.PI * 2); ctx.fill();
+   131→  ctx.fillStyle = '#0D3B0F';
+   132→  ctx.beginPath(); ctx.arc(x + s * 0.5, y - s * 0.12 + bob, s * 0.08, 0, Math.PI * 2); ctx.fill();
+   133→  ctx.fillStyle = '#1B5E20';
+   134→  ctx.beginPath(); ctx.arc(x + s * 0.5, y - s * 0.12 + bob, s * 0.055, 0, Math.PI * 2); ctx.fill();
+   135→  ctx.restore();
+   136→}
+   137→
+   138→function drawWallnut(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, anim: number, hpRatio: number) {
+   139→  const bob = Math.sin(anim * 0.8) * 2;
+   140→  const sq = 1 + Math.sin(anim * 1.2) * 0.015;
+   141→  // Shadow
+   142→  ctx.fillStyle = 'rgba(0,0,0,0.1)';
+   143→  ctx.beginPath(); ctx.ellipse(x, y + s * 0.48, s * 0.3, s * 0.06, 0, 0, Math.PI * 2); ctx.fill();
+   144→  // Big round body
+   145→  const wg = ctx.createRadialGradient(x - s * 0.12, y - s * 0.12 + bob, s * 0.1, x, y + s * 0.05 + bob, s * 0.45 * sq);
+   146→  wg.addColorStop(0, '#F0D48A'); wg.addColorStop(0.4, '#D4A34A'); wg.addColorStop(0.8, '#A0722A'); wg.addColorStop(1, '#6B4513');
+   147→  ctx.fillStyle = wg;
+   148→  ctx.beginPath(); ctx.ellipse(x, y + s * 0.05 + bob, s * 0.38 * sq, s * 0.44, 0, 0, Math.PI * 2); ctx.fill();
+   149→  // Warm highlight
+   150→  ctx.fillStyle = 'rgba(255,245,200,0.2)';
+   151→  ctx.beginPath(); ctx.ellipse(x - s * 0.12, y - s * 0.15 + bob, s * 0.18, s * 0.15, -0.4, 0, Math.PI * 2); ctx.fill();
+   152→  // Texture
+   153→  ctx.strokeStyle = 'rgba(120,70,20,0.2)'; ctx.lineWidth = 1;
+   154→  ctx.beginPath(); ctx.arc(x + s * 0.05, y - s * 0.1 + bob, s * 0.15, 0.2, 1.8); ctx.stroke();
+   155→  ctx.beginPath(); ctx.arc(x - s * 0.08, y + s * 0.15 + bob, s * 0.12, -0.5, 1.0); ctx.stroke();
+   156→  // Big worried eyes with eyebrows
+   157→  ctx.fillStyle = '#fff';
+   158→  ctx.beginPath(); ctx.ellipse(x - s * 0.12, y - s * 0.08 + bob, s * 0.09, s * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+   159→  ctx.beginPath(); ctx.ellipse(x + s * 0.12, y - s * 0.08 + bob, s * 0.09, s * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+   160→  ctx.fillStyle = '#4E342E';
+   161→  ctx.beginPath(); ctx.arc(x - s * 0.1, y - s * 0.07 + bob, s * 0.05, 0, Math.PI * 2); ctx.fill();
+   162→  ctx.beginPath(); ctx.arc(x + s * 0.14, y - s * 0.07 + bob, s * 0.05, 0, Math.PI * 2); ctx.fill();
+   163→  ctx.fillStyle = '#fff';
+   164→  ctx.beginPath(); ctx.arc(x - s * 0.08, y - s * 0.09 + bob, s * 0.02, 0, Math.PI * 2); ctx.fill();
+   165→  ctx.beginPath(); ctx.arc(x + s * 0.16, y - s * 0.09 + bob, s * 0.02, 0, Math.PI * 2); ctx.fill();
+   166→  // Worried eyebrows
+   167→  ctx.strokeStyle = '#5D4037'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+   168→  ctx.beginPath(); ctx.moveTo(x - s * 0.2, y - s * 0.2 + bob); ctx.quadraticCurveTo(x - s * 0.12, y - s * 0.25 + bob, x - s * 0.04, y - s * 0.18 + bob); ctx.stroke();
+   169→  ctx.beginPath(); ctx.moveTo(x + s * 0.2, y - s * 0.2 + bob); ctx.quadraticCurveTo(x + s * 0.12, y - s * 0.25 + bob, x + s * 0.04, y - s * 0.18 + bob); ctx.stroke();
+   170→  // O-shaped worried mouth
+   171→  ctx.strokeStyle = '#5D4037'; ctx.lineWidth = 2;
+   172→  ctx.beginPath(); ctx.ellipse(x, y + s * 0.08 + bob, s * 0.06, s * 0.05, 0, 0, Math.PI * 2); ctx.stroke();
+   173→  ctx.fillStyle = '#4E342E';
+   174→  ctx.beginPath(); ctx.ellipse(x, y + s * 0.08 + bob, s * 0.04, s * 0.03, 0, 0, Math.PI * 2); ctx.fill();
+   175→  // Blush
+   176→  ctx.fillStyle = 'rgba(255,138,128,0.25)';
+   177→  ctx.beginPath(); ctx.ellipse(x - s * 0.24, y + bob, s * 0.06, s * 0.04, 0, 0, Math.PI * 2); ctx.fill();
+   178→  ctx.beginPath(); ctx.ellipse(x + s * 0.24, y + bob, s * 0.06, s * 0.04, 0, 0, Math.PI * 2); ctx.fill();
+   179→  // Cracks
+   180→  if (hpRatio < 0.66) {
+   181→    ctx.strokeStyle = 'rgba(60,30,5,0.5)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+   182→    ctx.beginPath(); ctx.moveTo(x - s * 0.1, y - s * 0.2 + bob); ctx.lineTo(x - s * 0.05, y + bob); ctx.lineTo(x - s * 0.15, y + s * 0.2 + bob); ctx.stroke();
+   183→  }
+   184→  if (hpRatio < 0.33) {
+   185→    ctx.beginPath(); ctx.moveTo(x + s * 0.15, y - s * 0.25 + bob); ctx.lineTo(x + s * 0.08, y - bob); ctx.lineTo(x + s * 0.2, y + s * 0.15 + bob); ctx.stroke();
+   186→  }
+   187→}
+   188→
+   189→function drawSnowPea(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, anim: number) {
+   190→  const bob = Math.sin(anim) * 3;
+   191→  // Icy pot base
+   192→  ctx.fillStyle = '#80DEEA';
+   193→  ctx.beginPath(); ctx.ellipse(x, y + s * 0.42, s * 0.22, s * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+   194→  // Frost aura glow
+   195→  const fg = ctx.createRadialGradient(x, y - s * 0.1 + bob, s * 0.1, x, y - s * 0.1 + bob, s * 0.55);
+   196→  fg.addColorStop(0, 'rgba(150,230,255,0.1)'); fg.addColorStop(1, 'rgba(150,230,255,0)');
+   197→  ctx.fillStyle = fg;
+   198→  ctx.beginPath(); ctx.arc(x, y - s * 0.1 + bob, s * 0.55, 0, Math.PI * 2); ctx.fill();
+   199→  // Stem
+   200→  const sg = ctx.createLinearGradient(x - s * 0.04, 0, x + s * 0.04, 0);
+   201→  sg.addColorStop(0, '#00838F'); sg.addColorStop(0.5, '#26C6DA'); sg.addColorStop(1, '#00838F');
+   202→  ctx.fillStyle = sg;
+   203→  ctx.beginPath(); ctx.roundRect(x - s * 0.05, y + s * 0.1, s * 0.1, s * 0.35, 4); ctx.fill();
+   204→  // Icy leaves
+   205→  ctx.fillStyle = '#80DEEA';
+   206→  ctx.save(); ctx.translate(x - s * 0.05, y + s * 0.3); ctx.rotate(-0.5);
+   207→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.18, s * 0.055, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+   208→  ctx.save(); ctx.translate(x + s * 0.05, y + s * 0.33); ctx.rotate(0.4);
+   209→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.16, s * 0.05, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+   210→  // Ice crystal crown
+   211→  ctx.strokeStyle = 'rgba(200,245,255,0.8)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+   212→  for (let i = 0; i < 5; i++) {
+   213→    const a = -Math.PI * 0.7 + i * 0.35 + Math.sin(anim * 0.5 + i) * 0.05;
+   214→    const len = s * (0.08 + Math.sin(anim + i * 1.2) * 0.03);
+   215→    const bx = x + Math.cos(a) * s * 0.32;
+   216→    const by = y - s * 0.12 + bob + Math.sin(a) * s * 0.32;
+   217→    ctx.beginPath(); ctx.moveTo(bx, by);
+   218→    ctx.lineTo(bx + Math.cos(a) * len, by + Math.sin(a) * len); ctx.stroke();
+   219→  }
+   220→  // Big round head (icy blue)
+   221→  const hg = ctx.createRadialGradient(x - s * 0.08, y - s * 0.18 + bob, s * 0.05, x, y - s * 0.12 + bob, s * 0.4);
+   222→  hg.addColorStop(0, '#E0F7FA'); hg.addColorStop(0.4, '#80DEEA'); hg.addColorStop(1, '#00838F');
+   223→  ctx.fillStyle = hg;
+   224→  ctx.beginPath(); ctx.arc(x, y - s * 0.12 + bob, s * 0.38, 0, Math.PI * 2); ctx.fill();
+   225→  // Cheek blush (icy pink)
+   226→  ctx.fillStyle = 'rgba(179,229,252,0.35)';
+   227→  ctx.beginPath(); ctx.ellipse(x - s * 0.22, y - s * 0.06 + bob, s * 0.07, s * 0.045, -0.2, 0, Math.PI * 2); ctx.fill();
+   228→  ctx.beginPath(); ctx.ellipse(x + s * 0.22, y - s * 0.06 + bob, s * 0.07, s * 0.045, 0.2, 0, Math.PI * 2); ctx.fill();
+   229→  // Big cute eyes
+   230→  ctx.fillStyle = '#E0F7FA';
+   231→  ctx.beginPath(); ctx.ellipse(x - s * 0.12, y - s * 0.2 + bob, s * 0.11, s * 0.13, 0, 0, Math.PI * 2); ctx.fill();
+   232→  ctx.beginPath(); ctx.ellipse(x + s * 0.1, y - s * 0.22 + bob, s * 0.09, s * 0.11, 0, 0, Math.PI * 2); ctx.fill();
+   233→  ctx.fillStyle = '#006064';
+   234→  ctx.beginPath(); ctx.arc(x - s * 0.07, y - s * 0.19 + bob, s * 0.06, 0, Math.PI * 2); ctx.fill();
+   235→  ctx.beginPath(); ctx.arc(x + s * 0.14, y - s * 0.21 + bob, s * 0.05, 0, Math.PI * 2); ctx.fill();
+   236→  ctx.fillStyle = '#fff';
+   237→  ctx.beginPath(); ctx.arc(x - s * 0.05, y - s * 0.21 + bob, s * 0.025, 0, Math.PI * 2); ctx.fill();
+   238→  ctx.beginPath(); ctx.arc(x + s * 0.16, y - s * 0.23 + bob, s * 0.02, 0, Math.PI * 2); ctx.fill();
+   239→  // Smile
+   240→  ctx.strokeStyle = '#006064'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+   241→  ctx.beginPath(); ctx.arc(x + s * 0.02, y - s * 0.05 + bob, s * 0.07, 0.1, Math.PI - 0.1); ctx.stroke();
+   242→  // Cannon tube
+   243→  const cg = ctx.createRadialGradient(x + s * 0.3, y - s * 0.12 + bob, s * 0.05, x + s * 0.38, y - s * 0.12 + bob, s * 0.16);
+   244→  cg.addColorStop(0, '#4DD0E1'); cg.addColorStop(1, '#00695C');
+   245→  ctx.fillStyle = cg;
+   246→  ctx.beginPath(); ctx.ellipse(x + s * 0.38, y - s * 0.12 + bob, s * 0.2, s * 0.15, 0, 0, Math.PI * 2); ctx.fill();
+   247→  ctx.fillStyle = '#004D40';
+   248→  ctx.beginPath(); ctx.arc(x + s * 0.5, y - s * 0.12 + bob, s * 0.08, 0, Math.PI * 2); ctx.fill();
+   249→  // Frost particles
+   250→  ctx.fillStyle = 'rgba(200,245,255,0.6)';
+   251→  for (let i = 0; i < 6; i++) {
+   252→    const px = x + s * 0.52 + Math.sin(anim * 2 + i * 1.1) * s * 0.18;
+   253→    const py = y - s * 0.15 + bob + Math.cos(anim * 1.5 + i * 1.3) * s * 0.18;
+   254→    ctx.beginPath(); ctx.arc(px, py, s * 0.018 + Math.sin(anim * 3 + i) * s * 0.008, 0, Math.PI * 2); ctx.fill();
+   255→  }
+   256→}
+   257→
+   258→function drawRepeater(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, anim: number) {
+   259→  const bob = Math.sin(anim) * 3;
+   260→  // Pot
+   261→  ctx.fillStyle = '#5D4037';
+   262→  ctx.beginPath(); ctx.ellipse(x, y + s * 0.42, s * 0.22, s * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+   263→  // Thick stem
+   264→  const sg = ctx.createLinearGradient(x - s * 0.05, 0, x + s * 0.05, 0);
+   265→  sg.addColorStop(0, '#1B5E20'); sg.addColorStop(0.5, '#388E3C'); sg.addColorStop(1, '#1B5E20');
+   266→  ctx.fillStyle = sg;
+   267→  ctx.beginPath(); ctx.roundRect(x - s * 0.06, y + s * 0.1, s * 0.12, s * 0.35, 4); ctx.fill();
+   268→  // Leaves
+   269→  ctx.fillStyle = '#43A047';
+   270→  ctx.save(); ctx.translate(x - s * 0.06, y + s * 0.28); ctx.rotate(-0.6);
+   271→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.2, s * 0.06, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+   272→  ctx.save(); ctx.translate(x + s * 0.06, y + s * 0.32); ctx.rotate(0.5);
+   273→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.18, s * 0.055, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+   274→  // Big head (darker green, tougher look)
+   275→  const hg = ctx.createRadialGradient(x - s * 0.08, y - s * 0.18 + bob, s * 0.05, x, y - s * 0.12 + bob, s * 0.42);
+   276→  hg.addColorStop(0, '#66BB6A'); hg.addColorStop(0.5, '#388E3C'); hg.addColorStop(1, '#1B5E20');
+   277→  ctx.fillStyle = hg;
+   278→  ctx.beginPath(); ctx.arc(x, y - s * 0.12 + bob, s * 0.4, 0, Math.PI * 2); ctx.fill();
+   279→  // Determined eyebrows (thick, V-shape)
+   280→  ctx.strokeStyle = '#0D3B0F'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+   281→  ctx.beginPath(); ctx.moveTo(x - s * 0.2, y - s * 0.28 + bob); ctx.lineTo(x - s * 0.04, y - s * 0.24 + bob); ctx.stroke();
+   282→  ctx.beginPath(); ctx.moveTo(x + s * 0.2, y - s * 0.28 + bob); ctx.lineTo(x + s * 0.04, y - s * 0.24 + bob); ctx.stroke();
+   283→  // Eyes (narrower, determined)
+   284→  ctx.fillStyle = '#fff';
+   285→  ctx.beginPath(); ctx.ellipse(x - s * 0.1, y - s * 0.18 + bob, s * 0.1, s * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+   286→  ctx.beginPath(); ctx.ellipse(x + s * 0.1, y - s * 0.18 + bob, s * 0.08, s * 0.07, 0, 0, Math.PI * 2); ctx.fill();
+   287→  ctx.fillStyle = '#1a1a1a';
+   288→  ctx.beginPath(); ctx.arc(x - s * 0.06, y - s * 0.18 + bob, s * 0.055, 0, Math.PI * 2); ctx.fill();
+   289→  ctx.beginPath(); ctx.arc(x + s * 0.14, y - s * 0.18 + bob, s * 0.045, 0, Math.PI * 2); ctx.fill();
+   290→  ctx.fillStyle = '#fff';
+   291→  ctx.beginPath(); ctx.arc(x - s * 0.04, y - s * 0.19 + bob, s * 0.022, 0, Math.PI * 2); ctx.fill();
+   292→  ctx.beginPath(); ctx.arc(x + s * 0.16, y - s * 0.19 + bob, s * 0.018, 0, Math.PI * 2); ctx.fill();
+   293→  // Grin
+   294→  ctx.strokeStyle = '#0D3B0F'; ctx.lineWidth = 2;
+   295→  ctx.beginPath(); ctx.arc(x + s * 0.02, y - s * 0.04 + bob, s * 0.1, 0, Math.PI); ctx.stroke();
+   296→  // Double cannon
+   297→  const cg1 = ctx.createRadialGradient(x + s * 0.28, y - s * 0.2 + bob, s * 0.04, x + s * 0.36, y - s * 0.2 + bob, s * 0.15);
+   298→  cg1.addColorStop(0, '#4CAF50'); cg1.addColorStop(1, '#1B5E20');
+   299→  ctx.fillStyle = cg1;
+   300→  ctx.beginPath(); ctx.ellipse(x + s * 0.36, y - s * 0.2 + bob, s * 0.17, s * 0.12, -0.12, 0, Math.PI * 2); ctx.fill();
+   301→  ctx.fillStyle = '#0D3B0F'; ctx.beginPath(); ctx.arc(x + s * 0.47, y - s * 0.2 + bob, s * 0.06, 0, Math.PI * 2); ctx.fill();
+   302→  const cg2 = ctx.createRadialGradient(x + s * 0.28, y - s * 0.04 + bob, s * 0.04, x + s * 0.36, y - s * 0.04 + bob, s * 0.15);
+   303→  cg2.addColorStop(0, '#4CAF50'); cg2.addColorStop(1, '#1B5E20');
+   304→  ctx.fillStyle = cg2;
+   305→  ctx.beginPath(); ctx.ellipse(x + s * 0.36, y - s * 0.04 + bob, s * 0.17, s * 0.12, 0.12, 0, Math.PI * 2); ctx.fill();
+   306→  ctx.fillStyle = '#0D3B0F'; ctx.beginPath(); ctx.arc(x + s * 0.47, y - s * 0.04 + bob, s * 0.06, 0, Math.PI * 2); ctx.fill();
+   307→}
+   308→
+   309→function drawCherryBomb(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, anim: number) {
+   310→  const bob = Math.sin(anim * 2) * 2;
+   311→  const pulse = 1 + Math.sin(anim * 4) * 0.04;
+   312→  // Big warm glow
+   313→  const gg = ctx.createRadialGradient(x, y + bob, s * 0.1, x, y + bob, s * 0.6 * pulse);
+   314→  gg.addColorStop(0, 'rgba(255,120,50,0.15)'); gg.addColorStop(1, 'rgba(255,80,0,0)');
+   315→  ctx.fillStyle = gg;
+   316→  ctx.beginPath(); ctx.arc(x, y + bob, s * 0.6 * pulse, 0, Math.PI * 2); ctx.fill();
+   317→  // Stems
+   318→  ctx.strokeStyle = '#33691E'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+   319→  ctx.beginPath(); ctx.moveTo(x - s * 0.14, y - s * 0.15 + bob);
+   320→  ctx.quadraticCurveTo(x - s * 0.05, y - s * 0.5 + bob, x + s * 0.12, y - s * 0.48 + bob); ctx.stroke();
+   321→  ctx.beginPath(); ctx.moveTo(x + s * 0.14, y - s * 0.15 + bob);
+   322→  ctx.quadraticCurveTo(x + s * 0.08, y - s * 0.45 + bob, x + s * 0.12, y - s * 0.48 + bob); ctx.stroke();
+   323→  // Leaf
+   324→  ctx.fillStyle = '#66BB6A';
+   325→  ctx.save(); ctx.translate(x + s * 0.12, y - s * 0.48 + bob); ctx.rotate(0.3);
+   326→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.14, s * 0.05, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+   327→  // Bigger cherries
+   328→  const cherryR = s * 0.26 * pulse;
+   329→  // Left cherry
+   330→  const lg = ctx.createRadialGradient(x - s * 0.18 - s * 0.06, y + s * 0.05 + bob - s * 0.06, s * 0.04, x - s * 0.18, y + s * 0.05 + bob, cherryR);
+   331→  lg.addColorStop(0, '#FF8A80'); lg.addColorStop(0.4, '#F44336'); lg.addColorStop(1, '#B71C1C');
+   332→  ctx.fillStyle = lg;
+   333→  ctx.beginPath(); ctx.arc(x - s * 0.18, y + s * 0.05 + bob, cherryR, 0, Math.PI * 2); ctx.fill();
+   334→  // Right cherry
+   335→  const rg = ctx.createRadialGradient(x + s * 0.18 - s * 0.06, y + s * 0.05 + bob - s * 0.06, s * 0.04, x + s * 0.18, y + s * 0.05 + bob, cherryR);
+   336→  rg.addColorStop(0, '#FF8A80'); rg.addColorStop(0.4, '#F44336'); rg.addColorStop(1, '#B71C1C');
+   337→  ctx.fillStyle = rg;
+   338→  ctx.beginPath(); ctx.arc(x + s * 0.18, y + s * 0.05 + bob, cherryR, 0, Math.PI * 2); ctx.fill();
+   339→  // Highlights
+   340→  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+   341→  ctx.beginPath(); ctx.ellipse(x - s * 0.24, y - s * 0.02 + bob, s * 0.09, s * 0.05, -0.4, 0, Math.PI * 2); ctx.fill();
+   342→  ctx.beginPath(); ctx.ellipse(x + s * 0.12, y - s * 0.02 + bob, s * 0.09, s * 0.05, -0.4, 0, Math.PI * 2); ctx.fill();
+   343→  // Angry faces - Left
+   344→  ctx.fillStyle = '#fff';
+   345→  ctx.beginPath(); ctx.arc(x - s * 0.23, y + bob, s * 0.05, 0, Math.PI * 2); ctx.fill();
+   346→  ctx.beginPath(); ctx.arc(x - s * 0.13, y + bob, s * 0.05, 0, Math.PI * 2); ctx.fill();
+   347→  ctx.fillStyle = '#333';
+   348→  ctx.beginPath(); ctx.arc(x - s * 0.22, y + bob, s * 0.03, 0, Math.PI * 2); ctx.fill();
+   349→  ctx.beginPath(); ctx.arc(x - s * 0.14, y + bob, s * 0.03, 0, Math.PI * 2); ctx.fill();
+   350→  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+   351→  ctx.beginPath(); ctx.moveTo(x - s * 0.28, y - s * 0.05 + bob); ctx.lineTo(x - s * 0.18, y - s * 0.02 + bob); ctx.stroke();
+   352→  ctx.beginPath(); ctx.moveTo(x - s * 0.08, y - s * 0.05 + bob); ctx.lineTo(x - s * 0.18, y - s * 0.02 + bob); ctx.stroke();
+   353→  // Angry open mouth left
+   354→  ctx.fillStyle = '#333';
+   355→  ctx.beginPath(); ctx.ellipse(x - s * 0.18, y + s * 0.08 + bob, s * 0.04, s * 0.03, 0, 0, Math.PI * 2); ctx.fill();
+   356→  // Right face
+   357→  ctx.fillStyle = '#fff';
+   358→  ctx.beginPath(); ctx.arc(x + s * 0.13, y + bob, s * 0.05, 0, Math.PI * 2); ctx.fill();
+   359→  ctx.beginPath(); ctx.arc(x + s * 0.23, y + bob, s * 0.05, 0, Math.PI * 2); ctx.fill();
+   360→  ctx.fillStyle = '#333';
+   361→  ctx.beginPath(); ctx.arc(x + s * 0.14, y + bob, s * 0.03, 0, Math.PI * 2); ctx.fill();
+   362→  ctx.beginPath(); ctx.arc(x + s * 0.22, y + bob, s * 0.03, 0, Math.PI * 2); ctx.fill();
+   363→  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+   364→  ctx.beginPath(); ctx.moveTo(x + s * 0.08, y - s * 0.05 + bob); ctx.lineTo(x + s * 0.18, y - s * 0.02 + bob); ctx.stroke();
+   365→  ctx.beginPath(); ctx.moveTo(x + s * 0.28, y - s * 0.05 + bob); ctx.lineTo(x + s * 0.18, y - s * 0.02 + bob); ctx.stroke();
+   366→  ctx.fillStyle = '#333';
+   367→  ctx.beginPath(); ctx.ellipse(x + s * 0.18, y + s * 0.08 + bob, s * 0.04, s * 0.03, 0, 0, Math.PI * 2); ctx.fill();
+   368→  // Fuse
+   369→  ctx.strokeStyle = '#FF8F00'; ctx.lineWidth = 2;
+   370→  ctx.beginPath(); ctx.moveTo(x + s * 0.12, y - s * 0.48 + bob);
+   371→  ctx.quadraticCurveTo(x + s * 0.15, y - s * 0.58 + bob, x + s * 0.1, y - s * 0.65 + bob); ctx.stroke();
+   372→  // Spark
+   373→  const sparkS = s * 0.06 + Math.sin(anim * 8) * s * 0.03;
+   374→  ctx.fillStyle = '#FFEB3B';
+   375→  ctx.beginPath(); ctx.arc(x + s * 0.1, y - s * 0.65 + bob, sparkS, 0, Math.PI * 2); ctx.fill();
+   376→  ctx.fillStyle = '#FF6D00';
+   377→  ctx.beginPath(); ctx.arc(x + s * 0.1, y - s * 0.65 + bob, sparkS * 0.5, 0, Math.PI * 2); ctx.fill();
+   378→  // Spark rays
+   379→  ctx.strokeStyle = 'rgba(255,235,59,0.6)'; ctx.lineWidth = 1.5;
+   380→  for (let i = 0; i < 4; i++) {
+   381→    const a = anim * 3 + i * Math.PI / 2;
+   382→    ctx.beginPath();
+   383→    ctx.moveTo(x + s * 0.1 + Math.cos(a) * sparkS * 0.8, y - s * 0.65 + bob + Math.sin(a) * sparkS * 0.8);
+   384→    ctx.lineTo(x + s * 0.1 + Math.cos(a) * sparkS * 1.5, y - s * 0.65 + bob + Math.sin(a) * sparkS * 1.5);
+   385→    ctx.stroke();
+   386→  }
+   387→}
+   388→
+   389→function drawPlant(ctx: CanvasRenderingContext2D, type: PlantType, x: number, y: number,
+   390→  cellW: number, cellH: number, animPhase: number, hpRatio: number) {
+   391→  const s = Math.min(cellW, cellH) * 0.9;
+   392→  switch (type) {
+   393→    case 'peashooter': drawPeashooter(ctx, x, y, s, animPhase); break;
+   394→    case 'wallnut': drawWallnut(ctx, x, y, s, animPhase, hpRatio); break;
+   395→    case 'snowpea': drawSnowPea(ctx, x, y, s, animPhase); break;
+   396→    case 'repeater': drawRepeater(ctx, x, y, s, animPhase); break;
+   397→    case 'cherrybomb': drawCherryBomb(ctx, x, y, s, animPhase); break;
+   398→  }
+   399→}
+   400→
+   401→// --- Zombie Drawing (bigger, funnier) ---
+   402→function drawZombieBase(ctx: CanvasRenderingContext2D, x: number, zy: number, bob: number,
+   403→  cellW: number, cellH: number, animPhase: number, slowed: boolean, eating: boolean) {
+   404→  const s = Math.min(cellW, cellH) * 0.95;
+   405→  const skin = slowed ? '#7BAFD4' : '#8BAF4A';
+   406→  const skinDk = slowed ? '#5A8AB5' : '#6A8F3A';
+   407→  const skinLt = slowed ? '#A5D0F0' : '#B0CC6A';
+   408→  const walk = eating ? 0 : Math.sin(animPhase) * 8;
+   409→  const armSw = eating ? Math.sin(animPhase * 3) * 3 : Math.sin(animPhase * 1.5) * 12;
+   410→  const headTilt = eating ? Math.sin(animPhase * 4) * 0.05 : 0;
+   411→
+   412→  // Legs (bent, walking)
+   413→  ctx.fillStyle = '#5A5070';
+   414→  ctx.save(); ctx.translate(x - s * 0.07, zy + s * 0.25 + bob); ctx.rotate(walk * 0.025);
+   415→  ctx.beginPath(); ctx.roundRect(-s * 0.045, 0, s * 0.09, s * 0.22, 4); ctx.fill(); ctx.restore();
+   416→  ctx.save(); ctx.translate(x + s * 0.07, zy + s * 0.25 + bob); ctx.rotate(-walk * 0.025);
+   417→  ctx.beginPath(); ctx.roundRect(-s * 0.045, 0, s * 0.09, s * 0.22, 4); ctx.fill(); ctx.restore();
+   418→  // Shoes (bigger, funnier)
+   419→  ctx.fillStyle = '#4A4050';
+   420→  ctx.beginPath(); ctx.ellipse(x - s * 0.07 + walk * 0.015, zy + s * 0.47 + bob, s * 0.09, s * 0.045, 0, 0, Math.PI * 2); ctx.fill();
+   421→  ctx.beginPath(); ctx.ellipse(x + s * 0.07 - walk * 0.015, zy + s * 0.47 + bob, s * 0.09, s * 0.045, 0, 0, Math.PI * 2); ctx.fill();
+   422→
+   423→  // Body (suit jacket, bigger)
+   424→  ctx.fillStyle = '#6A5040';
+   425→  ctx.beginPath(); ctx.roundRect(x - s * 0.18, zy - s * 0.06 + bob, s * 0.36, s * 0.34, 5); ctx.fill();
+   426→  // Suit lapel
+   427→  ctx.fillStyle = '#5A4030';
+   428→  ctx.beginPath(); ctx.moveTo(x, zy - s * 0.06 + bob); ctx.lineTo(x - s * 0.06, zy + s * 0.15 + bob); ctx.lineTo(x, zy + s * 0.28 + bob); ctx.closePath(); ctx.fill();
+   429→  // Tie (bright red, bigger)
+   430→  ctx.fillStyle = '#E53935';
+   431→  ctx.beginPath(); ctx.moveTo(x - s * 0.02, zy - s * 0.04 + bob); ctx.lineTo(x + s * 0.03, zy + s * 0.12 + bob); ctx.lineTo(x - s * 0.02, zy + s * 0.2 + bob); ctx.closePath(); ctx.fill();
+   432→  // Shirt tear (bigger)
+   433→  ctx.fillStyle = skin;
+   434→  ctx.beginPath();
+   435→  ctx.moveTo(x + s * 0.06, zy + s * 0.02 + bob);
+   436→  ctx.lineTo(x + s * 0.15, zy + s * 0.14 + bob);
+   437→  ctx.lineTo(x + s * 0.1, zy + s * 0.26 + bob);
+   438→  ctx.closePath(); ctx.fill();
+   439→
+   440→  // Arms (thicker, longer, more animated)
+   441→  ctx.strokeStyle = skin; ctx.lineWidth = s * 0.1; ctx.lineCap = 'round';
+   442→  ctx.beginPath(); ctx.moveTo(x - s * 0.18, zy + bob);
+   443→  ctx.quadraticCurveTo(x - s * 0.32, zy - s * 0.08 + bob + armSw, x - s * 0.44, zy - s * 0.18 + bob + armSw);
+   444→  ctx.stroke();
+   445→  ctx.beginPath(); ctx.moveTo(x + s * 0.18, zy + bob);
+   446→  ctx.quadraticCurveTo(x + s * 0.34, zy - s * 0.1 + bob - armSw, x + s * 0.42, zy - s * 0.22 + bob - armSw);
+   447→  ctx.stroke();
+   448→  // Hands (bigger, green)
+   449→  ctx.fillStyle = skinLt;
+   450→  ctx.beginPath(); ctx.arc(x - s * 0.44, zy - s * 0.18 + bob + armSw, s * 0.06, 0, Math.PI * 2); ctx.fill();
+   451→  ctx.beginPath(); ctx.arc(x + s * 0.42, zy - s * 0.22 + bob - armSw, s * 0.06, 0, Math.PI * 2); ctx.fill();
+   452→  // Fingers
+   453→  ctx.strokeStyle = skinLt; ctx.lineWidth = 2;
+   454→  for (let f = -1; f <= 1; f++) {
+   455→    ctx.beginPath(); ctx.moveTo(x - s * 0.44, zy - s * 0.18 + bob + armSw);
+   456→    ctx.lineTo(x - s * 0.48 + f * s * 0.02, zy - s * 0.24 + bob + armSw); ctx.stroke();
+   457→    ctx.beginPath(); ctx.moveTo(x + s * 0.42, zy - s * 0.22 + bob - armSw);
+   458→    ctx.lineTo(x + s * 0.46 + f * s * 0.02, zy - s * 0.28 + bob - armSw); ctx.stroke();
+   459→  }
+   460→
+   461→  // Head (bigger, rounder)
+   462→  ctx.save(); ctx.translate(x, zy - s * 0.2 + bob); ctx.rotate(headTilt);
+   463→  const hg = ctx.createRadialGradient(-s * 0.05, -s * 0.05, s * 0.05, 0, 0, s * 0.24);
+   464→  hg.addColorStop(0, skinLt); hg.addColorStop(1, skinDk);
+   465→  ctx.fillStyle = hg;
+   466→  ctx.beginPath(); ctx.arc(0, 0, s * 0.24, 0, Math.PI * 2); ctx.fill();
+   467→  // Ears (small bumps)
+   468→  ctx.fillStyle = skinDk;
+   469→  ctx.beginPath(); ctx.ellipse(-s * 0.23, s * 0.02, s * 0.04, s * 0.06, -0.3, 0, Math.PI * 2); ctx.fill();
+   470→  ctx.beginPath(); ctx.ellipse(s * 0.23, s * 0.02, s * 0.04, s * 0.06, 0.3, 0, Math.PI * 2); ctx.fill();
+   471→  // Eyes (much bigger, googly)
+   472→  ctx.fillStyle = '#FFF9C4';
+   473→  ctx.beginPath(); ctx.ellipse(-s * 0.08, -s * 0.04, s * 0.075, s * 0.09, 0, 0, Math.PI * 2); ctx.fill();
+   474→  ctx.beginPath(); ctx.ellipse(s * 0.09, -s * 0.02, s * 0.06, s * 0.075, 0.1, 0, Math.PI * 2); ctx.fill();
+   475→  // Red pupils (offset, looking left)
+   476→  ctx.fillStyle = '#D32F2F';
+   477→  ctx.beginPath(); ctx.arc(-s * 0.07, -s * 0.04, s * 0.04, 0, Math.PI * 2); ctx.fill();
+   478→  ctx.beginPath(); ctx.arc(s * 0.1, -s * 0.02, s * 0.032, 0, Math.PI * 2); ctx.fill();
+   479→  // Pupil highlights
+   480→  ctx.fillStyle = '#fff';
+   481→  ctx.beginPath(); ctx.arc(-s * 0.055, -s * 0.055, s * 0.015, 0, Math.PI * 2); ctx.fill();
+   482→  ctx.beginPath(); ctx.arc(s * 0.115, -s * 0.035, s * 0.012, 0, Math.PI * 2); ctx.fill();
+   483→  // Big open mouth
+   484→  ctx.fillStyle = '#3E2723';
+   485→  ctx.beginPath(); ctx.ellipse(s * 0.02, s * 0.1, s * 0.1, s * 0.06, 0, 0, Math.PI * 2); ctx.fill();
+   486→  // Teeth (bigger)
+   487→  ctx.fillStyle = '#FFF8E1';
+   488→  const teethTop = s * 0.04;
+   489→  for (let i = -2; i <= 2; i++) {
+   490→    ctx.beginPath(); ctx.roundRect(i * s * 0.035 - s * 0.012, s * 0.04, s * 0.022, teethTop, 2); ctx.fill();
+   491→  }
+   492→  for (let i = -1; i <= 1; i++) {
+   493→    ctx.beginPath(); ctx.roundRect(i * s * 0.035 - s * 0.01, s * 0.1, s * 0.02, teethTop * 0.7, 2); ctx.fill();
+   494→  }
+   495→  ctx.restore();
+   496→  return { s, bob, skin };
+   497→}
+   498→
+   499→function drawZombie(ctx: CanvasRenderingContext2D, zombie: Zombie, cellW: number, cellH: number, ox: number, oy: number) {
+   500→  const zy = oy + zombie.row * cellH + cellH / 2;
+   501→  const bob = zombie.eating ? 0 : Math.sin(zombie.animPhase) * 3;
+   502→  const alpha = zombie.dead ? Math.max(0, zombie.deathTimer / 500) : 1;
+   503→  ctx.globalAlpha = alpha;
+   504→  // Shadow
+   505→  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+   506→  ctx.beginPath(); ctx.ellipse(zombie.x, oy + zombie.row * cellH + cellH - 6, cellW * 0.2, 5, 0, 0, Math.PI * 2); ctx.fill();
+   507→  const { s, bob: b } = drawZombieBase(ctx, zombie.x, zy, bob, cellW, cellH, zombie.animPhase, zombie.slowed, zombie.eating);
+   508→
+   509→  // Accessories (bigger, more detailed)
+   510→  if (zombie.type === 'cone') {
+   511→    const cg = ctx.createLinearGradient(zombie.x - s * 0.14, zy - s * 0.6 + b, zombie.x + s * 0.14, zy - s * 0.25 + b);
+   512→    cg.addColorStop(0, '#FFB74D'); cg.addColorStop(1, '#E65100');
+   513→    ctx.fillStyle = cg;
+   514→    ctx.beginPath(); ctx.moveTo(zombie.x, zy - s * 0.62 + b);
+   515→    ctx.lineTo(zombie.x - s * 0.16, zy - s * 0.28 + b); ctx.lineTo(zombie.x + s * 0.16, zy - s * 0.28 + b); ctx.closePath(); ctx.fill();
+   516→    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+   517→    ctx.fillRect(zombie.x - s * 0.1, zy - s * 0.46 + b, s * 0.2, s * 0.05);
+   518→    ctx.fillRect(zombie.x - s * 0.07, zy - s * 0.37 + b, s * 0.14, s * 0.04);
+   519→  } else if (zombie.type === 'bucket') {
+   520→    const bg = ctx.createLinearGradient(zombie.x - s * 0.16, zy - s * 0.55 + b, zombie.x + s * 0.16, zy - s * 0.25 + b);
+   521→    bg.addColorStop(0, '#B0BEC5'); bg.addColorStop(0.4, '#78909C'); bg.addColorStop(0.7, '#607D8B'); bg.addColorStop(1, '#455A64');
+   522→    ctx.fillStyle = bg;
+   523→    ctx.beginPath(); ctx.roundRect(zombie.x - s * 0.16, zy - s * 0.55 + b, s * 0.32, s * 0.32, 3); ctx.fill();
+   524→    ctx.fillStyle = '#CFD8DC'; ctx.fillRect(zombie.x - s * 0.17, zy - s * 0.55 + b, s * 0.34, s * 0.05);
+   525→    ctx.strokeStyle = '#90A4AE'; ctx.lineWidth = 2.5;
+   526→    ctx.beginPath(); ctx.arc(zombie.x, zy - s * 0.55 + b, s * 0.1, Math.PI, 0); ctx.stroke();
+   527→    ctx.fillStyle = '#CFD8DC';
+   528→    ctx.beginPath(); ctx.arc(zombie.x - s * 0.1, zy - s * 0.38 + b, s * 0.02, 0, Math.PI * 2); ctx.fill();
+   529→    ctx.beginPath(); ctx.arc(zombie.x + s * 0.1, zy - s * 0.38 + b, s * 0.02, 0, Math.PI * 2); ctx.fill();
+   530→  } else if (zombie.type === 'flag') {
+   531→    ctx.strokeStyle = '#5D4037'; ctx.lineWidth = 3;
+   532→    ctx.beginPath(); ctx.moveTo(zombie.x + s * 0.14, zy - s * 0.18 + b);
+   533→    ctx.lineTo(zombie.x + s * 0.14, zy - s * 0.65 + b); ctx.stroke();
+   534→    const wave = Math.sin(zombie.animPhase * 2) * s * 0.04;
+   535→    ctx.fillStyle = '#E53935';
+   536→    ctx.beginPath();
+   537→    ctx.moveTo(zombie.x + s * 0.14, zy - s * 0.65 + b);
+   538→    ctx.quadraticCurveTo(zombie.x + s * 0.3 + wave, zy - s * 0.58 + b, zombie.x + s * 0.38, zy - s * 0.52 + b);
+   539→    ctx.lineTo(zombie.x + s * 0.14, zy - s * 0.42 + b);
+   540→    ctx.closePath(); ctx.fill();
+   541→  }
+   542→
+   543→  if (zombie.slowed && !zombie.dead) {
+   544→    ctx.fillStyle = 'rgba(100,220,255,0.1)';
+   545→    ctx.beginPath(); ctx.arc(zombie.x, zy + bob, s * 0.35, 0, Math.PI * 2); ctx.fill();
+   546→  }
+   547→  ctx.globalAlpha = 1;
+   548→}
+   549→
+   550→// ============ Component ============
+   551→export default function PvZGame() {
+   552→  const canvasRef = useRef<HTMLCanvasElement>(null);
+   553→  const containerRef = useRef<HTMLDivElement>(null);
+   554→  const gs = useRef<GameState | null>(null);
+   555→  const rafRef = useRef<number>(0);
+   556→  const [phase, setPhase] = useState<GamePhase>('menu');
+   557→  const [uiTick, setUiTick] = useState(0);
+   558→  const forceUpdate = useCallback(() => setUiTick(t => t + 1), []);
+   559→  const dims = useRef({ w: 900, h: 500, cellW: 80, cellH: 90, ox: 30, oy: 15 });
+   560→
+   561→  const recalcDims = useCallback(() => {
+   562→    const canvas = canvasRef.current;
+   563→    const container = containerRef.current;
+   564→    if (!canvas || !container) return;
+   565→    const rect = container.getBoundingClientRect();
+   566→    const dpr = window.devicePixelRatio || 1;
+   567→    const w = rect.width; const h = rect.height;
+   568→    canvas.width = w * dpr; canvas.height = h * dpr;
+   569→    canvas.style.width = `${w}px`; canvas.style.height = `${h}px`;
+   570→    const ctx = canvas.getContext('2d');
+   571→    if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+   572→    const cellW = (w * 0.9) / GRID_COLS;
+   573→    const cellH = (h * 0.95) / GRID_ROWS;
+   574→    const ox = w * 0.07; const oy = h * 0.025;
+   575→    dims.current = { w, h, cellW, cellH, ox, oy };
+   576→  }, []);
+   577→
+   578→  const initGame = useCallback(() => {
+   579→    _idCounter = 0;
+   580→    const state: GameState = {
+   581→      phase: 'playing', sun: STARTING_SUN, score: 0, wave: 0,
+   582→      plants: [], zombies: [], projectiles: [],
+   583→      explosions: [], floatingTexts: [],
+   584→      selectedPlant: null, currentQuiz: null, quizCooldown: 0,
+   585→      wordsAnswered: 0, wordsCorrect: 0,
+   586→      waveStartTime: Date.now(), waveZombiesSpawned: 0,
+   587→      totalKills: 0, lastTime: Date.now(),
+   588→      zombieSpeedBoostEnd: 0, usedWordIndices: new Set(),
+   589→      shakeTimer: 0, comboCount: 0,
+   590→    };
+   591→    gs.current = state;
+   592→    setPhase('playing');
+   593→    generateQuiz(state);
+   594→    forceUpdate();
+   595→  }, [forceUpdate]);
+   596→
+   597→  const generateQuiz = useCallback((state: GameState) => {
+   598→    const difficultyFilter = state.wordsAnswered < 3 ? 1 : 0;
+   599→    let available = WORD_BANK.map((_, i) => i).filter(
+   600→      i => !state.usedWordIndices.has(i) && (!difficultyFilter || WORD_BANK[i].difficulty === 1)
+   601→    );
+   602→    if (available.length < 4) { state.usedWordIndices.clear(); }
+   603→    available = WORD_BANK.map((_, i) => i).filter(
+   604→      i => !state.usedWordIndices.has(i) && (!difficultyFilter || WORD_BANK[i].difficulty === 1)
+   605→    );
+   606→    if (available.length < 4) available = WORD_BANK.map((_, i) => i);
+   607→    const shuffled = shuffle(available);
+   608→    const correctIdx = shuffled[0];
+   609→    const correctWord = WORD_BANK[correctIdx];
+   610→    state.usedWordIndices.add(correctIdx);
+   611→    const wrongPool = WORD_BANK.map((_, i) => i).filter(
+   612→      i => i !== correctIdx && (!difficultyFilter || WORD_BANK[i].difficulty === 1)
+   613→    );
+   614→    const wrongShuffled = shuffle(wrongPool).slice(0, 3);
+   615→    const options = shuffle([correctWord.zh, ...wrongShuffled.map(i => WORD_BANK[i].zh)]);
+   616→    state.currentQuiz = {
+   617→      word: correctWord, options,
+   618→      correctIndex: options.indexOf(correctWord.zh),
+   619→      timer: QUIZ_TIME_LIMIT, answered: false, wasCorrect: undefined,
+   620→    };
+   621→    forceUpdate();
+   622→  }, [forceUpdate]);
+   623→
+   624→  const handleAnswer = useCallback((index: number) => {
+   625→    const state = gs.current;
+   626→    if (!state || !state.currentQuiz || state.currentQuiz.answered || state.phase !== 'playing') return;
+   627→    const quiz = state.currentQuiz;
+   628→    quiz.answered = true;
+   629→    const isCorrect = index === quiz.correctIndex;
+   630→    quiz.wasCorrect = isCorrect;
+   631→    state.wordsAnswered++;
+   632→    const now = Date.now();
+   633→    const { w, h } = dims.current;
+   634→    if (isCorrect) {
+   635→      state.wordsCorrect++;
+   636→      state.comboCount++;
+   637→      const reward = QUIZ_SUN_REWARD[quiz.word.difficulty];
+   638→      const comboBonus = state.comboCount >= 3 ? Math.floor(reward * 0.5) : 0;
+   639→      state.sun += reward + comboBonus;
+   640→      state.score += reward + comboBonus;
+   641→      state.floatingTexts.push({
+   642→        id: uid(), x: w / 2, y: h - 80,
+   643→        text: `+${reward + comboBonus} ☀️${comboBonus > 0 ? ' x' + state.comboCount : ''}`,
+   644→        color: '#FF8F00', timer: 1500, maxTimer: 1500,
+   645→      });
+   646→    } else {
+   647→      state.comboCount = 0;
+   648→      state.zombieSpeedBoostEnd = now + ZOMBIE_SPEED_BOOST_DURATION;
+   649→      state.shakeTimer = 300;
+   650→      state.floatingTexts.push({
+   651→        id: uid(), x: w / 2, y: h - 80,
+   652→        text: '答错了! 僵尸加速!', color: '#E53935', timer: 1500, maxTimer: 1500,
+   653→      });
+   654→    }
+   655→    state.quizCooldown = QUIZ_COOLDOWN;
+   656→    forceUpdate();
+   657→  }, [forceUpdate]);
+   658→
+   659→  const handleCanvasClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+   660→    const state = gs.current;
+   661→    if (!state || state.phase !== 'playing' || !state.selectedPlant) return;
+   662→    const canvas = canvasRef.current; if (!canvas) return;
+   663→    const rect = canvas.getBoundingClientRect();
+   664→    let cx: number, cy: number;
+   665→    if ('touches' in e) { if (!e.touches.length) return; cx = e.touches[0].clientX; cy = e.touches[0].clientY; }
+   666→    else { cx = e.clientX; cy = e.clientY; }
+   667→    const x = cx - rect.left; const y = cy - rect.top;
+   668→    const { cellW, cellH, ox, oy } = dims.current;
+   669→    const col = Math.floor((x - ox) / cellW);
+   670→    const row = Math.floor((y - oy) / cellH);
+   671→    if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return;
+   672→    if (state.plants.some(p => p.row === row && p.col === col)) return;
+   673→    const def = PLANT_DEFS[state.selectedPlant];
+   674→    if (state.sun < def.cost) {
+   675→      state.floatingTexts.push({ id: uid(), x, y, text: '阳光不足!', color: '#E53935', timer: 1000, maxTimer: 1000 });
+   676→      return;
+   677→    }
+   678→    state.sun -= def.cost;
+   679→    const plant: Plant = { id: uid(), type: state.selectedPlant, row, col, hp: def.hp, maxHp: def.hp, lastAttack: Date.now(), animPhase: Math.random() * Math.PI * 2 };
+   680→    state.plants.push(plant);
+   681→    if (def.explosive) {
+   682→      const cs = state; const cp = plant; const cc = col; const cr = row;
+   683→      setTimeout(() => {
+   684→        if (cs.phase !== 'playing') return;
+   685→        const { ox: oX, oy: oY, cellW: cW, cellH: cH } = dims.current;
+   686→        const ex = oX + cc * cW + cW / 2; const ey = oY + cr * cH + cH / 2;
+   687→        cs.explosions.push({ id: uid(), x: ex, y: ey, radius: 0, maxRadius: cW * 2, timer: 0, maxTimer: 600 });
+   688→        cs.zombies.forEach(z => {
+   689→          if (!z.dead && Math.abs(z.row - cr) <= 1) {
+   690→            const zzy = oY + z.row * cH + cH / 2;
+   691→            if (Math.sqrt((z.x - ex) ** 2 + (zzy - ey) ** 2) < cW * 2.5) {
+   692→              z.hp -= 1800;
+   693→              if (z.hp <= 0) { z.dead = true; z.deathTimer = 500; cs.totalKills++; cs.score += 50; }
+   694→            }
+   695→          }
+   696→        });
+   697→        cs.plants = cs.plants.filter(p => p.id !== cp.id);
+   698→        forceUpdate();
+   699→      }, 500);
+   700→    }
+   701→    forceUpdate();
+   702→  }, [forceUpdate]);
+   703→
+   704→  // ---- Game loop (render only) ----
+   705→  const gameLoop = useCallback(() => {
+   706→    const state = gs.current; const canvas = canvasRef.current;
+   707→    if (!state || !canvas || state.phase !== 'playing') return;
+   708→    const ctx = canvas.getContext('2d'); if (!ctx) return;
+   709→    const now = Date.now();
+   710→    const dt = Math.min(now - state.lastTime, 50);
+   711→    state.lastTime = now;
+   712→    const { w, h, cellW, cellH, ox, oy } = dims.current;
+   713→    const isBoosted = now < state.zombieSpeedBoostEnd;
+   714→    const speedMult = isBoosted ? ZOMBIE_SPEED_BOOST : 1;
+   715→
+   716→    // Spawn
+   717→    const waveConfig = WAVE_CONFIGS[state.wave];
+   718→    if (waveConfig) {
+   719→      const elapsed = now - state.waveStartTime;
+   720→      for (let i = state.waveZombiesSpawned; i < waveConfig.zombies.length; i++) {
+   721→        if (elapsed >= waveConfig.zombies[i].delay) {
+   722→          state.waveZombiesSpawned = i + 1;
+   723→          const zc = waveConfig.zombies[i]; const def = ZOMBIE_DEFS[zc.type];
+   724→          const row = zc.row ?? Math.floor(Math.random() * GRID_ROWS);
+   725→          state.zombies.push({ id: uid(), type: zc.type, row, x: ox + (GRID_COLS + 0.8) * cellW, hp: def.hp, maxHp: def.hp, speed: def.speed, baseSpeed: def.speed, eating: false, slowed: false, slowTimer: 0, lastHit: now, animPhase: Math.random() * Math.PI * 2, dead: false, deathTimer: 0 });
+   726→        } else break;
+   727→      }
+   728→    }
+   729→
+   730→    // Wave check
+   731→    const allSpawned = waveConfig ? state.waveZombiesSpawned >= waveConfig.zombies.length : true;
+   732→    const allDead = state.zombies.length === 0 || state.zombies.every(z => z.dead);
+   733→    if (allSpawned && allDead && state.zombies.length > 0) {
+   734→      if (state.wave < WAVE_CONFIGS.length - 1) {
+   735→        state.wave++; state.waveStartTime = now; state.waveZombiesSpawned = 0;
+   736→        state.floatingTexts.push({ id: uid(), x: w / 2, y: h / 2, text: `第 ${state.wave + 1} 波!`, color: '#E65100', timer: 2000, maxTimer: 2000 });
+   737→        forceUpdate();
+   738→      } else { state.phase = 'victory'; setPhase('victory'); return; }
+   739→    }
+   740→
+   741→    // Zombies
+   742→    let gameOver = false;
+   743→    for (const z of state.zombies) {
+   744→      if (z.dead) { z.deathTimer -= dt; continue; }
+   745→      if (z.slowed) { z.slowTimer -= dt; if (z.slowTimer <= 0) z.slowed = false; }
+   746→      z.animPhase += dt * 0.005 * (z.slowed ? 0.5 : 1);
+   747→      const spd = z.baseSpeed * speedMult * (z.slowed ? 0.5 : 1);
+   748→      const ep = state.plants.find(p => p.row === z.row && Math.abs(z.x - (ox + p.col * cellW + cellW / 2)) < cellW * 0.35);
+   749→      if (ep) {
+   750→        z.eating = true;
+   751→        if (now - z.lastHit > 1000) { z.lastHit = now; ep.hp -= 100; if (ep.hp <= 0) state.plants = state.plants.filter(p => p.id !== ep.id); }
+   752→      } else { z.eating = false; z.x -= spd * (dt / 1000); }
+   753→      if (z.x < ox - cellW * 0.5) gameOver = true;
+   754→    }
+   755→    state.zombies = state.zombies.filter(z => !(z.dead && z.deathTimer <= 0));
+   756→    if (gameOver) { state.phase = 'gameover'; setPhase('gameover'); return; }
+   757→
+   758→    // Plants
+   759→    for (const p of state.plants) {
+   760→      p.animPhase += dt * 0.003;
+   761→      const d = PLANT_DEFS[p.type];
+   762→      if (d.attack && d.attackSpeed) {
+   763→        const hz = state.zombies.some(z => !z.dead && z.row === p.row && z.x > ox + p.col * cellW);
+   764→        if (hz && now - p.lastAttack >= d.attackSpeed) {
+   765→          p.lastAttack = now;
+   766→          const px = ox + p.col * cellW + cellW * 0.7;
+   767→          state.projectiles.push({ id: uid(), row: p.row, x: px, speed: 250, damage: d.attack, slow: !!d.slowEffect, active: true });
+   768→          if (d.doubleShot) { setTimeout(() => { if (gs.current?.phase === 'playing') gs.current.projectiles.push({ id: uid(), row: p.row, x: px, speed: 250, damage: d.attack, slow: false, active: true }); }, 150); }
+   769→        }
+   770→      }
+   771→    }
+   772→
+   773→    // Projectiles
+   774→    for (const pr of state.projectiles) {
+   775→      if (!pr.active) continue;
+   776→      pr.x += pr.speed * (dt / 1000);
+   777→      const hz = state.zombies.find(z => !z.dead && z.row === pr.row && Math.abs(z.x - pr.x) < cellW * 0.25);
+   778→      if (hz) {
+   779→        pr.active = false; hz.hp -= pr.damage;
+   780→        if (pr.slow) { hz.slowed = true; hz.slowTimer = 3000; }
+   781→        if (hz.hp <= 0) { hz.dead = true; hz.deathTimer = 500; state.totalKills++; state.score += 50; }
+   782→        state.floatingTexts.push({ id: uid(), x: pr.x, y: oy + pr.row * cellH + cellH * 0.25, text: `-${pr.damage}`, color: pr.slow ? '#29B6F6' : '#FF6D00', timer: 600, maxTimer: 600 });
+   783→      }
+   784→      if (pr.x > ox + (GRID_COLS + 1) * cellW) pr.active = false;
+   785→    }
+   786→    state.projectiles = state.projectiles.filter(p => p.active);
+   787→
+   788→    // Effects
+   789→    for (const e of state.explosions) { e.timer += dt; e.radius = (e.timer / e.maxTimer) * e.maxRadius; }
+   790→    state.explosions = state.explosions.filter(e => e.timer < e.maxTimer);
+   791→    for (const f of state.floatingTexts) { f.timer -= dt; f.y -= dt * 0.04; }
+   792→    state.floatingTexts = state.floatingTexts.filter(f => f.timer > 0);
+   793→
+   794→    // Quiz
+   795→    if (state.currentQuiz) {
+   796→      if (state.currentQuiz.answered) { state.quizCooldown -= dt; if (state.quizCooldown <= 0) generateQuiz(state); }
+   797→      else {
+   798→        state.currentQuiz.timer -= dt;
+   799→        if (state.currentQuiz.timer <= 0) {
+   800→          state.currentQuiz.answered = true; state.currentQuiz.wasCorrect = false;
+   801→          state.wordsAnswered++; state.comboCount = 0;
+   802→          state.zombieSpeedBoostEnd = now + ZOMBIE_SPEED_BOOST_DURATION;
+   803→          state.shakeTimer = 300; state.quizCooldown = QUIZ_COOLDOWN;
+   804→          state.floatingTexts.push({ id: uid(), x: w / 2, y: h - 80, text: '⏰ 超时! 僵尸加速!', color: '#E53935', timer: 1500, maxTimer: 1500 });
+   805→          forceUpdate();
+   806→        }
+   807→      }
+   808→    }
+   809→    if (state.shakeTimer > 0) state.shakeTimer -= dt;
+   810→
+   811→    // ======== RENDER ========
+   812→    const dpr = window.devicePixelRatio || 1;
+   813→    ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+   814→    if (state.shakeTimer > 0) ctx.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
+   815→
+   816→    // Warm sky background
+   817→    const sky = ctx.createLinearGradient(0, 0, 0, h);
+   818→    sky.addColorStop(0, '#87CEEB'); sky.addColorStop(0.12, '#B3E5FC');
+   819→    sky.addColorStop(0.28, '#C8E6C9'); sky.addColorStop(0.4, '#A5D6A7');
+   820→    sky.addColorStop(1, '#66BB6A');
+   821→    ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+   822→
+   823→    // Clouds
+   824→    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+   825→    ctx.beginPath(); ctx.ellipse(w * 0.12, h * 0.05, 42, 15, 0, 0, Math.PI * 2); ctx.fill();
+   826→    ctx.beginPath(); ctx.ellipse(w * 0.16, h * 0.01, 28, 12, 0, 0, Math.PI * 2); ctx.fill();
+   827→    ctx.beginPath(); ctx.ellipse(w * 0.52, h * 0.07, 38, 13, 0, 0, Math.PI * 2); ctx.fill();
+   828→    ctx.beginPath(); ctx.ellipse(w * 0.56, h * 0.03, 25, 10, 0, 0, Math.PI * 2); ctx.fill();
+   829→    ctx.beginPath(); ctx.ellipse(w * 0.85, h * 0.04, 32, 12, 0, 0, Math.PI * 2); ctx.fill();
+   830→
+   831→    // Grid (warm green)
+   832→    for (let r = 0; r < GRID_ROWS; r++) {
+   833→      for (let c = 0; c < GRID_COLS; c++) {
+   834→        ctx.fillStyle = (r + c) % 2 === 0 ? 'rgba(102,187,106,0.3)' : 'rgba(76,175,80,0.25)';
+   835→        ctx.fillRect(ox + c * cellW, oy + r * cellH, cellW, cellH);
+   836→        ctx.strokeStyle = 'rgba(56,142,60,0.1)'; ctx.lineWidth = 0.5;
+   837→        ctx.strokeRect(ox + c * cellW, oy + r * cellH, cellW, cellH);
+   838→      }
+   839→    }
+   840→
+   841→    // House
+   842→    const hsg = ctx.createLinearGradient(0, oy, ox, oy);
+   843→    hsg.addColorStop(0, '#8D6E63'); hsg.addColorStop(0.6, '#A1887F'); hsg.addColorStop(1, '#BCAAA4');
+   844→    ctx.fillStyle = hsg; ctx.fillRect(0, oy, ox - 2, GRID_ROWS * cellH);
+   845→    const dW = ox * 0.42; const dH = cellH * 0.7;
+   846→    const dX = (ox - dW) / 2; const dY = oy + (GRID_ROWS * cellH - dH) / 2;
+   847→    ctx.fillStyle = '#5D4037'; ctx.beginPath(); ctx.roundRect(dX, dY, dW, dH, [5, 5, 0, 0]); ctx.fill();
+   848→    ctx.fillStyle = '#FFD54F'; ctx.beginPath(); ctx.arc(dX + dW * 0.78, dY + dH * 0.55, 2.5, 0, Math.PI * 2); ctx.fill();
+   849→    ctx.fillStyle = '#BBDEFB'; const wS = ox * 0.26;
+   850→    ctx.fillRect(ox * 0.15, oy + cellH * 0.4, wS, wS);
+   851→    ctx.fillRect(ox * 0.15, oy + cellH * 2.3, wS, wS);
+   852→    ctx.strokeStyle = '#8D6E63'; ctx.lineWidth = 1.5;
+   853→    ctx.strokeRect(ox * 0.15, oy + cellH * 0.4, wS, wS);
+   854→    ctx.strokeRect(ox * 0.15, oy + cellH * 2.3, wS, wS);
+   855→
+   856→    // Grid hover
+   857→    if (state.selectedPlant) {
+   858→      ctx.fillStyle = 'rgba(255,235,59,0.08)';
+   859→      for (let r = 0; r < GRID_ROWS; r++) for (let c = 0; c < GRID_COLS; c++)
+   860→        if (!state.plants.some(p => p.row === r && p.col === c)) ctx.fillRect(ox + c * cellW, oy + r * cellH, cellW, cellH);
+   861→    }
+   862→
+   863→    // Plants
+   864→    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+   865→    for (const p of state.plants) {
+   866→      const px = ox + p.col * cellW + cellW / 2;
+   867→      const py = oy + p.row * cellH + cellH / 2;
+   868→      ctx.fillStyle = 'rgba(0,0,0,0.1)';
+   869→      ctx.beginPath(); ctx.ellipse(px, oy + p.row * cellH + cellH - 5, cellW * 0.22, 5, 0, 0, Math.PI * 2); ctx.fill();
+   870→      drawPlant(ctx, p.type, px, py, cellW, cellH, p.animPhase, p.hp / p.maxHp);
+   871→      if (p.hp < p.maxHp) {
+   872→        const bW = cellW * 0.6; const bX = px - bW / 2; const bY = oy + p.row * cellH + 3;
+   873→        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.roundRect(bX - 1, bY - 1, bW + 2, 6, 3); ctx.fill();
+   874→        const rat = Math.max(0, p.hp / p.maxHp);
+   875→        ctx.fillStyle = rat > 0.5 ? '#66BB6A' : rat > 0.25 ? '#FFA726' : '#EF5350';
+   876→        ctx.beginPath(); ctx.roundRect(bX, bY, bW * rat, 4, 2); ctx.fill();
+   877→      }
+   878→    }
+   879→
+   880→    // Projectiles
+   881→    for (const pr of state.projectiles) {
+   882→      const py = oy + pr.row * cellH + cellH / 2;
+   883→      const ps = Math.max(4, cellW * 0.09);
+   884→      ctx.fillStyle = pr.slow ? 'rgba(100,200,255,0.25)' : 'rgba(139,195,74,0.25)';
+   885→      ctx.beginPath(); ctx.ellipse(pr.x - ps * 1.5, py, ps * 2, ps * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+   886→      ctx.shadowColor = pr.slow ? '#29B6F6' : '#8BC34A'; ctx.shadowBlur = 6;
+   887→      const pg = ctx.createRadialGradient(pr.x - ps * 0.2, py - ps * 0.2, 0, pr.x, py, ps);
+   888→      if (pr.slow) { pg.addColorStop(0, '#E1F5FE'); pg.addColorStop(0.5, '#4FC3F7'); pg.addColorStop(1, '#0277BD'); }
+   889→      else { pg.addColorStop(0, '#DCEDC8'); pg.addColorStop(0.5, '#8BC34A'); pg.addColorStop(1, '#33691E'); }
+   890→      ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(pr.x, py, ps, 0, Math.PI * 2); ctx.fill();
+   891→      ctx.shadowBlur = 0;
+   892→    }
+   893→
+   894→    // Zombies
+   895→    for (const z of state.zombies) {
+   896→      drawZombie(ctx, z, cellW, cellH, ox, oy);
+   897→      if (!z.dead && z.hp < z.maxHp) {
+   898→        const bW = cellW * 0.45; const bX = z.x - bW / 2; const bY = oy + z.row * cellH + 3;
+   899→        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.roundRect(bX - 1, bY - 1, bW + 2, 6, 3); ctx.fill();
+   900→        const rat = Math.max(0, z.hp / z.maxHp);
+   901→        ctx.fillStyle = rat > 0.5 ? '#66BB6A' : rat > 0.25 ? '#FFA726' : '#EF5350';
+   902→        ctx.beginPath(); ctx.roundRect(bX, bY, bW * rat, 4, 2); ctx.fill();
+   903→      }
+   904→    }
+   905→
+   906→    // Explosions
+   907→    for (const e of state.explosions) {
+   908→      const p = e.timer / e.maxTimer; const a = 1 - p;
+   909→      ctx.strokeStyle = `rgba(255,183,77,${a * 0.8})`; ctx.lineWidth = 3;
+   910→      ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.stroke();
+   911→      ctx.fillStyle = `rgba(255,111,0,${a * 0.5})`; ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fill();
+   912→      ctx.fillStyle = `rgba(255,224,130,${a * 0.4})`; ctx.beginPath(); ctx.arc(e.x, e.y, e.radius * 0.5, 0, Math.PI * 2); ctx.fill();
+   913→    }
+   914→
+   915→    // Floating texts
+   916→    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+   917→    for (const f of state.floatingTexts) {
+   918→      const a = Math.min(1, f.timer / (f.maxTimer * 0.3)); ctx.globalAlpha = a;
+   919→      ctx.font = 'bold 15px sans-serif';
+   920→      ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 3; ctx.strokeText(f.text, f.x, f.y);
+   921→      ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y);
+   922→      ctx.globalAlpha = 1;
+   923→    }
+   924→
+   925→    // Wave announce
+   926→    if (state.waveZombiesSpawned <= 1 && waveConfig) {
+   927→      const el = now - state.waveStartTime;
+   928→      if (el < 2500) {
+   929→        const a = el < 500 ? el / 500 : el > 2000 ? (2500 - el) / 500 : 1; ctx.globalAlpha = a;
+   930→        ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center';
+   931→        ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 4;
+   932→        ctx.strokeText(`第 ${state.wave + 1} 波`, w / 2, h / 2 - 8);
+   933→        ctx.fillStyle = '#FFF'; ctx.fillText(`第 ${state.wave + 1} 波`, w / 2, h / 2 - 8);
+   934→        ctx.font = '15px sans-serif';
+   935→        ctx.strokeText(`${waveConfig.zombies.length} 个僵尸来袭!`, w / 2, h / 2 + 22);
+   936→        ctx.fillStyle = '#FFE082'; ctx.fillText(`${waveConfig.zombies.length} 个僵尸来袭!`, w / 2, h / 2 + 22);
+   937→        ctx.globalAlpha = 1;
+   938→      }
+   939→    }
+   940→
+   941→    // Speed boost border
+   942→    if (isBoosted) {
+   943→      const p = 0.2 + Math.sin(now * 0.008) * 0.1;
+   944→      ctx.strokeStyle = `rgba(229,57,53,${p})`; ctx.lineWidth = 3; ctx.strokeRect(2, 2, w - 4, h - 4);
+   945→    }
+   946→    ctx.restore();
+   947→    rafRef.current = requestAnimationFrame(gameLoop);
+   948→  }, [generateQuiz, forceUpdate]);
+   949→
+   950→  useEffect(() => {
+   951→    if (!containerRef.current) return;
+   952→    recalcDims();
+   953→    const obs = new ResizeObserver(() => recalcDims());
+   954→    obs.observe(containerRef.current);
+   955→    return () => obs.disconnect();
+   956→  }, [phase, recalcDims]);
+   957→
+   958→  useEffect(() => {
+   959→    if (phase === 'playing') { gs.current!.lastTime = Date.now(); rafRef.current = requestAnimationFrame(gameLoop); }
+   960→    return () => cancelAnimationFrame(rafRef.current);
+   961→  }, [phase, gameLoop]);
+   962→
+   963→  const state = gs.current;
+   964→  const quiz = state?.currentQuiz;
+   965→  const diff = quiz?.word.difficulty ?? 1;
+   966→
+   967→  return (
+   968→    <div className="flex flex-col h-screen w-full overflow-hidden select-none" style={{ background: '#FFF8E1' }}>
+   969→      {phase === 'menu' && (
+   970→        <div className="flex-1 flex flex-col items-center justify-center gap-4 relative overflow-hidden"
+   971→          style={{ background: 'linear-gradient(180deg, #FFF3E0 0%, #FFE0B2 40%, #C8E6C9 80%, #81C784 100%)' }}>
+   972→          <div className="text-8xl animate-bounce" style={{ filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.15))' }}>🧟</div>
+   973→          <h1 className="text-4xl md:text-6xl font-extrabold z-10"
+   974→            style={{ color: '#E65100', textShadow: '2px 2px 0 #FFCC80, 0 0 30px rgba(255,152,0,0.2)' }}>
+   975→            植物大战僵尸
+   976→          </h1>
+   977→          <p className="text-xl md:text-2xl font-semibold tracking-widest z-10" style={{ color: '#BF360C' }}>
+   978→            单词大作战
+   979→          </p>
+   980→          <div className="mt-2 text-sm md:text-base text-center space-y-2 z-10 rounded-2xl px-6 py-4"
+   981→            style={{ background: 'rgba(255,255,255,0.55)', backdropFilter: 'blur(8px)', color: '#4E342E' }}>
+   982→            <p>📝 答对单词自动获得阳光</p>
+   983→            <p>🌱 用阳光种植植物抵御僵尸</p>
+   984→            <p>🧟 不要让僵尸到达你的房子!</p>
+   985→            <p>🔥 连续答对获得连击加成</p>
+   986→          </div>
+   987→          <button onClick={initGame}
+   988→            className="mt-4 px-12 py-3.5 font-bold text-xl rounded-2xl shadow-lg z-10 transition-all hover:scale-105 active:scale-95"
+   989→            style={{ background: 'linear-gradient(180deg, #FFB74D, #FF9800)', color: '#4E342E', boxShadow: '0 4px 15px rgba(255,152,0,0.4)' }}>
+   990→            开始游戏
+   991→          </button>
+   992→        </div>
+   993→      )}
+   994→
+   995→      {(phase === 'playing' || phase === 'gameover' || phase === 'victory') && state && (
+   996→        <>
+   997→          {/* HUD - warm amber */}
+   998→          <div className="flex items-center justify-between px-3 py-1.5 relative z-10 flex-shrink-0"
+   999→            style={{ background: 'linear-gradient(180deg, #8D6E63, #A1887F)', borderBottom: '2px solid rgba(255,183,77,0.5)' }}>
+  1000→            <div className="flex items-center gap-1.5 rounded-xl px-3 py-1" style={{ background: 'rgba(255,255,255,0.2)' }}>
+  1001→              <div className="w-7 h-7 rounded-full flex items-center justify-center text-lg"
+  1002→                style={{ background: 'radial-gradient(circle, #FFF176, #FFB300)', boxShadow: '0 0 10px rgba(255,179,0,0.5)' }}>☀️</div>
+  1003→              <span className="font-extrabold text-xl tabular-nums min-w-[45px]" style={{ color: '#FFF8E1' }}>{state.sun}</span>
+  1004→            </div>
+  1005→            <div className="flex items-center gap-2.5 text-xs md:text-sm">
+  1006→              <div className="rounded-lg px-2.5 py-1 text-center" style={{ background: 'rgba(255,255,255,0.15)' }}>
+  1007→                <div className="text-amber-200/80 text-[10px] leading-tight">波次</div>
+  1008→                <div className="font-extrabold text-base text-white leading-tight">{state.wave + 1}<span className="text-amber-200/60">/{WAVE_CONFIGS.length}</span></div>
+  1009→              </div>
+  1010→              <div className="rounded-lg px-2.5 py-1 text-center hidden sm:block" style={{ background: 'rgba(255,255,255,0.15)' }}>
+  1011→                <div className="text-amber-200/80 text-[10px] leading-tight">得分</div>
+  1012→                <div className="font-bold text-white leading-tight">{state.score}</div>
+  1013→              </div>
+  1014→              <div className="rounded-lg px-2.5 py-1 text-center" style={{ background: 'rgba(255,255,255,0.15)' }}>
+  1015→                <div className="text-amber-200/80 text-[10px] leading-tight">答题</div>
+  1016→                <div className="font-bold text-white leading-tight"><span style={{ color: '#A5D6A7' }}>{state.wordsCorrect}</span>/{state.wordsAnswered}</div>
+  1017→              </div>
+  1018→              {state.comboCount >= 3 && (
+  1019→                <div className="rounded-lg px-2.5 py-1 animate-pulse" style={{ background: 'rgba(255,87,34,0.6)' }}>
+  1020→                  <div className="font-extrabold text-sm" style={{ color: '#FFCC80' }}>🔥x{state.comboCount}</div>
+  1021→                </div>
+  1022→              )}
+  1023→            </div>
+  1024→          </div>
+  1025→
+  1026→          {/* Card bar - warm */}
+  1027→          <div className="flex items-center gap-1.5 px-2 py-1.5 relative z-10 flex-shrink-0 overflow-x-auto"
+  1028→            style={{ background: 'linear-gradient(180deg, #6D4C41, #795548)', borderBottom: '1px solid rgba(255,183,77,0.2)' }}>
+  1029→            <button onClick={() => { state.selectedPlant = null; forceUpdate(); }}
+  1030→              className={`flex-shrink-0 w-10 h-12 rounded-lg text-base font-bold transition-all flex items-center justify-center ${
+  1031→                !state.selectedPlant ? 'ring-2 ring-amber-300 shadow-lg' : ''}`}
+  1032→              style={{ background: !state.selectedPlant ? 'linear-gradient(180deg, #FFB74D, #FF9800)' : 'rgba(255,255,255,0.1)',
+  1033→                color: !state.selectedPlant ? '#4E342E' : '#BCAAA4' }}>
+  1034→              ✋
+  1035→            </button>
+  1036→            {PLANT_ORDER.map(pt => {
+  1037→              const d = PLANT_DEFS[pt]; const ok = state.sun >= d.cost; const sel = state.selectedPlant === pt;
+  1038→              return (
+  1039→                <button key={pt} onClick={() => { state.selectedPlant = sel ? null : pt; forceUpdate(); }} disabled={!ok}
+  1040→                  className={`flex-shrink-0 flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl text-xs font-medium transition-all min-w-[52px] ${
+  1041→                    sel ? 'ring-2 ring-amber-300 shadow-lg scale-105' : ok ? 'hover:scale-105' : 'cursor-not-allowed'}`}
+  1042→                  style={{ background: sel ? 'linear-gradient(180deg, #FFB74D, #FF9800)' : ok ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)',
+  1043→                    color: sel ? '#4E342E' : ok ? '#EFEBE9' : '#6D4C41',
+  1044→                    border: ok ? '1px solid rgba(255,183,77,0.25)' : '1px solid transparent' }}>
+  1045→                  <span className="text-xl leading-none">{d.emoji}</span>
+  1046→                  <span className="font-bold text-[10px] leading-tight">{d.name}</span>
+  1047→                  <span className="text-[10px] leading-tight font-bold" style={{ color: ok ? '#FFE082' : '#5D4037' }}>☀️{d.cost}</span>
+  1048→                </button>
+  1049→              );
+  1050→            })}
+  1051→          </div>
+  1052→
+  1053→          {/* Canvas - FIXED SIZE */}
+  1054→          <div ref={containerRef} className="flex-1 relative min-h-0">
+  1055→            <canvas ref={canvasRef} onClick={handleCanvasClick} onTouchStart={(e) => { e.preventDefault(); handleCanvasClick(e); }} className="w-full h-full" />
+  1056→            {Date.now() < state.zombieSpeedBoostEnd && (
+  1057→              <div className="absolute top-2 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold animate-pulse z-10"
+  1058→                style={{ background: 'rgba(229,57,53,0.85)', color: '#fff', boxShadow: '0 0 12px rgba(229,57,53,0.5)' }}>
+  1059→                ⚡ 僵尸加速中!
+  1060→              </div>
+  1061→            )}
+  1062→          </div>
+  1063→
+  1064→          {/* Quiz panel - FIXED HEIGHT, warm theme */}
+  1065→          {phase === 'playing' && quiz && (
+  1066→            <div className="flex-shrink-0 relative z-10" style={{ height: '108px',
+  1067→              background: quiz.answered
+  1068→                ? (quiz.wasCorrect ? 'linear-gradient(180deg, #E8F5E9, #C8E6C9)' : 'linear-gradient(180deg, #FFEBEE, #FFCDD2)')
+  1069→                : 'linear-gradient(180deg, #FFF8E1, #FFECB3)',
+  1070→              borderTop: '2px solid',
+  1071→              borderTopColor: quiz.answered
+  1072→                ? (quiz.wasCorrect ? '#A5D6A7' : '#EF9A9A')
+  1073→                : '#FFCC80'
+  1074→            }}>
+  1075→              <div className="max-w-lg mx-auto h-full flex flex-col justify-center px-3 md:px-6">
+  1076→                {quiz.answered ? (
+  1077→                  <div className="flex items-center justify-center gap-2">
+  1078→                    <span className="text-xl">{quiz.wasCorrect ? '✅' : '❌'}</span>
+  1079→                    <span className="font-bold text-base" style={{ color: quiz.wasCorrect ? '#2E7D32' : '#C62828' }}>
+  1080→                      {quiz.word.en} = {quiz.word.zh}
+  1081→                    </span>
+  1082→                    <span className="text-xs ml-2" style={{ color: '#8D6E63' }}>
+  1083→                      下一题 {Math.max(0, Math.ceil(state.quizCooldown / 1000))}s
+  1084→                    </span>
+  1085→                  </div>
+  1086→                ) : (
+  1087→                  <>
+  1088→                    <div className="flex items-center justify-between mb-1">
+  1089→                      <div className="flex items-center gap-2">
+  1090→                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+  1091→                          diff === 1 ? 'bg-green-600 text-green-100' : diff === 2 ? 'bg-amber-600 text-amber-100' : 'bg-red-600 text-red-100'
+  1092→                        }`}>
+  1093→                          {diff === 1 ? '简单' : diff === 2 ? '中等' : '困难'} +{QUIZ_SUN_REWARD[diff]}☀️
+  1094→                        </span>
+  1095→                        <span className="font-bold text-lg md:text-xl tracking-wide" style={{ color: '#4E342E' }}>{quiz.word.en}</span>
+  1096→                      </div>
+  1097→                      <span className={`text-sm font-mono tabular-nums ${quiz.timer < 3000 ? 'font-bold animate-pulse' : ''}`}
+  1098→                        style={{ color: quiz.timer < 3000 ? '#D32F2F' : '#8D6E63' }}>
+  1099→                        {Math.max(0, Math.ceil(quiz.timer / 1000))}s
+  1100→                      </span>
+  1101→                    </div>
+  1102→                    <div className="w-full h-2 rounded-full mb-1.5 overflow-hidden" style={{ background: 'rgba(0,0,0,0.08)' }}>
+  1103→                      <div className={`h-full rounded-full transition-all duration-150 ${
+  1104→                        quiz.timer < 3000 ? 'bg-red-400' : 'bg-green-500'
+  1105→                      }`} style={{ width: `${(quiz.timer / QUIZ_TIME_LIMIT) * 100}%` }} />
+  1106→                    </div>
+  1107→                    <div className="grid grid-cols-2 gap-1.5">
+  1108→                      {quiz.options.map((opt, i) => (
+  1109→                        <button key={i} onClick={() => handleAnswer(i)}
+  1110→                          className="py-1.5 md:py-2 px-2 md:px-3 rounded-xl text-sm md:text-base font-medium transition-all hover:scale-[1.02] active:scale-[0.98] hover:shadow-md"
+  1111→                          style={{ color: '#4E342E', background: 'rgba(255,255,255,0.7)', border: '1.5px solid rgba(141,110,99,0.2)',
+  1112→                            hoverBackgroundColor: 'rgba(255,255,255,0.9)', hoverBorderColor: 'rgba(141,110,99,0.4)' }}>
+  1113→                          <span className="font-bold mr-1" style={{ color: '#8D6E63' }}>{String.fromCharCode(65 + i)}</span>
+  1114→                          {opt}
+  1115→                        </button>
+  1116→                      ))}
+  1117→                    </div>
+  1118→                  </>
+  1119→                )}
+  1120→              </div>
+  1121→            </div>
+  1122→          )}
+  1123→
+  1124→          {/* Game Over */}
+  1125→          {phase === 'gameover' && (
+  1126→            <div className="absolute inset-0 flex items-center justify-center z-30" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
+  1127→              <div className="rounded-3xl p-8 text-center max-w-sm mx-4 shadow-2xl"
+  1128→                style={{ background: 'linear-gradient(180deg, #FFF3E0, #FFE0B2)', border: '2px solid rgba(229,57,53,0.4)' }}>
+  1129→                <div className="text-6xl mb-3">💀</div>
+  1130→                <h2 className="text-3xl font-extrabold mb-3" style={{ color: '#C62828' }}>游戏结束</h2>
+  1131→                <div className="space-y-2 text-sm mb-5">
+  1132→                  {[['存活波次', `${state.wave + 1}/${WAVE_CONFIGS.length}`], ['消灭僵尸', `${state.totalKills}`],
+  1133→                    ['答题正确率', `${state.wordsAnswered > 0 ? Math.round(state.wordsCorrect / state.wordsAnswered * 100) : 0}% (${state.wordsCorrect}/${state.wordsAnswered})`],
+  1134→                    ['最终得分', `${state.score}`]
+  1135→                  ].map(([l, v], i) => (
+  1136→                    <div key={i} className="flex justify-between rounded-lg px-3 py-1.5" style={{ background: 'rgba(255,255,255,0.5)' }}>
+  1137→                      <span style={{ color: '#6D4C41' }}>{l}</span>
+  1138→                      <span className="font-bold" style={{ color: i === 3 ? '#E65100' : '#4E342E' }}>{v}</span>
+  1139→                    </div>
+  1140→                  ))}
+  1141→                </div>
+  1142→                <button onClick={initGame} className="px-10 py-3 font-bold text-lg rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95"
+  1143→                  style={{ background: 'linear-gradient(180deg, #EF5350, #E53935)', color: '#fff', boxShadow: '0 4px 15px rgba(229,57,53,0.3)' }}>
+  1144→                  再来一局
+  1145→                </button>
+  1146→              </div>
+  1147→            </div>
+  1148→          )}
+  1149→
+  1150→          {/* Victory */}
+  1151→          {phase === 'victory' && (
+  1152→            <div className="absolute inset-0 flex items-center justify-center z-30" style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}>
+  1153→              <div className="rounded-3xl p-8 text-center max-w-sm mx-4 shadow-2xl"
+  1154→                style={{ background: 'linear-gradient(180deg, #FFF8E1, #FFECB3)', border: '2px solid rgba(255,183,77,0.5)' }}>
+  1155→                <div className="text-6xl mb-3">🏆</div>
+  1156→                <h2 className="text-3xl font-extrabold mb-1" style={{ color: '#E65100' }}>胜利!</h2>
+  1157→                <p className="text-sm mb-4" style={{ color: '#558B2F' }}>成功抵御了所有僵尸!</p>
+  1158→                <div className="space-y-2 text-sm mb-5">
+  1159→                  {[['消灭僵尸', `${state.totalKills}`],
+  1160→                    ['答题正确率', `${state.wordsAnswered > 0 ? Math.round(state.wordsCorrect / state.wordsAnswered * 100) : 0}% (${state.wordsCorrect}/${state.wordsAnswered})`],
+  1161→                    ['最终得分', `${state.score}`]
+  1162→                  ].map(([l, v], i) => (
+  1163→                    <div key={i} className="flex justify-between rounded-lg px-3 py-1.5" style={{ background: 'rgba(255,255,255,0.5)' }}>
+  1164→                      <span style={{ color: '#6D4C41' }}>{l}</span>
+  1165→                      <span className="font-bold" style={{ color: i === 2 ? '#E65100' : '#4E342E' }}>{v}</span>
+  1166→                    </div>
+  1167→                  ))}
+  1168→                </div>
+  1169→                <button onClick={initGame} className="px-10 py-3 font-bold text-lg rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95"
+  1170→                  style={{ background: 'linear-gradient(180deg, #FFB74D, #FF9800)', color: '#4E342E', boxShadow: '0 4px 15px rgba(255,152,0,0.3)' }}>
+  1171→                  再玩一次
+  1172→                </button>
+  1173→              </div>
+  1174→            </div>
+  1175→          )}
+  1176→        </>
+  1177→      )}
+  1178→    </div>
+  1179→  );
+  1180→}
+  1181→
