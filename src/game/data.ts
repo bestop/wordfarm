@@ -1,4 +1,6 @@
-// ============================================// 植物大战僵尸 · 背单词游戏 - 数据定义// ============================================
+// ============================================
+// 植物大战僵尸 · 背单词游戏 - 数据定义
+// ============================================
 
 // ---- 单词库 ----
 export interface Word {
@@ -101,8 +103,6 @@ export interface PlantDef {
   description: string;
   attack?: number;
   attackSpeed?: number;
-  sunProduction?: number;
-  sunInterval?: number;
   slowEffect?: number;
   doubleShot?: boolean;
   explosive?: boolean;
@@ -111,17 +111,6 @@ export interface PlantDef {
 }
 
 export const PLANT_DEFS: Record<string, PlantDef> = {
-  sunflower: {
-    id: 'sunflower',
-    name: '向日葵',
-    cost: 50,
-    hp: 100,
-    emoji: '🌻',
-    color: '#FFD700',
-    description: '每8秒产生25阳光',
-    sunProduction: 25,
-    sunInterval: 8000,
-  },
   peashooter: {
     id: 'peashooter',
     name: '豌豆射手',
@@ -181,7 +170,7 @@ export const PLANT_DEFS: Record<string, PlantDef> = {
 };
 
 export type PlantType = keyof typeof PLANT_DEFS;
-export const PLANT_ORDER: PlantType[] = ['sunflower', 'peashooter', 'wallnut', 'snowpea', 'repeater', 'cherrybomb'];
+export const PLANT_ORDER: PlantType[] = ['peashooter', 'wallnut', 'snowpea', 'repeater', 'cherrybomb'];
 
 // ---- 僵尸定义 ----
 export interface ZombieDef {
@@ -285,10 +274,8 @@ export const WAVE_CONFIGS: WaveConfig[] = [
 export const GRID_COLS = 9;
 export const GRID_ROWS = 5;
 export const STARTING_SUN = 200;
-export const QUIZ_SUN_REWARD: Record<number, number> = { 1: 25, 2: 50, 3: 75 };
-export const QUIZ_TIME_LIMIT = 10000; // 10秒答题时间
-export const QUIZ_COOLDOWN = 2000; // 答题后冷却时间
-export const NATURAL_SUN_INTERVAL = 10000; // 天然阳光掉落间隔
-export const NATURAL_SUN_VALUE = 30;
-export const ZOMBIE_SPEED_BOOST = 1.5; // 答错题僵尸加速倍率
-export const ZOMBIE_SPEED_BOOST_DURATION = 5000; // 加速持续时间
+export const QUIZ_SUN_REWARD: Record<number, number> = { 1: 35, 2: 60, 3: 100 };
+export const QUIZ_TIME_LIMIT = 10000;
+export const QUIZ_COOLDOWN = 2000;
+export const ZOMBIE_SPEED_BOOST = 1.5;
+export const ZOMBIE_SPEED_BOOST_DURATION = 5000;
