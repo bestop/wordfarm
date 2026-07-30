@@ -140,14 +140,22 @@ export default function PvZGame() {
 
   // ---- Generate quiz ----
   const generateQuiz = useCallback((state: GameState) => {
-    const available = WORD_BANK.map((_, i) => i).filter(i => !state.usedWordIndices.has(i));
+    // First 3 questions are always easy difficulty
+    const difficultyFilter = state.wordsAnswered < 3 ? 1 : 0;
+    const available = WORD_BANK.map((_, i) => i).filter(
+      i => !state.usedWordIndices.has(i) && (!difficultyFilter || WORD_BANK[i].difficulty === 1)
+    );
     if (available.length < 4) state.usedWordIndices.clear();
-    const pool = available.length >= 4 ? available : WORD_BANK.map((_, i) => i);
+    const pool = available.length >= 4
+      ? available
+      : WORD_BANK.map((_, i) => i).filter(i => !difficultyFilter || WORD_BANK[i].difficulty === 1);
     const shuffled = shuffle(pool);
     const correctIdx = shuffled[0];
     const correctWord = WORD_BANK[correctIdx];
     state.usedWordIndices.add(correctIdx);
-    const wrongPool = WORD_BANK.map((_, i) => i).filter(i => i !== correctIdx);
+    const wrongPool = WORD_BANK.map((_, i) => i).filter(
+      i => i !== correctIdx && (!difficultyFilter || WORD_BANK[i].difficulty === 1)
+    );
     const wrongShuffled = shuffle(wrongPool).slice(0, 3);
     const options = shuffle([correctWord.zh, ...wrongShuffled.map(i => WORD_BANK[i].zh)]);
     state.currentQuiz = {
@@ -413,7 +421,7 @@ export default function PvZGame() {
             damage: def.attack, slow: !!def.slowEffect, active: true,
           });
           if (def.doubleShot) {
- setTimeout(() => {
+            setTimeout(() => {
               if (gs.current?.phase === 'playing') {
                 gs.current.projectiles.push({
                   id: uid(), row: plant.row, x: px, speed: 250,

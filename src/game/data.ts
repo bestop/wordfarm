@@ -197,16 +197,16 @@ export interface ZombieDef {
 
 export const ZOMBIE_DEFS: Record<string, ZombieDef> = {
   normal: {
-    id: 'normal', name: '普通僵尸', hp: 200, speed: 18, damage: 100, attackSpeed: 1000, color: '#6B8E23', emoji: '🧟',
+    id: 'normal', name: '普通僵尸', hp: 200, speed: 14, damage: 80, attackSpeed: 1000, color: '#6B8E23', emoji: '🧟',
   },
   cone: {
-    id: 'cone', name: '路障僵尸', hp: 370, speed: 18, damage: 100, attackSpeed: 1000, color: '#FF8C00', emoji: '🧟',
+    id: 'cone', name: '路障僵尸', hp: 370, speed: 14, damage: 80, attackSpeed: 1000, color: '#FF8C00', emoji: '🧟',
   },
   bucket: {
-    id: 'bucket', name: '铁桶僵尸', hp: 650, speed: 18, damage: 100, attackSpeed: 1000, color: '#708090', emoji: '🧟',
+    id: 'bucket', name: '铁桶僵尸', hp: 650, speed: 14, damage: 80, attackSpeed: 1000, color: '#708090', emoji: '🧟',
   },
   flag: {
-    id: 'flag', name: '旗帜僵尸', hp: 200, speed: 30, damage: 100, attackSpeed: 1000, color: '#DC143C', emoji: '🚩',
+    id: 'flag', name: '旗帜僵尸', hp: 200, speed: 24, damage: 80, attackSpeed: 1000, color: '#DC143C', emoji: '🚩',
   },
 };
 
@@ -284,11 +284,11 @@ export const WAVE_CONFIGS: WaveConfig[] = [
 // ---- 游戏常量 ----
 export const GRID_COLS = 9;
 export const GRID_ROWS = 5;
-export const STARTING_SUN = 150;
+export const STARTING_SUN = 200;
 export const QUIZ_SUN_REWARD: Record<number, number> = { 1: 25, 2: 50, 3: 75 };
 export const QUIZ_TIME_LIMIT = 10000; // 10秒答题时间
 export const QUIZ_COOLDOWN = 2000; // 答题后冷却时间
-export const NATURAL_SUN_INTERVAL = 12000; // 天然阳光掉落间隔
-export const NATURAL_SUN_VALUE = 25;
+export const NATURAL_SUN_INTERVAL = 10000; // 天然阳光掉落间隔
+export const NATURAL_SUN_VALUE = 30;
 export const ZOMBIE_SPEED_BOOST = 1.5; // 答错题僵尸加速倍率
 export const ZOMBIE_SPEED_BOOST_DURATION = 5000; // 加速持续时间

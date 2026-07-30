@@ -1,0 +1,842 @@
+   213→    }
+   214→    const x = clientX - rect.left;
+   215→    const y = clientY - rect.top;
+   216→    const { cellW, cellH, ox, oy } = dims.current;
+   217→    const col = Math.floor((x - ox) / cellW);
+   218→    const row = Math.floor((y - oy) / cellH);
+   219→    if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return;
+   220→    if (state.plants.some(p => p.row === row && p.col === col)) return;
+   221→    const def = PLANT_DEFS[state.selectedPlant];
+   222→    if (state.sun < def.cost) {
+   223→      state.floatingTexts.push({
+   224→        id: uid(), x, y, text: '阳光不足!', color: '#FF4444', timer: 1000, maxTimer: 1000,
+   225→      });
+   226→      return;
+   227→    }
+   228→    state.sun -= def.cost;
+   229→    const plant: Plant = {
+   230→      id: uid(), type: state.selectedPlant, row, col,
+   231→      hp: def.hp, maxHp: def.hp,
+   232→      lastAttack: Date.now(), lastSun: Date.now(), animPhase: 0,
+   233→    };
+   234→    state.plants.push(plant);
+   235→
+   236→    // Cherry bomb: delayed explosion
+   237→    if (def.explosive) {
+   238→      const capturedState = state;
+   239→      const capturedPlant = plant;
+   240→      const capturedCol = col;
+   241→      const capturedRow = row;
+   242→      setTimeout(() => {
+   243→        if (capturedState.phase !== 'playing') return;
+   244→        const { ox: oX, oy: oY, cellW: cW, cellH: cH } = dims.current;
+   245→        const cx = oX + capturedCol * cW + cW / 2;
+   246→        const cy = oY + capturedRow * cH + cH / 2;
+   247→        capturedState.explosions.push({
+   248→          id: uid(), x: cx, y: cy, radius: 0,
+   249→          maxRadius: cW * 2, timer: 0, maxTimer: 600,
+   250→        });
+   251→        capturedState.zombies.forEach(z => {
+   252→          if (!z.dead && Math.abs(z.row - capturedRow) <= 1) {
+   253→            const zy = oY + z.row * cH + cH / 2;
+   254→            const dist = Math.sqrt((z.x - cx) ** 2 + (zy - cy) ** 2);
+   255→            if (dist < cW * 2.5) {
+   256→              z.hp -= 1800;
+   257→              if (z.hp <= 0) {
+   258→                z.dead = true; z.deathTimer = 500;
+   259→                capturedState.totalKills++; capturedState.score += 50;
+   260→              }
+   261→            }
+   262→          }
+   263→        });
+   264→        capturedState.plants = capturedState.plants.filter(p => p.id !== capturedPlant.id);
+   265→        forceUpdate();
+   266→      }, 500);
+   267→    }
+   268→    forceUpdate();
+   269→  }, [forceUpdate]);
+   270→
+   271→  // ---- Sun click ----
+   272→  const handleSunClick = useCallback((sunId: string, e: React.MouseEvent) => {
+   273→    e.stopPropagation();
+   274→    const state = gs.current;
+   275→    if (!state) return;
+   276→    const sun = state.suns.find(s => s.id === sunId);
+   277→    if (!sun || sun.collected) return;
+   278→    sun.collected = true;
+   279→    state.sun += sun.value;
+   280→    forceUpdate();
+   281→  }, [forceUpdate]);
+   282→
+   283→  // ---- Game loop ----
+   284→  const gameLoop = useCallback(() => {
+   285→    const state = gs.current;
+   286→    const canvas = canvasRef.current;
+   287→    if (!state || !canvas) return;
+   288→    if (state.phase !== 'playing') {
+   289→      // Still render one last frame
+   290→      return;
+   291→    }
+   292→    const ctx = canvas.getContext('2d');
+   293→    if (!ctx) return;
+   294→
+   295→    const now = Date.now();
+   296→    const dt = Math.min(now - state.lastTime, 50);
+   297→    state.lastTime = now;
+   298→    const { w, h, cellW, cellH, ox, oy } = dims.current;
+   299→    const isBoosted = now < state.zombieSpeedBoostEnd;
+   300→    const speedMult = isBoosted ? ZOMBIE_SPEED_BOOST : 1;
+   301→
+   302→    // -- Spawn wave zombies --
+   303→    const waveConfig = WAVE_CONFIGS[state.wave];
+   304→    if (waveConfig) {
+   305→      const waveElapsed = now - state.waveStartTime;
+   306→      for (let i = state.waveZombiesSpawned; i < waveConfig.zombies.length; i++) {
+   307→        if (waveElapsed >= waveConfig.zombies[i].delay) {
+   308→          state.waveZombiesSpawned = i + 1;
+   309→          const zc = waveConfig.zombies[i];
+   310→          const def = ZOMBIE_DEFS[zc.type];
+   311→          const row = zc.row ?? Math.floor(Math.random() * GRID_ROWS);
+   312→          state.zombies.push({
+   313→            id: uid(), type: zc.type, row,
+   314→            x: ox + (GRID_COLS + 0.8) * cellW,
+   315→            hp: def.hp, maxHp: def.hp, speed: def.speed, baseSpeed: def.speed,
+   316→            eating: false, slowed: false, slowTimer: 0,
+   317→            lastHit: now, animPhase: Math.random() * Math.PI * 2,
+   318→            dead: false, deathTimer: 0,
+   319→          });
+   320→        } else {
+   321→          break;
+   322→        }
+   323→      }
+   324→    }
+   325→
+   326→    // -- Check wave complete --
+   327→    const allSpawned = waveConfig ? state.waveZombiesSpawned >= waveConfig.zombies.length : true;
+   328→    const allDead = state.zombies.length === 0 || state.zombies.every(z => z.dead);
+   329→    if (allSpawned && allDead && state.zombies.length > 0) {
+   330→      if (state.wave < WAVE_CONFIGS.length - 1) {
+   331→        state.wave++;
+   332→        state.waveStartTime = now;
+   333→        state.waveZombiesSpawned = 0;
+   334→        state.floatingTexts.push({
+   335→          id: uid(), x: w / 2, y: h / 2,
+   336→          text: `第 ${state.wave + 1} 波!`, color: '#FF6600', timer: 2000, maxTimer: 2000,
+   337→        });
+   338→        forceUpdate();
+   339→      } else {
+   340→        state.phase = 'victory';
+   341→        setPhase('victory');
+   342→        return;
+   343→      }
+   344→    }
+   345→
+   346→    // -- Update zombies --
+   347→    let gameOver = false;
+   348→    for (const zombie of state.zombies) {
+   349→      if (zombie.dead) {
+   350→        zombie.deathTimer -= dt;
+   351→        continue;
+   352→      }
+   353→      if (zombie.slowed) {
+   354→        zombie.slowTimer -= dt;
+   355→        if (zombie.slowTimer <= 0) zombie.slowed = false;
+   356→      }
+   357→      zombie.animPhase += dt * 0.005 * (zombie.slowed ? 0.5 : 1);
+   358→      const currentSpeed = zombie.baseSpeed * speedMult * (zombie.slowed ? 0.5 : 1);
+   359→      const eatingPlant = state.plants.find(p => {
+   360→        if (p.row !== zombie.row) return false;
+   361→        const plantX = ox + p.col * cellW + cellW / 2;
+   362→        return Math.abs(zombie.x - plantX) < cellW * 0.35;
+   363→      });
+   364→      if (eatingPlant) {
+   365→        zombie.eating = true;
+   366→        if (now - zombie.lastHit > 1000) {
+   367→          zombie.lastHit = now;
+   368→          eatingPlant.hp -= 100;
+   369→          if (eatingPlant.hp <= 0) {
+   370→            state.plants = state.plants.filter(p => p.id !== eatingPlant.id);
+   371→          }
+   372→        }
+   373→      } else {
+   374→        zombie.eating = false;
+   375→        zombie.x -= currentSpeed * (dt / 1000);
+   376→      }
+   377→      if (zombie.x < ox - cellW * 0.5) {
+   378→        gameOver = true;
+   379→      }
+   380→    }
+   381→    state.zombies = state.zombies.filter(z => !(z.dead && z.deathTimer <= 0));
+   382→
+   383→    if (gameOver) {
+   384→      state.phase = 'gameover';
+   385→      setPhase('gameover');
+   386→      return;
+   387→    }
+   388→
+   389→    // -- Update plants --
+   390→    for (const plant of state.plants) {
+   391→      plant.animPhase += dt * 0.003;
+   392→      const def = PLANT_DEFS[plant.type];
+   393→      if (def.sunProduction && def.sunInterval && now - plant.lastSun >= def.sunInterval) {
+   394→        plant.lastSun = now;
+   395→        const px = ox + plant.col * cellW + cellW / 2;
+   396→        const py = oy + plant.row * cellH + cellH / 2;
+   397→        state.suns.push({
+   398→          id: uid(), x: px, y: py - 10,
+   399→          targetY: py + cellH * 0.3 + Math.random() * 20,
+   400→          value: def.sunProduction, timer: 8000,
+   401→          collected: false, opacity: 1, scale: 0,
+   402→        });
+   403→      }
+   404→      if (def.attack && def.attackSpeed) {
+   405→        const hasZombie = state.zombies.some(
+   406→          z => !z.dead && z.row === plant.row && z.x > ox + plant.col * cellW
+   407→        );
+   408→        if (hasZombie && now - plant.lastAttack >= def.attackSpeed) {
+   409→          plant.lastAttack = now;
+   410→          const px = ox + plant.col * cellW + cellW * 0.7;
+   411→          state.projectiles.push({
+   412→            id: uid(), row: plant.row, x: px, speed: 250,
+   413→            damage: def.attack, slow: !!def.slowEffect, active: true,
+   414→          });
+   415→          if (def.doubleShot) {
+   416→ setTimeout(() => {
+   417→              if (gs.current?.phase === 'playing') {
+   418→                gs.current.projectiles.push({
+   419→                  id: uid(), row: plant.row, x: px, speed: 250,
+   420→                  damage: def.attack, slow: false, active: true,
+   421→                });
+   422→              }
+   423→            }, 150);
+   424→          }
+   425→        }
+   426→      }
+   427→    }
+   428→
+   429→    // -- Update projectiles --
+   430→    for (const proj of state.projectiles) {
+   431→      if (!proj.active) continue;
+   432→      proj.x += proj.speed * (dt / 1000);
+   433→      const hitZombie = state.zombies.find(
+   434→        z => !z.dead && z.row === proj.row && Math.abs(z.x - proj.x) < cellW * 0.25
+   435→      );
+   436→      if (hitZombie) {
+   437→        proj.active = false;
+   438→        hitZombie.hp -= proj.damage;
+   439→        if (proj.slow) { hitZombie.slowed = true; hitZombie.slowTimer = 3000; }
+   440→        if (hitZombie.hp <= 0) {
+   441→          hitZombie.dead = true; hitZombie.deathTimer = 500;
+   442→          state.totalKills++; state.score += 50;
+   443→        }
+   444→        state.floatingTexts.push({
+   445→          id: uid(), x: proj.x, y: oy + proj.row * cellH + cellH * 0.25,
+   446→          text: `-${proj.damage}`, color: proj.slow ? '#00E5FF' : '#FF6600',
+   447→          timer: 600, maxTimer: 600,
+   448→        });
+   449→      }
+   450→      if (proj.x > ox + (GRID_COLS + 1) * cellW) proj.active = false;
+   451→    }
+   452→    state.projectiles = state.projectiles.filter(p => p.active);
+   453→
+   454→    // -- Update suns --
+   455→    for (const sun of state.suns) {
+   456→      if (sun.collected) {
+   457→        sun.opacity -= dt / 300;
+   458→        sun.scale += dt / 200;
+   459→        continue;
+   460→      }
+   461→      if (sun.y < sun.targetY) sun.y = Math.min(sun.y + dt * 0.05, sun.targetY);
+   462→      if (sun.scale < 1) sun.scale = Math.min(1, sun.scale + dt / 300);
+   463→      sun.timer -= dt;
+   464→    }
+   465→    state.suns = state.suns.filter(s => s.timer > 0 && s.opacity > 0);
+   466→
+   467→    // -- Natural sun drops --
+   468→    if (now >= state.nextNaturalSun) {
+   469→      state.nextNaturalSun = now + NATURAL_SUN_INTERVAL;
+   470→      const sx = ox + Math.random() * (GRID_COLS * cellW);
+   471→      state.suns.push({
+   472→        id: uid(), x: sx, y: -20,
+   473→        targetY: oy + Math.random() * (GRID_ROWS * cellH),
+   474→        value: NATURAL_SUN_VALUE, timer: 10000,
+   475→        collected: false, opacity: 1, scale: 0,
+   476→      });
+   477→    }
+   478→
+   479→    // -- Update effects --
+   480→    for (const exp of state.explosions) {
+   481→      exp.timer += dt;
+   482→      exp.radius = (exp.timer / exp.maxTimer) * exp.maxRadius;
+   483→    }
+   484→    state.explosions = state.explosions.filter(e => e.timer < e.maxTimer);
+   485→
+   486→    for (const ft of state.floatingTexts) {
+   487→      ft.timer -= dt;
+   488→      ft.y -= dt * 0.04;
+   489→    }
+   490→    state.floatingTexts = state.floatingTexts.filter(ft => ft.timer > 0);
+   491→
+   492→    // -- Update quiz --
+   493→    if (state.currentQuiz) {
+   494→      if (state.currentQuiz.answered) {
+   495→        state.quizCooldown -= dt;
+   496→        if (state.quizCooldown <= 0) generateQuiz(state);
+   497→      } else {
+   498→        state.currentQuiz.timer -= dt;
+   499→        if (state.currentQuiz.timer <= 0) {
+   500→          state.currentQuiz.answered = true;
+   501→          state.currentQuiz.wasCorrect = false;
+   502→          state.wordsAnswered++;
+   503→          state.comboCount = 0;
+   504→          state.zombieSpeedBoostEnd = now + ZOMBIE_SPEED_BOOST_DURATION;
+   505→          state.shakeTimer = 300;
+   506→          state.quizCooldown = QUIZ_COOLDOWN;
+   507→          state.floatingTexts.push({
+   508→            id: uid(), x: w / 2, y: h - 80,
+   509→            text: '⏰ 超时! 僵尸加速!', color: '#FF4444', timer: 1500, maxTimer: 1500,
+   510→          });
+   511→          forceUpdate();
+   512→        }
+   513→      }
+   514→    }
+   515→
+   516→    if (state.shakeTimer > 0) state.shakeTimer -= dt;
+   517→
+   518→    // ======== RENDER ========
+   519→    const dpr = window.devicePixelRatio || 1;
+   520→    ctx.save();
+   521→    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+   522→
+   523→    if (state.shakeTimer > 0) {
+   524→      ctx.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
+   525→    }
+   526→
+   527→    // Background
+   528→    const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+   529→    skyGrad.addColorStop(0, '#87CEEB');
+   530→    skyGrad.addColorStop(0.2, '#B0E0E6');
+   531→    skyGrad.addColorStop(0.35, '#90EE90');
+   532→    skyGrad.addColorStop(1, '#228B22');
+   533→    ctx.fillStyle = skyGrad;
+   534→    ctx.fillRect(0, 0, w, h);
+   535→
+   536→    // Grid
+   537→    for (let r = 0; r < GRID_ROWS; r++) {
+   538→      for (let c = 0; c < GRID_COLS; c++) {
+   539→        ctx.fillStyle = (r + c) % 2 === 0
+   540→          ? 'rgba(34, 139, 34, 0.35)' : 'rgba(50, 205, 50, 0.3)';
+   541→        ctx.fillRect(ox + c * cellW, oy + r * cellH, cellW, cellH);
+   542→        ctx.strokeStyle = 'rgba(0, 80, 0, 0.12)';
+   543→        ctx.lineWidth = 1;
+   544→        ctx.strokeRect(ox + c * cellW, oy + r * cellH, cellW, cellH);
+   545→      }
+   546→    }
+   547→
+   548→    // House edge
+   549→    ctx.fillStyle = '#8B4513';
+   550→    ctx.fillRect(0, oy, ox - 2, GRID_ROWS * cellH);
+   551→    ctx.fillStyle = '#A0522D';
+   552→    ctx.fillRect(2, oy + 5, ox - 6, GRID_ROWS * cellH - 10);
+   553→    const doorW = ox * 0.5;
+   554→    const doorH = cellH * 0.8;
+   555→    ctx.fillStyle = '#654321';
+   556→    ctx.fillRect(
+   557→      (ox - doorW) / 2,
+   558→      oy + (GRID_ROWS * cellH - doorH) / 2,
+   559→      doorW, doorH
+   560→    );
+   561→
+   562→    // Grid hover highlight when plant selected
+   563→    if (state.selectedPlant) {
+   564→      ctx.fillStyle = 'rgba(255, 255, 0, 0.1)';
+   565→      for (let r = 0; r < GRID_ROWS; r++) {
+   566→        for (let c = 0; c < GRID_COLS; c++) {
+   567→          if (!state.plants.some(p => p.row === r && p.col === c)) {
+   568→            ctx.fillRect(ox + c * cellW, oy + r * cellH, cellW, cellH);
+   569→          }
+   570→        }
+   571→      }
+   572→    }
+   573→
+   574→    // Draw plants
+   575→    ctx.textAlign = 'center';
+   576→    ctx.textBaseline = 'middle';
+   577→    for (const plant of state.plants) {
+   578→      const def = PLANT_DEFS[plant.type];
+   579→      const px = ox + plant.col * cellW + cellW / 2;
+   580→      const py = oy + plant.row * cellH + cellH / 2;
+   581→      const bob = Math.sin(plant.animPhase) * 3;
+   582→      // Shadow
+   583→      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+   584→      ctx.beginPath();
+   585→      ctx.ellipse(px, oy + plant.row * cellH + cellH - 5, cellW * 0.22, 5, 0, 0, Math.PI * 2);
+   586→      ctx.fill();
+   587→      // Emoji
+   588→      ctx.font = `${cellW * 0.55}px serif`;
+   589→      ctx.fillText(def.emoji, px, py + bob);
+   590→      // HP bar
+   591→      if (plant.hp < plant.maxHp) {
+   592→        const barW = cellW * 0.6;
+   593→        const barX = px - barW / 2;
+   594→        const barY = oy + plant.row * cellH + 3;
+   595→        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+   596→        ctx.fillRect(barX, barY, barW, 4);
+   597→        const ratio = Math.max(0, plant.hp / plant.maxHp);
+   598→        ctx.fillStyle = ratio > 0.5 ? '#4CAF50' : ratio > 0.25 ? '#FF9800' : '#F44336';
+   599→        ctx.fillRect(barX, barY, barW * ratio, 4);
+   600→      }
+   601→    }
+   602→
+   603→    // Draw projectiles
+   604→    for (const proj of state.projectiles) {
+   605→      const py = oy + proj.row * cellH + cellH / 2;
+   606→      ctx.shadowColor = proj.slow ? '#00BCD4' : '#4CAF50';
+   607→      ctx.shadowBlur = proj.slow ? 8 : 5;
+   608→      ctx.fillStyle = proj.slow ? '#00E5FF' : '#76FF03';
+   609→      ctx.beginPath();
+   610→      ctx.arc(proj.x, py, Math.max(3, cellW * 0.07), 0, Math.PI * 2);
+   611→      ctx.fill();
+   612→      ctx.shadowBlur = 0;
+   613→    }
+   614→
+   615→    // Draw zombies
+   616→    for (const zombie of state.zombies) {
+   617→      const zy = oy + zombie.row * cellH + cellH / 2;
+   618→      const bob = zombie.eating ? 0 : Math.sin(zombie.animPhase) * 4;
+   619→      const alpha = zombie.dead ? Math.max(0, zombie.deathTimer / 500) : 1;
+   620→      ctx.globalAlpha = alpha;
+   621→
+   622→      // Shadow
+   623→      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+   624→      ctx.beginPath();
+   625→      ctx.ellipse(zombie.x, oy + zombie.row * cellH + cellH - 5, cellW * 0.18, 4, 0, 0, Math.PI * 2);
+   626→      ctx.fill();
+   627→
+   628→      // Body
+   629→      const bColor = zombie.slowed ? '#4A90D9' : '#6B8E23';
+   630→      ctx.fillStyle = bColor;
+   631→      ctx.beginPath();
+   632→      ctx.ellipse(zombie.x, zy + bob + cellH * 0.08, cellW * 0.17, cellH * 0.22, 0, 0, Math.PI * 2);
+   633→      ctx.fill();
+   634→
+   635→      // Head
+   636→      ctx.fillStyle = zombie.slowed ? '#5BA3EC' : '#9ACD32';
+   637→      ctx.beginPath();
+   638→      ctx.arc(zombie.x, zy - cellH * 0.18 + bob, cellW * 0.15, 0, Math.PI * 2);
+   639→      ctx.fill();
+   640→
+   641→      // Eyes
+   642→      ctx.fillStyle = '#FF0000';
+   643→      ctx.beginPath();
+   644→      ctx.arc(zombie.x - cellW * 0.055, zy - cellH * 0.2 + bob, 2, 0, Math.PI * 2);
+   645→      ctx.fill();
+   646→      ctx.beginPath();
+   647→      ctx.arc(zombie.x + cellW * 0.055, zy - cellH * 0.2 + bob, 2, 0, Math.PI * 2);
+   648→      ctx.fill();
+   649→
+   650→      // Mouth
+   651→      ctx.strokeStyle = '#333';
+   652→      ctx.lineWidth = 1.5;
+   653→      ctx.beginPath();
+   654→      ctx.arc(zombie.x, zy - cellH * 0.1 + bob, cellW * 0.05, 0, Math.PI);
+   655→      ctx.stroke();
+   656→
+   657→      // Arms
+   658→      ctx.strokeStyle = bColor;
+   659→      ctx.lineWidth = 3;
+   660→      const armSwing = Math.sin(zombie.animPhase * 1.5) * 8;
+   661→      ctx.beginPath();
+   662→      ctx.moveTo(zombie.x - cellW * 0.14, zy + bob);
+   663→      ctx.lineTo(zombie.x - cellW * 0.28, zy + cellH * 0.15 + bob + armSwing);
+   664→      ctx.stroke();
+   665→      ctx.beginPath();
+   666→      ctx.moveTo(zombie.x + cellW * 0.14, zy + bob);
+   667→      ctx.lineTo(zombie.x + cellW * 0.32, zy - cellH * 0.05 + bob - armSwing);
+   668→      ctx.stroke();
+   669→
+   670→      // Accessories
+   671→      if (zombie.type === 'cone') {
+   672→        ctx.fillStyle = '#FF8C00';
+   673→        ctx.beginPath();
+   674→        ctx.moveTo(zombie.x, zy - cellH * 0.45 + bob);
+   675→        ctx.lineTo(zombie.x - cellW * 0.11, zy - cellH * 0.22 + bob);
+   676→        ctx.lineTo(zombie.x + cellW * 0.11, zy - cellH * 0.22 + bob);
+   677→        ctx.closePath();
+   678→        ctx.fill();
+   679→        ctx.strokeStyle = '#CC7000'; ctx.lineWidth = 1; ctx.stroke();
+   680→      } else if (zombie.type === 'bucket') {
+   681→        const bw = cellW * 0.2; const bh = cellH * 0.17;
+   682→        ctx.fillStyle = '#708090';
+   683→        ctx.fillRect(zombie.x - bw / 2, zy - cellH * 0.37 + bob, bw, bh);
+   684→        ctx.strokeStyle = '#556677'; ctx.lineWidth = 1;
+   685→        ctx.strokeRect(zombie.x - bw / 2, zy - cellH * 0.37 + bob, bw, bh);
+   686→        ctx.beginPath();
+   687→        ctx.arc(zombie.x, zy - cellH * 0.37 + bob, bw * 0.4, Math.PI, 0);
+   688→        ctx.stroke();
+   689→      } else if (zombie.type === 'flag') {
+   690→        ctx.strokeStyle = '#8B4513'; ctx.lineWidth = 2;
+   691→        ctx.beginPath();
+   692→        ctx.moveTo(zombie.x + cellW * 0.11, zy - cellH * 0.15 + bob);
+   693→        ctx.lineTo(zombie.x + cellW * 0.11, zy - cellH * 0.5 + bob);
+   694→        ctx.stroke();
+   695→        ctx.fillStyle = '#DC143C';
+   696→        ctx.beginPath();
+   697→        ctx.moveTo(zombie.x + cellW * 0.11, zy - cellH * 0.5 + bob);
+   698→        ctx.lineTo(zombie.x + cellW * 0.28, zy - cellH * 0.42 + bob);
+   699→        ctx.lineTo(zombie.x + cellW * 0.11, zy - cellH * 0.34 + bob);
+   700→        ctx.closePath();
+   701→        ctx.fill();
+   702→      }
+   703→
+   704→      // Slowed aura
+   705→      if (zombie.slowed && !zombie.dead) {
+   706→        ctx.fillStyle = 'rgba(0, 188, 212, 0.25)';
+   707→        ctx.beginPath();
+   708→        ctx.arc(zombie.x, zy + bob, cellW * 0.22, 0, Math.PI * 2);
+   709→        ctx.fill();
+   710→      }
+   711→
+   712→      // HP bar
+   713→      if (!zombie.dead && zombie.hp < zombie.maxHp) {
+   714→        const barW = cellW * 0.45;
+   715→        const barX = zombie.x - barW / 2;
+   716→        const barY = oy + zombie.row * cellH + 3;
+   717→        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+   718→        ctx.fillRect(barX, barY, barW, 4);
+   719→        const ratio = Math.max(0, zombie.hp / zombie.maxHp);
+   720→        ctx.fillStyle = ratio > 0.5 ? '#4CAF50' : ratio > 0.25 ? '#FF9800' : '#F44336';
+   721→        ctx.fillRect(barX, barY, barW * ratio, 4);
+   722→      }
+   723→      ctx.globalAlpha = 1;
+   724→    }
+   725→
+   726→    // Explosions
+   727→    for (const exp of state.explosions) {
+   728→      const progress = exp.timer / exp.maxTimer;
+   729→      const alpha = 1 - progress;
+   730→      ctx.fillStyle = `rgba(255, 100, 0, ${alpha * 0.6})`;
+   731→      ctx.beginPath();
+   732→      ctx.arc(exp.x, exp.y, exp.radius, 0, Math.PI * 2);
+   733→      ctx.fill();
+   734→      ctx.fillStyle = `rgba(255, 200, 0, ${alpha * 0.4})`;
+   735→      ctx.beginPath();
+   736→      ctx.arc(exp.x, exp.y, exp.radius * 0.6, 0, Math.PI * 2);
+   737→      ctx.fill();
+   738→    }
+   739→
+   740→    // Suns
+   741→    for (const sun of state.suns) {
+   742→      ctx.globalAlpha = sun.collected ? Math.max(0, sun.opacity) : Math.min(1, sun.opacity);
+   743→      const s = sun.collected ? sun.scale : Math.min(1, sun.scale);
+   744→      const size = Math.max(4, cellW * 0.18 * s);
+   745→      ctx.fillStyle = 'rgba(255, 255, 0, 0.2)';
+   746→      ctx.beginPath();
+   747→      ctx.arc(sun.x, sun.y, size * 1.8, 0, Math.PI * 2);
+   748→      ctx.fill();
+   749→      const sunGrad = ctx.createRadialGradient(sun.x, sun.y, 0, sun.x, sun.y, size);
+   750→      sunGrad.addColorStop(0, '#FFF176');
+   751→      sunGrad.addColorStop(0.6, '#FFD600');
+   752→      sunGrad.addColorStop(1, '#FF8F00');
+   753→      ctx.fillStyle = sunGrad;
+   754→      ctx.beginPath();
+   755→      ctx.arc(sun.x, sun.y, size, 0, Math.PI * 2);
+   756→      ctx.fill();
+   757→      if (!sun.collected && s > 0.7) {
+   758→        ctx.fillStyle = '#5D4037';
+   759→        ctx.font = `bold ${Math.max(8, size * 0.85)}px sans-serif`;
+   760→        ctx.textAlign = 'center';
+   761→        ctx.textBaseline = 'middle';
+   762→        ctx.fillText(sun.value.toString(), sun.x, sun.y);
+   763→      }
+   764→      ctx.globalAlpha = 1;
+   765→    }
+   766→
+   767→    // Floating texts
+   768→    ctx.textAlign = 'center';
+   769→    ctx.textBaseline = 'middle';
+   770→    for (const ft of state.floatingTexts) {
+   771→      const alpha = Math.min(1, ft.timer / (ft.maxTimer * 0.3));
+   772→      ctx.globalAlpha = alpha;
+   773→      ctx.fillStyle = ft.color;
+   774→      ctx.font = 'bold 15px sans-serif';
+   775→      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+   776→      ctx.shadowBlur = 3;
+   777→      ctx.fillText(ft.text, ft.x, ft.y);
+   778→      ctx.shadowBlur = 0;
+   779→      ctx.globalAlpha = 1;
+   780→    }
+   781→
+   782→    // Wave announcement
+   783→    if (state.waveZombiesSpawned <= 1 && waveConfig) {
+   784→      const waveElapsed = now - state.waveStartTime;
+   785→      if (waveElapsed < 2000) {
+   786→        const alpha = waveElapsed < 500
+   787→          ? waveElapsed / 500
+   788→          : waveElapsed > 1500 ? (2000 - waveElapsed) / 500 : 1;
+   789→        ctx.globalAlpha = alpha;
+   790→        ctx.fillStyle = '#FFFFFF';
+   791→        ctx.font = 'bold 26px sans-serif';
+   792→        ctx.textAlign = 'center';
+   793→        ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 4;
+   794→        ctx.fillText(`第 ${state.wave + 1} 波`, w / 2, h / 2);
+   795→        ctx.font = '15px sans-serif';
+   796→        ctx.fillText(`${waveConfig.zombies.length} 个僵尸来袭!`, w / 2, h / 2 + 28);
+   797→        ctx.shadowBlur = 0;
+   798→        ctx.globalAlpha = 1;
+   799→      }
+   800→    }
+   801→
+   802→    ctx.restore();
+   803→    rafRef.current = requestAnimationFrame(gameLoop);
+   804→  }, [generateQuiz, forceUpdate]);
+   805→
+   806→  // ---- Effects ----
+   807→  useEffect(() => {
+   808→    if (!containerRef.current) return;
+   809→    recalcDims();
+   810→    const observer = new ResizeObserver(() => recalcDims());
+   811→    observer.observe(containerRef.current);
+   812→    return () => observer.disconnect();
+   813→  }, [phase, recalcDims]);
+   814→
+   815→  useEffect(() => {
+   816→    if (phase === 'playing') {
+   817→      gs.current!.lastTime = Date.now();
+   818→      rafRef.current = requestAnimationFrame(gameLoop);
+   819→    }
+   820→    return () => cancelAnimationFrame(rafRef.current);
+   821→  }, [phase, gameLoop]);
+   822→
+   823→  const state = gs.current;
+   824→  const quiz = state?.currentQuiz;
+   825→  const diff = quiz?.word.difficulty ?? 1;
+   826→
+   827→  return (
+   828→    <div className="flex flex-col h-screen w-full overflow-hidden select-none" style={{ background: '#1a1a2e' }}>
+   829→      {/* ===== Start Screen ===== */}
+   830→
+   831→      {phase === 'menu' && (
+   832→        <div className="flex-1 flex flex-col items-center justify-center gap-5"
+   833→          style={{ background: 'linear-gradient(180deg, #1a472a 0%, #2d5a27 50%, #4a7c3f 100%)' }}>
+   834→          <div className="text-7xl animate-bounce">🧟</div>
+   835→          <h1 className="text-4xl md:text-5xl font-extrabold text-yellow-300"
+   836→            style={{ textShadow: '3px 3px 0 #5D4037, 0 0 20px rgba(255,215,0,0.3)' }}>
+   837→            植物大战僵尸
+   838→          </h1>
+   839→          <p className="text-xl text-green-200 font-semibold tracking-wide">· 单词大作战 ·</p>
+   840→          <div className="mt-3 text-sm text-green-300/80 text-center space-y-1.5">
+   841→            <p>🌻 答对单词获得阳光</p>
+   842→            <p>🌱 用阳光种植植物抵御僵尸</p>
+   843→            <p>🧟 不要让僵尸到达你的房子!</p>
+   844→          </div>
+   845→          <button onClick={initGame}
+   846→            className="mt-5 px-10 py-3 bg-yellow-400 hover:bg-yellow-300 text-green-900 font-bold text-xl rounded-full
+   847→              shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95">
+   848→            开始游戏
+   849→          </button>
+   850→        </div>
+   851→      )}
+   852→
+   853→      {/* ===== Game Screen ===== */}
+   854→
+   855→      {(phase === 'playing' || phase === 'gameover' || phase === 'victory') && state && (
+   856→        <>
+   857→          {/* Top bar */}
+   858→          <div className="flex items-center justify-between px-3 py-1.5 bg-gradient-to-r from-green-900 via-green-800 to-green-900 border-b-2 border-yellow-600/50 z-10 flex-shrink-0">
+   859→            <div className="flex items-center gap-1.5">
+   860→              <span className="text-xl">☀️</span>
+   861→              <span className="text-yellow-300 font-bold text-lg min-w-[40px]">{state.sun}</span>
+   862→            </div>
+   863→            <div className="flex items-center gap-3 text-xs md:text-sm">
+   864→              <span className="text-yellow-200">
+   865→                波次 <span className="font-bold text-base text-white">{state.wave + 1}</span>/{WAVE_CONFIGS.length}
+   866→              </span>
+   867→              <span className="text-green-200 hidden sm:inline">
+   868→                得分: <span className="font-bold text-white">{state.score}</span>
+   869→              </span>
+   870→              <span className="text-blue-200">
+   871→                {state.wordsCorrect}/{state.wordsAnswered}
+   872→              </span>
+   873→              {state.comboCount >= 3 && (
+   874→                <span className="text-orange-300 font-bold animate-pulse">
+   875→                  🔥x{state.comboCount}
+   876→                </span>
+   877→              )}
+   878→            </div>
+   879→          </div>
+   880→
+   881→          {/* Plant card bar */}
+   882→          <div className="flex items-center gap-1 px-2 py-1 bg-green-950/80 border-b border-green-700/50 overflow-x-auto flex-shrink-0 z-10">
+   883→            <button
+   884→              onClick={() => { state.selectedPlant = null; forceUpdate(); }}
+   885→              className={`flex-shrink-0 px-2 py-1 rounded-lg text-xs font-bold transition-all ${
+   886→                !state.selectedPlant
+   887→                  ? 'bg-yellow-500 text-green-900 ring-2 ring-yellow-300'
+   888→                  : 'bg-green-800 text-green-300 hover:bg-green-700'
+   889→              }`}>
+   890→              ✋
+   891→            </button>
+   892→            {PLANT_ORDER.map(ptype => {
+   893→              const def = PLANT_DEFS[ptype];
+   894→              const canAfford = state.sun >= def.cost;
+   895→              const isSelected = state.selectedPlant === ptype;
+   896→              return (
+   897→                <button key={ptype}
+   898→                  onClick={() => {
+   899→                    state.selectedPlant = isSelected ? null : ptype;
+   900→                    forceUpdate();
+   901→                  }}
+   902→                  disabled={!canAfford}
+   903→                  className={`flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all ${
+   904→                    isSelected
+   905→                      ? 'bg-yellow-500 text-green-900 ring-2 ring-yellow-300 scale-105'
+   906→                      : canAfford
+   907→                        ? 'bg-green-800/80 text-green-200 hover:bg-green-700 hover:scale-105'
+   908→                        : 'bg-green-900/50 text-green-600/50 cursor-not-allowed'
+   909→                  }`}>
+   910→                  <span className="text-base leading-none">{def.emoji}</span>
+   911→                  <div className="text-left">
+   912→                    <div className="font-bold leading-tight text-[10px] md:text-xs">{def.name}</div>
+   913→                    <div className="text-yellow-400/80 leading-tight text-[10px]">☀️{def.cost}</div>
+   914→                  </div>
+   915→                </button>
+   916→              );
+   917→            })}
+   918→          </div>
+   919→
+   920→          {/* Canvas */}
+   921→          <div ref={containerRef} className="flex-1 relative min-h-0">
+   922→            <canvas
+   923→              ref={canvasRef}
+   924→              onClick={handleCanvasClick}
+   925→              onTouchStart={(e) => { e.preventDefault(); handleCanvasClick(e); }}
+   926→              className="w-full h-full"
+   927→            />
+   928→            {/* Sun click targets */}
+   929→            {state.suns.filter(s => !s.collected).map(sun => (
+   930→              <button
+   931→                key={sun.id}
+   932→                onMouseDown={(e) => handleSunClick(sun.id, e)}
+   933→                onTouchStart={(e) => { e.preventDefault(); handleSunClick(sun.id, e as any); }}
+   934→                className="absolute rounded-full cursor-pointer z-10"
+   935→                style={{
+   936→                  left: sun.x - 20, top: sun.y - 20,
+   937→                  width: 40, height: 40,
+   938→                  background: 'transparent', border: 'none', padding: 0,
+   939→                }}
+   940→              />
+   941→            ))}
+   942→            {/* Speed boost indicator */}
+   943→            {Date.now() < state.zombieSpeedBoostEnd && (
+   944→              <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-red-600/80 text-white px-3 py-0.5 rounded-full text-xs font-bold animate-pulse z-10">
+   945→                ⚡ 僵尸加速中!
+   946→              </div>
+   947→            )}
+   948→          </div>
+   949→
+   950→          {/* Quiz panel */}
+   951→          {phase === 'playing' && quiz && (
+   952→            <div className={`flex-shrink-0 px-2 md:px-4 py-2 border-t-2 transition-colors z-10 ${
+   953→              quiz.answered
+   954→                ? (quiz.wasCorrect ? 'bg-green-900/90 border-green-500' : 'bg-red-900/90 border-red-500')
+   955→                : 'bg-slate-900/95 border-slate-600'
+   956→            }`}>
+   957→              <div className="max-w-xl mx-auto">
+   958→                {quiz.answered ? (
+   959→                  <div className="flex items-center justify-center gap-2 py-0.5">
+   960→                    <span className="text-base">{quiz.wasCorrect ? '✅' : '❌'}</span>
+   961→                    <span className="text-white font-bold">{quiz.word.en} = {quiz.word.zh}</span>
+   962→                    <span className="text-slate-400 text-xs">
+   963→                      下一题 {Math.max(0, Math.ceil(state.quizCooldown / 1000))}s
+   964→                    </span>
+   965→                  </div>
+   966→                ) : (
+   967→                  <>
+   968→                    <div className="flex items-center justify-between mb-1">
+   969→                      <div className="flex items-center gap-2">
+   970→                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+   971→                          diff === 1 ? 'bg-green-700 text-green-200'
+   972→                            : diff === 2 ? 'bg-yellow-700 text-yellow-200'
+   973→                              : 'bg-red-700 text-red-200'
+   974→                        }`}>
+   975→                          {diff === 1 ? '简单' : diff === 2 ? '中等' : '困难'} +{QUIZ_SUN_REWARD[diff]}☀️
+   976→                        </span>
+   977→                        <span className="text-white font-bold text-base md:text-lg">{quiz.word.en}</span>
+   978→                      </div>
+   979→                      <span className={`text-xs ${quiz.timer < 3000 ? 'text-red-400 font-bold animate-pulse' : 'text-slate-400'}`}>
+   980→                        ⏱{Math.max(0, Math.ceil(quiz.timer / 1000))}s
+   981→                      </span>
+   982→                    </div>
+   983→                    <div className="w-full h-1.5 bg-slate-700 rounded-full mb-1.5 overflow-hidden">
+   984→                      <div className={`h-full rounded-full transition-all duration-150 ${
+   985→                        quiz.timer < 3000 ? 'bg-red-500' : 'bg-green-500'
+   986→                      }`} style={{ width: `${(quiz.timer / QUIZ_TIME_LIMIT) * 100}%` }} />
+   987→                    </div>
+   988→                    <div className="grid grid-cols-2 gap-1 md:gap-1.5">
+   989→                      {quiz.options.map((opt, i) => (
+   990→                        <button
+   991→                          key={i}
+   992→                          onClick={() => handleAnswer(i)}
+   993→                          className="py-1.5 md:py-2 px-2 md:px-3 rounded-lg text-xs md:text-sm font-medium text-white
+   994→                            bg-slate-700/80 hover:bg-slate-600 active:bg-slate-500
+   995→                            transition-all hover:scale-[1.02] active:scale-[0.98]
+   996→                            border border-slate-600/50 hover:border-slate-500">
+   997→                          {String.fromCharCode(65 + i)}. {opt}
+   998→                        </button>
+   999→                      ))}
+  1000→                    </div>
+  1001→                  </>
+  1002→                )}
+  1003→              </div>
+  1004→            </div>
+  1005→          )}
+  1006→
+  1007→          {/* Game Over */}
+  1008→          {phase === 'gameover' && (
+  1009→            <div className="absolute inset-0 flex items-center justify-center z-30 bg-black/60 backdrop-blur-sm">
+  1010→              <div className="bg-slate-900 border-2 border-red-500 rounded-2xl p-6 md:p-8 text-center max-w-sm mx-4 shadow-2xl">
+  1011→                <div className="text-5xl mb-2">💀</div>
+  1012→                <h2 className="text-3xl font-bold text-red-400 mb-2">游戏结束</h2>
+  1013→                <div className="space-y-1 text-slate-300 text-sm mb-4">
+  1014→                  <p>存活: <span className="text-white font-bold">{state.wave + 1}/{WAVE_CONFIGS.length} 波</span></p>
+  1015→                  <p>消灭僵尸: <span className="text-white font-bold">{state.totalKills}</span></p>
+  1016→                  <p>答题: <span className="text-white font-bold">{state.wordsCorrect}/{state.wordsAnswered}</span>
+  1017→                    ({state.wordsAnswered > 0 ? Math.round(state.wordsCorrect / state.wordsAnswered * 100) : 0}%)</p>
+  1018→                  <p>得分: <span className="text-yellow-400 font-bold text-xl">{state.score}</span></p>
+  1019→                </div>
+  1020→                <button onClick={initGame}
+  1021→                  className="px-8 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-full
+  1022→                    shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95">
+  1023→                  再来一局
+  1024→                </button>
+  1025→              </div>
+  1026→            </div>
+  1027→          )}
+  1028→
+  1029→          {/* Victory */}
+  1030→          {phase === 'victory' && (
+  1031→            <div className="absolute inset-0 flex items-center justify-center z-30 bg-black/50 backdrop-blur-sm">
+  1032→              <div className="bg-slate-900 border-2 border-yellow-500 rounded-2xl p-6 md:p-8 text-center max-w-sm mx-4 shadow-2xl">
+  1033→                <div className="text-5xl mb-2">🏆</div>
+  1034→                <h2 className="text-3xl font-bold text-yellow-400 mb-1">胜利!</h2>
+  1035→                <p className="text-green-300 text-sm mb-3">成功抵御了所有僵尸!</p>
+  1036→                <div className="space-y-1 text-slate-300 text-sm mb-4">
+  1037→                  <p>消灭僵尸: <span className="text-white font-bold">{state.totalKills}</span></p>
+  1038→                  <p>答题: <span className="text-white font-bold">{state.wordsCorrect}/{state.wordsAnswered}</span>
+  1039→                    ({state.wordsAnswered > 0 ? Math.round(state.wordsCorrect / state.wordsAnswered * 100) : 0}%)</p>
+  1040→                  <p>得分: <span className="text-yellow-400 font-bold text-xl">{state.score}</span></p>
+  1041→                </div>
+  1042→                <button onClick={initGame}
+  1043→                  className="px-8 py-2.5 bg-yellow-500 hover:bg-yellow-400 text-green-900 font-bold rounded-full
+  1044→                    shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95">
+  1045→                  再玩一次
+  1046→                </button>
+  1047→              </div>
+  1048→            </div>
+  1049→          )}
+  1050→        </>
+  1051→      )}
+  1052→    </div>
+  1053→  );
+  1054→}
