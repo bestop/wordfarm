@@ -1,0 +1,399 @@
+  1567→  useEffect(() => {
+  1568→    if (phase === 'playing') { gs.current!.lastTime = Date.now(); rafRef.current = requestAnimationFrame(gameLoop); }
+  1569→    return () => cancelAnimationFrame(rafRef.current);
+  1570→  }, [phase, gameLoop]);
+  1571→
+  1572→  const state = gs.current;
+  1573→  const quiz = state?.currentQuiz;
+  1574→  const diff = quiz?.word.difficulty ?? 1;
+  1575→
+  1576→  return (
+  1577→    <div className="flex flex-col h-screen w-full overflow-hidden select-none" style={{ background: '#FFF8E1' }}>
+  1578→      {phase === 'menu' && (
+  1579→        <div className="flex-1 flex flex-col items-center justify-center gap-4 relative overflow-hidden"
+  1580→          style={{ background: 'linear-gradient(180deg, #FFF8E1 0%, #FFECB3 25%, #FFE082 50%, #C8E6C9 78%, #A5D6A7 100%)' }}>
+  1581→          <div className="text-8xl animate-bounce" style={{ filter: 'drop-shadow(0 8px 16px rgba(255,152,0,0.25))' }}>🧟</div>
+  1582→          <h1 className="text-4xl md:text-6xl font-extrabold z-10"
+  1583→            style={{ color: '#E65100', textShadow: '3px 3px 0 #FFE082, 0 0 40px rgba(255,183,77,0.3)' }}>
+  1584→            植物大战僵尸
+  1585→          </h1>
+  1586→          <p className="text-xl md:text-2xl font-semibold tracking-widest z-10" style={{ color: '#BF360C', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>
+  1587→            单词大作战
+  1588→          </p>
+  1589→          <div className="mt-2 text-sm md:text-base text-center space-y-2 z-10 rounded-2xl px-6 py-4"
+  1590→            style={{ background: 'rgba(255,255,255,0.65)', backdropFilter: 'blur(10px)', color: '#4E342E', boxShadow: '0 4px 20px rgba(255,152,0,0.15)' }}>
+  1591→            <p>📝 答对单词自动获得阳光</p>
+  1592→            <p>🌱 用阳光种植植物抵御僵尸</p>
+  1593→            <p>🎯 击杀僵尸可掉落增益道具</p>
+  1594→            <p>🔥 连续答对触发连击庆祝</p>
+  1595→            <p>🧟 不要让僵尸到达你的房子!</p>
+  1596→          </div>
+  1597→          <button onClick={initGame}
+  1598→            className="mt-4 px-12 py-3.5 font-bold text-xl rounded-2xl shadow-lg z-10 transition-all hover:scale-105 active:scale-95"
+  1599→            style={{ background: 'linear-gradient(180deg, #FFCC80, #FFB74D)', color: '#4E342E', boxShadow: '0 6px 24px rgba(255,152,0,0.45)', border: '2px solid rgba(255,255,255,0.4)' }}>
+  1600→            开始游戏
+  1601→          </button>
+  1602→        </div>
+  1603→      )}
+  1604→
+  1605→      {(phase === 'playing' || phase === 'gameover' || phase === 'victory') && state && (
+  1606→        <>
+  1607→          {/* HUD - bright warm amber/gold */}
+  1608→          <div className="flex items-center justify-between px-3 py-1.5 relative z-10 flex-shrink-0"
+  1609→            style={{ background: 'linear-gradient(180deg, #FFB74D, #FFA726)', borderBottom: '2px solid rgba(255,255,255,0.4)', boxShadow: '0 3px 12px rgba(255,152,0,0.2)' }}>
+  1610→            <div className="flex items-center gap-1.5 rounded-xl px-3 py-1" style={{ background: 'rgba(255,255,255,0.5)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)' }}>
+  1611→              <div className="w-7 h-7 rounded-full flex items-center justify-center text-lg"
+  1612→                style={{ background: 'radial-gradient(circle, #FFF9C4, #FFD54F)', boxShadow: '0 0 12px rgba(255,213,79,0.6)' }}>☀️</div>
+  1613→              <span className="font-extrabold text-xl tabular-nums min-w-[45px]" style={{ color: '#3E2723' }}>{state.sun}</span>
+  1614→            </div>
+  1615→            <div className="flex items-center gap-2.5 text-xs md:text-sm">
+  1616→              <div className="rounded-lg px-2.5 py-1 text-center" style={{ background: 'rgba(255,255,255,0.5)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)' }}>
+  1617→                <div className="text-amber-800/70 text-[10px] leading-tight">波次</div>
+  1618→                <div className="font-extrabold text-base leading-tight" style={{ color: '#3E2723' }}>{state.wave + 1}<span className="text-amber-800/50">/{WAVE_CONFIGS.length}</span></div>
+  1619→              </div>
+  1620→              <div className="rounded-lg px-2.5 py-1 text-center hidden sm:block" style={{ background: 'rgba(255,255,255,0.5)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)' }}>
+  1621→                <div className="text-amber-800/70 text-[10px] leading-tight">得分</div>
+  1622→                <div className="font-bold leading-tight" style={{ color: '#3E2723' }}>{state.score}</div>
+  1623→              </div>
+  1624→              <div className="rounded-lg px-2.5 py-1 text-center" style={{ background: 'rgba(255,255,255,0.5)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)' }}>
+  1625→                <div className="text-amber-800/70 text-[10px] leading-tight">答题</div>
+  1626→                <div className="font-bold leading-tight" style={{ color: '#3E2723' }}><span style={{ color: '#2E7D32' }}>{state.wordsCorrect}</span>/{state.wordsAnswered}</div>
+  1627→              </div>
+  1628→              {state.comboCount >= 3 && (
+  1629→                <div className="rounded-lg px-2.5 py-1 animate-pulse" style={{ background: 'linear-gradient(135deg, #FF6F00, #E65100)', boxShadow: '0 0 12px rgba(255,111,0,0.5)' }}>
+  1630→                  <div className="font-extrabold text-sm" style={{ color: '#FFF9C4' }}>🔥x{state.comboCount}</div>
+  1631→                </div>
+  1632→              )}
+  1633→            </div>
+  1634→          </div>
+  1635→
+  1636→          {/* Card bar - upgraded card-style design with tooltip */
+  1637→          <div className="flex items-center gap-1.5 px-2 py-1.5 relative z-10 flex-shrink-0 overflow-x-auto"
+  1638→            style={{ background: 'linear-gradient(180deg, #FFECB3, #FFE082)', borderBottom: '1px solid rgba(255,224,130,0.6)', boxShadow: '0 2px 8px rgba(255,152,0,0.08)' }}>
+  1639→            <button onClick={() => { state.selectedPlant = null; forceUpdate(); }}
+  1640→              className={`flex-shrink-0 w-10 h-12 rounded-lg text-base font-bold transition-all flex items-center justify-center ${
+  1641→                !state.selectedPlant ? 'ring-2 ring-orange-400 shadow-lg' : ''}`}
+  1642→              style={{ background: !state.selectedPlant ? 'linear-gradient(180deg, #FFCC80, #FFB74D)' : 'rgba(139,119,101,0.12)',
+  1643→                color: !state.selectedPlant ? '#3E2723' : '#A1887F' }}>
+  1644→              ✋
+  1645→            </button>
+  1646→            {PLANT_ORDER.map(pt => {
+  1647→              const d = PLANT_DEFS[pt]; const ok = state.sun >= d.cost; const sel = state.selectedPlant === pt;
+  1648→              return (
+  1649→                <button key={pt} onClick={() => { state.selectedPlant = sel ? null : pt; forceUpdate(); }} disabled={!ok}
+  1650→                  className={`flex-shrink-0 flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl text-xs font-medium transition-all min-w-[52px] ${
+  1651→                    sel ? 'ring-2 ring-orange-400 shadow-lg scale-105' : ok ? 'hover:scale-105' : 'cursor-not-allowed'}`}
+  1652→                  style={{ background: sel ? 'linear-gradient(180deg, #FFCC80, #FFB74D)' : ok ? 'rgba(255,255,255,0.55)' : 'rgba(139,119,101,0.1)',
+  1653→                    color: sel ? '#3E2723' : ok ? '#3E2723' : '#BCAAA4',
+  1654→                    border: ok ? '1.5px solid rgba(255,183,77,0.35)' : '1.5px solid transparent',
+  1655→                    boxShadow: sel ? '0 2px 10px rgba(255,152,0,0.25)' : 'none' }}>
+  1656→                  <span className="text-xl leading-none">{d.emoji}</span>
+  1657→                  <span className="font-bold text-[10px] leading-tight">{d.name}</span>
+  1658→                  <span className="text-[10px] leading-tight font-bold" style={{ color: ok ? '#E65100' : '#BCAAA4' }}>☀️{d.cost}</span>
+  1659→                </button>
+  1660→              );
+  1661→            })}
+  1662→          </div>
+  1663→          <div ref={containerRef} className="flex-1 relative min-h-0">
+  1664→            <canvas ref={canvasRef} onClick={handleCanvasClick} onTouchStart={(e) => { e.preventDefault(); handleCanvasClick(e); }} className="w-full h-full" />
+  1665→            {Date.now() < state.zombieSpeedBoostEnd && (
+  1666→              <div className="absolute top-2 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold animate-pulse z-10"
+  1667→                style={{ background: 'linear-gradient(135deg, rgba(229,57,53,0.9), rgba(255,87,34,0.9))', color: '#FFF9C4', boxShadow: '0 0 16px rgba(229,57,53,0.5)' }}>
+  1668→                ⚡ 僵尸加速中!
+  1669→              </div>
+  1670→            )}
+  1671→
+  1672→            {/* Quiz panel - upgraded with circular timer, richer feedback */}
+  1673→            {phase === 'playing' && quiz && (
+  1674→              <div className="absolute bottom-0 left-0 right-0 z-20"
+  1675→                style={{ background: 'transparent' }}>
+  1676→                <div className="max-w-lg mx-auto px-2 md:px-4 pb-2">
+  1677→                  <div className="rounded-3xl overflow-hidden"
+  1678→                    style={{
+  1679→                      height: quiz.answered ? 'auto' : '155px',
+  1680→                      background: quiz.answered
+  1681→                        ? (quiz.wasCorrect
+  1682→                          ? 'linear-gradient(180deg, rgba(232,245,233,0.97), rgba(200,230,201,0.97))'
+  1683→                          : 'linear-gradient(180deg, rgba(255,235,238,0.97), rgba(255,205,210,0.97))')
+  1684→                        : 'linear-gradient(180deg, rgba(255,253,245,0.98), rgba(255,248,225,0.98))',
+  1685→                      border: quiz.answered
+  1686→                        ? (quiz.wasCorrect ? '2px solid #66BB6A' : '2px solid #EF5350')
+  1687→                        : '2px solid #FFE082',
+  1688→                      backdropFilter: 'blur(16px)',
+  1689→                      boxShadow: quiz.answered
+  1690→                        ? (quiz.wasCorrect
+  1691→                          ? '0 -4px 30px rgba(102,187,106,0.25)'
+  1692→                          : '0 -4px 30px rgba(239,83,80,0.25)')
+  1693→                        : '0 -4px 30px rgba(255,152,0,0.12)',
+  1694→                      padding: '10px 14px',
+  1695→                    }}>
+  1696→                    <div className="h-full flex flex-col justify-center">
+  1697→                      {quiz.answered ? (
+  1698→                        <div className="flex items-center justify-center gap-3 py-2">
+  1699→                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-2xl ${
+  1700→                            quiz.wasCorrect ? 'animate-bounce' : 'animate-[shake_0.4s_ease-in-out]'
+  1701→                          }`}
+  1702→                            style={{ background: quiz.wasCorrect
+  1703→                              ? 'linear-gradient(135deg, #A5D6A7, #66BB6A)'
+  1704→                              : 'linear-gradient(135deg, #FFCDD2, #EF9A9A)',
+  1705→                              boxShadow: quiz.wasCorrect
+  1706→                                ? '0 3px 12px rgba(102,187,106,0.4)'
+  1707→                                : '0 3px 12px rgba(239,83,80,0.4)' }}>
+  1708→                            {quiz.wasCorrect ? '✅' : '❌'}
+  1709→                          </div>
+  1710→                          <div className="flex flex-col">
+  1711→                            <span className="font-extrabold text-lg" style={{ color: quiz.wasCorrect ? '#2E7D32' : '#C62828' }}>
+  1712→                              {quiz.word.en} = {quiz.word.zh}
+  1713→                            </span>
+  1714→                            {quiz.wasCorrect && state.comboCount >= 3 && (
+  1715→                              <span className="text-xs font-bold" style={{ color: '#E65100' }}>
+  1716→                                🔥 {state.comboCount}连击! 阳光+{QUIZ_SUN_REWARD[diff]}{state.comboCount >= 3 ? ' (含50%连击加成)' : ''}
+  1717→                              </span>
+  1718→                            )}
+  1719→                            {!quiz.wasCorrect && (
+  1720→                              <span className="text-xs" style={{ color: '#EF5350' }}>
+  1721→                                僵尸正在加速! 5秒后恢复
+  1722→                              </span>
+  1723→                            )}
+  1724→                          </div>
+  1725→                          <div className="ml-auto text-center">
+  1726→                            <div className="text-xs font-bold" style={{ color: '#A1887F' }}>下一题</div>
+  1727→                            <div className="text-xl font-extrabold tabular-nums" style={{ color: '#5D4037' }}>
+  1728→                              {Math.max(0, Math.ceil(state.quizCooldown / 1000))}<span className="text-sm font-bold">s</span>
+  1729→                            </div>
+  1730→                          </div>
+  1731→                        </div>
+  1732→                      ) : (
+  1733→                        <>
+  1734→                          {/* Question header with circular timer */}
+  1735→                          <div className="flex items-center justify-between mb-1.5">
+  1736→                            <div className="flex items-center gap-2">
+  1737→                              <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${
+  1738→                                diff === 1 ? 'text-emerald-900' : diff === 2 ? 'text-amber-900' : 'text-red-900'
+  1739→                              }`} style={{
+  1740→                                background: diff === 1 ? 'linear-gradient(135deg, #C8E6C9, #A5D6A7)'
+  1741→                                  : diff === 2 ? 'linear-gradient(135deg, #FFE082, #FFD54F)'
+  1742→                                  : 'linear-gradient(135deg, #FFAB91, #FF8A65)',
+  1743→                                boxShadow: diff === 1 ? '0 1px 4px rgba(102,187,106,0.3)'
+  1744→                                  : diff === 2 ? '0 1px 4px rgba(255,183,77,0.3)'
+  1745→                                  : '0 1px 4px rgba(239,83,80,0.3)'
+  1746→                              }}>
+  1747→                                {diff === 1 ? '🌱简单' : diff === 2 ? '⚡中等' : '🔥困难'} +{QUIZ_SUN_REWARD[diff]}☀
+  1748→                              </span>
+  1749→                              <span className="font-extrabold text-xl md:text-2xl tracking-wide" style={{ color: '#3E2723', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>{quiz.word.en}</span>
+  1750→                            </div>
+  1751→                            {/* Circular timer */}
+  1752→                            <div className="relative flex-shrink-0" style={{ width: '38px', height: '38px' }}>
+  1753→                              <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
+  1754→                                <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,152,0,0.12)" strokeWidth="3" />
+  1755→                                <circle cx="18" cy="18" r="15.5" fill="none"
+  1756→                                  stroke={quiz.timer < 3000 ? '#EF5350' : '#FFB74D'}
+  1757→                                  strokeWidth="3" strokeLinecap="round"
+  1758→                                  strokeDasharray={`${2 * Math.PI * 15.5}`}
+  1759→                                  strokeDashoffset={`${2 * Math.PI * 15.5 * (1 - quiz.timer / QUIZ_TIME_LIMIT)}`}
+  1760→                                  style={{ transition: 'stroke-dashoffset 0.15s linear, stroke 0.3s' }} />
+  1761→                              </svg>
+  1762→                              <span className={`absolute inset-0 flex items-center justify-center text-[11px] font-extrabold tabular-nums ${quiz.timer < 3000 ? 'animate-pulse' : ''}`}
+  1763→                                style={{ color: quiz.timer < 3000 ? '#D32F2F' : '#5D4037' }}>
+  1764→                                {Math.max(0, Math.ceil(quiz.timer / 1000))}
+  1765→                              </span>
+  1766→                            </div>
+  1767→                          </div>
+  1768→                          {/* Linear timer bar (thinner, accent) */}
+  1769→                          <div className="w-full h-1.5 rounded-full mb-2 overflow-hidden" style={{ background: 'rgba(255,152,0,0.1)' }}>
+  1770→                            <div className={`h-full rounded-full transition-all duration-150 ${
+  1771→                              quiz.timer < 3000 ? 'bg-red-400' : 'bg-amber-400'
+  1772→                            }`} style={{ width: `${(quiz.timer / QUIZ_TIME_LIMIT) * 100}%` }} />
+  1773→                          </div>
+  1774→                          {/* Options - bigger, card-style buttons */}
+  1775→                          <div className="grid grid-cols-2 gap-2">
+  1776→                            {quiz.options.map((opt, i) => (
+  1777→                              <button key={i} onClick={() => handleAnswer(i)}
+  1778→                                className="py-2.5 md:py-3 px-3 md:px-4 rounded-2xl text-sm md:text-base font-semibold transition-all hover:scale-[1.03] active:scale-[0.97]"
+  1779→                                style={{ color: '#3E2723',
+  1780→                                  background: 'linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.75))',
+  1781→                                  border: '1.5px solid rgba(255,183,77,0.25)',
+  1782→                                  boxShadow: '0 2px 8px rgba(255,152,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)' }}>
+  1783→                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-md text-[11px] font-extrabold mr-1.5"
+  1784→                                  style={{ background: 'linear-gradient(180deg, #FFE082, #FFD54F)', color: '#5D4037', boxShadow: '0 1px 3px rgba(255,152,0,0.2)' }}>
+  1785→                                  {String.fromCharCode(65 + i)}
+  1786→                                </span>
+  1787→                                {opt}
+  1788→                              </button>
+  1789→                            ))}
+  1790→                          </div>
+  1791→                        </>
+  1792→                      )}
+  1793→                    </div>
+  1794→                  </div>
+  1795→                </div>
+  1796→              </div>
+  1797→            )}
+  1798→
+  1799→            {/* Game Over overlay - upgraded with star rating, wrong words review */}
+  1800→            {phase === 'gameover' && (
+  1801→              <div className="absolute inset-0 flex items-center justify-center z-30" style={{ background: 'rgba(62,39,35,0.5)', backdropFilter: 'blur(8px)' }}>
+  1802→                <div className="rounded-3xl text-center max-w-md w-full mx-4 shadow-2xl overflow-hidden"
+  1803→                  style={{ background: 'linear-gradient(180deg, #FFF8E1, #FFECB3)', border: '2px solid rgba(229,57,53,0.3)', boxShadow: '0 16px 60px rgba(0,0,0,0.25)' }}>
+  1804→                  {/* Header */
+  1805→                  <div className="py-5 px-6" style={{ background: 'linear-gradient(180deg, rgba(229,57,53,0.08), transparent)' }}>
+  1806→                    <div className="text-6xl mb-2" style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' }}>💀</div>
+  1807→                    <h2 className="text-3xl font-extrabold" style={{ color: '#C62828', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>游戏结束</h2>
+  1808→                    <p className="text-sm mt-1" style={{ color: '#8D6E63' }}>僵尸突破了防线...</p>
+  1809→                  </div>
+  1810→                  {/* Stats */}
+  1811→                  <div className="px-6 pb-3">
+  1812→                    <div className="grid grid-cols-2 gap-2 text-sm">
+  1813→                      {[
+  1814→                        { icon: '🌊', label: '存活波次', value: `${state.wave + 1}/${WAVE_CONFIGS.length}`, accent: false },
+  1815→                        { icon: '⚔️', label: '消灭僵尸', value: `${state.totalKills}`, accent: false },
+  1816→                        { icon: '🔥', label: '最高连击', value: `${state.bestCombo}`, accent: false },
+  1817→                        { icon: '📝', label: '答题正确率', value: `${state.wordsAnswered > 0 ? Math.round(state.wordsCorrect / state.wordsAnswered * 100) : 0}%`, accent: false },
+  1818→                      ].map((item, i) => (
+  1819→                        <div key={i} className="rounded-2xl px-3 py-2.5 flex items-center gap-2"
+  1820→                          style={{ background: 'rgba(255,255,255,0.6)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)' }}>
+  1821→                          <span className="text-lg">{item.icon}</span>
+  1822→                          <div className="text-left">
+  1823→                            <div className="text-[10px] font-bold" style={{ color: '#A1887F' }}>{item.label}</div>
+  1824→                            <div className="font-extrabold text-base" style={{ color: '#3E2723' }}>{item.value}</div>
+  1825→                          </div>
+  1826→                        </div>
+  1827→                      ))}
+  1828→                    </div>
+  1829→                    {/* Score banner */}
+  1830→                    <div className="mt-3 rounded-2xl py-3 px-4"
+  1831→                      style={{ background: 'linear-gradient(135deg, rgba(255,183,77,0.15), rgba(255,152,0,0.1))', border: '1px solid rgba(255,183,77,0.2)' }}>
+  1832→                      <div className="text-[11px] font-bold" style={{ color: '#A1887F' }}>最终得分</div>
+  1833→                      <div className="text-3xl font-extrabold" style={{ color: '#E65100', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>{state.score}</div>
+  1834→                    </div>
+  1835→                    {/* Wrong words review */}
+  1836→                    {state.wrongWords.length > 0 && (
+  1837→                      <div className="mt-3 text-left">
+  1838→                        <div className="flex items-center gap-1.5 mb-2">
+  1839→                          <span className="text-sm">📖</span>
+  1840→                          <span className="text-xs font-bold" style={{ color: '#6D4C41' }}>错题回顾 ({state.wrongWords.length}个)</span>
+  1841→                        </div>
+  1842→                        <div className="max-h-28 overflow-y-auto rounded-xl space-y-1 pr-1"
+  1843→                          style={{ scrollbarWidth: 'thin', scrollbarColor: '#FFE082 transparent' }}>
+  1844→                          {state.wrongWords.slice(0, 10).map((w, i) => (
+  1845→                            <div key={i} className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs"
+  1846→                              style={{ background: 'rgba(255,235,238,0.5)', border: '1px solid rgba(239,83,80,0.15)' }}>
+  1847→                              <span className="font-bold" style={{ color: '#3E2723' }}>{w.en}</span>
+  1848→                              <span style={{ color: '#C62828' }}>{w.zh}</span>
+  1849→                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold"
+  1850→                                style={{ background: w.difficulty === 1 ? '#C8E6C9' : w.difficulty === 2 ? '#FFE082' : '#FFAB91', color: w.difficulty === 1 ? '#2E7D32' : w.difficulty === 2 ? '#E65100' : '#C62828' }}>
+  1851→                                {w.difficulty === 1 ? '简单' : w.difficulty === 2 ? '中等' : '困难'}
+  1852→                              </span>
+  1853→                            </div>
+  1854→                          ))}
+  1855→                          {state.wrongWords.length > 10 && (
+  1856→                            <div className="text-center text-[11px] py-1" style={{ color: '#A1887F' }}>...还有 {state.wrongWords.length - 10} 个错词</div>
+  1857→                          )}
+  1858→                        </div>
+  1859→                      </div>
+  1860→                    )}
+  1861→                  </div>
+  1862→                  {/* Retry button */}
+  1863→                  <div className="px-6 pb-6 pt-2">
+  1864→                    <button onClick={initGame} className="w-full py-3.5 font-bold text-lg rounded-2xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+  1865→                      style={{ background: 'linear-gradient(180deg, #FF8A65, #EF5350)', color: '#fff', boxShadow: '0 4px 20px rgba(229,57,53,0.35)', border: '2px solid rgba(255,255,255,0.2)' }}>
+  1866→                      🔄 再来一局
+  1867→                    </button>
+  1868→                  </div>
+  1869→                </div>
+  1870→              </div>
+  1871→            )}
+  1872→
+  1873→            {/* Victory overlay - upgraded with star rating, confetti feel, wrong words */}
+  1874→            {phase === 'victory' && (() => {
+  1875→              const accuracy = state.wordsAnswered > 0 ? state.wordsCorrect / state.wordsAnswered : 0;
+  1876→              const stars = accuracy >= 0.9 ? 3 : accuracy >= 0.7 ? 2 : accuracy >= 0.5 ? 1 : 0;
+  1877→              const starLabels = ['', '继续加油!', '表现不错!', '完美通关!'];
+  1878→              return (
+  1879→                <div className="absolute inset-0 flex items-center justify-center z-30" style={{ background: 'rgba(62,39,35,0.35)', backdropFilter: 'blur(8px)' }}>
+  1880→                  <div className="rounded-3xl text-center max-w-md w-full mx-4 shadow-2xl overflow-hidden"
+  1881→                    style={{ background: 'linear-gradient(180deg, #FFFDE7, #FFF8E1)', border: '2px solid rgba(255,183,77,0.5)', boxShadow: '0 16px 60px rgba(255,152,0,0.2)' }}>
+  1882→                    {/* Header with stars */}
+  1883→                    <div className="py-5 px-6" style={{ background: 'linear-gradient(180deg, rgba(255,183,77,0.12), transparent)' }}>
+  1884→                      <div className="flex justify-center gap-2 mb-3">
+  1885→                        {[1, 2, 3].map(i => (
+  1886→                          <span key={i} className={`text-4xl transition-all duration-500 ${i <= stars ? 'drop-shadow-lg' : 'opacity-20'}`}
+  1887→                            style={{ filter: i <= stars ? 'drop-shadow(0 2px 8px rgba(255,183,77,0.6))' : 'none',
+  1888→                              animationDelay: `${i * 0.2}s` }}>
+  1889→                            {i <= stars ? '⭐' : '☆'}
+  1890→                          </span>
+  1891→                        ))}
+  1892→                      </div>
+  1893→                      <div className="text-5xl mb-2" style={{ filter: 'drop-shadow(0 4px 8px rgba(255,152,0,0.3))' }}>🏆</div>
+  1894→                      <h2 className="text-3xl font-extrabold" style={{ color: '#E65100', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>胜利!</h2>
+  1895→                      <p className="text-sm mt-1 font-bold" style={{ color: '#558B2F' }}>{starLabels[stars]}</p>
+  1896→                    </div>
+  1897→                    {/* Stats */}
+  1898→                    <div className="px-6 pb-3">
+  1899→                      <div className="grid grid-cols-2 gap-2 text-sm">
+  1900→                        {[
+  1901→                          { icon: '⚔️', label: '消灭僵尸', value: `${state.totalKills}`, accent: false },
+  1902→                          { icon: '🔥', label: '最高连击', value: `${state.bestCombo}`, accent: false },
+  1903→                          { icon: '📝', label: '答题正确率', value: `${Math.round(accuracy * 100)}%`, accent: false },
+  1904→                          { icon: '📖', label: '答对/总数', value: `${state.wordsCorrect}/${state.wordsAnswered}`, accent: false },
+  1905→                        ].map((item, i) => (
+  1906→                          <div key={i} className="rounded-2xl px-3 py-2.5 flex items-center gap-2"
+  1907→                            style={{ background: 'rgba(255,255,255,0.6)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)' }}>
+  1908→                            <span className="text-lg">{item.icon}</span>
+  1909→                            <div className="text-left">
+  1910→                              <div className="text-[10px] font-bold" style={{ color: '#A1887F' }}>{item.label}</div>
+  1911→                              <div className="font-extrabold text-base" style={{ color: '#3E2723' }}>{item.value}</div>
+  1912→                            </div>
+  1913→                          </div>
+  1914→                        ))}
+  1915→                      </div>
+  1916→                      {/* Score banner */}
+  1917→                      <div className="mt-3 rounded-2xl py-3 px-4"
+  1918→                        style={{ background: 'linear-gradient(135deg, rgba(255,183,77,0.2), rgba(255,152,0,0.12))', border: '1px solid rgba(255,183,77,0.3)' }}>
+  1919→                        <div className="text-[11px] font-bold" style={{ color: '#A1887F' }}>最终得分</div>
+  1920→                        <div className="text-3xl font-extrabold" style={{ color: '#E65100', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>{state.score}</div>
+  1921→                      </div>
+  1922→                      {/* Wrong words review */}
+  1923→                      {state.wrongWords.length > 0 && (
+  1924→                        <div className="mt-3 text-left">
+  1925→                          <div className="flex items-center gap-1.5 mb-2">
+  1926→                            <span className="text-sm">📖</span>
+  1927→                            <span className="text-xs font-bold" style={{ color: '#6D4C41' }}>错题回顾 ({state.wrongWords.length}个)</span>
+  1928→                          </div>
+  1929→                          <div className="max-h-28 overflow-y-auto rounded-xl space-y-1 pr-1"
+  1930→                            style={{ scrollbarWidth: 'thin', scrollbarColor: '#FFE082 transparent' }}>
+  1931→                            {state.wrongWords.slice(0, 10).map((w, i) => (
+  1932→                              <div key={i} className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs"
+  1933→                                style={{ background: 'rgba(255,243,224,0.7)', border: '1px solid rgba(255,183,77,0.15)' }}>
+  1934→                                <span className="font-bold" style={{ color: '#3E2723' }}>{w.en}</span>
+  1935→                                <span style={{ color: '#E65100' }}>{w.zh}</span>
+  1936→                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold"
+  1937→                                  style={{ background: w.difficulty === 1 ? '#C8E6C9' : w.difficulty === 2 ? '#FFE082' : '#FFAB91', color: w.difficulty === 1 ? '#2E7D32' : w.difficulty === 2 ? '#E65100' : '#C62828' }}>
+  1938→                                  {w.difficulty === 1 ? '简单' : w.difficulty === 2 ? '中等' : '困难'}
+  1939→                                </span>
+  1940→                              </div>
+  1941→                            ))}
+  1942→                            {state.wrongWords.length > 10 && (
+  1943→                              <div className="text-center text-[11px] py-1" style={{ color: '#A1887F' }}>...还有 {state.wrongWords.length - 10} 个错词</div>
+  1944→                            )}
+  1945→                          </div>
+  1946→                        </div>
+  1947→                      )}
+  1948→                    </div>
+  1949→                    {/* Play again button */}
+  1950→                    <div className="px-6 pb-6 pt-2">
+  1951→                      <button onClick={initGame} className="w-full py-3.5 font-bold text-lg rounded-2xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+  1952→                        style={{ background: 'linear-gradient(180deg, #FFD54F, #FFB74D)', color: '#3E2723', boxShadow: '0 6px 28px rgba(255,152,0,0.4)', border: '2px solid rgba(255,255,255,0.4)' }}>
+  1953→                        🎮 再玩一次
+  1954→                      </button>
+  1955→                    </div>
+  1956→                  </div>
+  1957→                </div>
+  1958→              );
+  1959→            })()}
+  1960→          </div>
+  1961→        </>
+  1962→      )}
+  1963→    </div>
+  1964→  );
+  1965→}

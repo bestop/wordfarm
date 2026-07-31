@@ -1,0 +1,502 @@
+   800→   800→  ctx.beginPath(); ctx.arc(x + s * 0.18, zy + bob + bodyBob, s * 0.07, 0, Math.PI * 2); ctx.fill();
+   801→   801→  ctx.beginPath(); ctx.moveTo(x + s * 0.18, zy + bob + bodyBob);
+   802→   802→  ctx.quadraticCurveTo(x + s * 0.34, zy - s * 0.1 + bob + bodyBob - armSw, x + s * 0.42, zy - s * 0.22 + bob + bodyBob - armSw);
+   803→   803→  ctx.stroke();
+   804→   804→  // Hands (bigger)
+   805→   805→  ctx.fillStyle = skinLt;
+   806→   806→  ctx.beginPath(); ctx.arc(x - s * 0.44, zy - s * 0.18 + bob + bodyBob + armSw, s * 0.07, 0, Math.PI * 2); ctx.fill();
+   807→   807→  ctx.beginPath(); ctx.arc(x + s * 0.42, zy - s * 0.22 + bob + bodyBob - armSw, s * 0.07, 0, Math.PI * 2); ctx.fill();
+   808→   808→  // Fingers (more detail)
+   809→   809→  ctx.strokeStyle = skinLt; ctx.lineWidth = 2;
+   810→   810→  for (let f = -1; f <= 1; f++) {
+   811→   811→    ctx.beginPath(); ctx.moveTo(x - s * 0.44, zy - s * 0.18 + bob + bodyBob + armSw);
+   812→   812→    ctx.lineTo(x - s * 0.48 + f * s * 0.022, zy - s * 0.26 + bob + bodyBob + armSw); ctx.stroke();
+   813→   813→    ctx.beginPath(); ctx.moveTo(x + s * 0.42, zy - s * 0.22 + bob + bodyBob - armSw);
+   814→   814→    ctx.lineTo(x + s * 0.46 + f * s * 0.022, zy - s * 0.3 + bob + bodyBob - armSw); ctx.stroke();
+   815→   815→  }
+   816→   816→
+   817→   817→  // Neck
+   818→   818→  ctx.fillStyle = skinDk;
+   819→   819→  ctx.beginPath(); ctx.roundRect(x - s * 0.06, zy - s * 0.14 + bob + bodyBob, s * 0.12, s * 0.1, 3); ctx.fill();
+   820→   820→
+   821→   821→  // Head (bigger, rounder)
+   822→   822→  ctx.save(); ctx.translate(x, zy - s * 0.22 + bob + bodyBob); ctx.rotate(headTilt);
+   823→   823→  const hg = ctx.createRadialGradient(-s * 0.06, -s * 0.06, s * 0.05, 0, 0, s * 0.25);
+   824→   824→  hg.addColorStop(0, skinLt); hg.addColorStop(0.6, skin); hg.addColorStop(1, skinDk);
+   825→   825→  ctx.fillStyle = hg;
+   826→   826→  ctx.beginPath(); ctx.arc(0, 0, s * 0.25, 0, Math.PI * 2); ctx.fill();
+   827→   827→  // Ears
+   828→   828→  ctx.fillStyle = skinDk;
+   829→   829→  ctx.beginPath(); ctx.ellipse(-s * 0.24, s * 0.02, s * 0.04, s * 0.06, -0.3, 0, Math.PI * 2); ctx.fill();
+   830→   830→  ctx.beginPath(); ctx.ellipse(s * 0.24, s * 0.02, s * 0.04, s * 0.06, 0.3, 0, Math.PI * 2); ctx.fill();
+   831→   831→  // Bald head highlight
+   832→   832→  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+   833→   833→  ctx.beginPath(); ctx.ellipse(-s * 0.05, -s * 0.15, s * 0.12, s * 0.08, -0.2, 0, Math.PI * 2); ctx.fill();
+   834→   834→  // Eyes (googly, bigger)
+   835→   835→  ctx.fillStyle = '#FFF9C4';
+   836→   836→  ctx.beginPath(); ctx.ellipse(-s * 0.09, -s * 0.04, s * 0.085, s * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+   837→   837→  ctx.beginPath(); ctx.ellipse(s * 0.09, -s * 0.02, s * 0.075, s * 0.09, 0.1, 0, Math.PI * 2); ctx.fill();
+   838→   838→  ctx.strokeStyle = 'rgba(0,0,0,0.12)'; ctx.lineWidth = 1;
+   839→   839→  ctx.beginPath(); ctx.ellipse(-s * 0.09, -s * 0.04, s * 0.085, s * 0.1, 0, 0, Math.PI * 2); ctx.stroke();
+   840→   840→  ctx.beginPath(); ctx.ellipse(s * 0.09, -s * 0.02, s * 0.075, s * 0.09, 0.1, 0, Math.PI * 2); ctx.stroke();
+   841→   841→  // Red pupils
+   842→   842→   ctx.fillStyle = '#D32F2F';
+   843→   843→  ctx.beginPath(); ctx.arc(-s * 0.075, -s * 0.04, s * 0.048, 0, Math.PI * 2); ctx.fill();
+   844→   844→  ctx.beginPath(); ctx.arc(s * 0.1, -s * 0.02, s * 0.04, 0, Math.PI * 2); ctx.fill();
+   845→   845→  ctx.fillStyle = '#fff';
+   846→   846→  ctx.beginPath(); ctx.arc(-s * 0.06, -s * 0.06, s * 0.02, 0, Math.PI * 2); ctx.fill();
+   847→   847→  ctx.beginPath(); ctx.arc(s * 0.12, -s * 0.04, s * 0.016, 0, Math.PI * 2); ctx.fill();
+   848→   848→  // Droopy eyelids
+   849→   849→  ctx.fillStyle = skinDk;
+   850→   850→  ctx.beginPath(); ctx.ellipse(-s * 0.09, -s * 0.09, s * 0.09, s * 0.03, 0, 0, Math.PI); ctx.fill();
+   851→   851→  ctx.beginPath(); ctx.ellipse(s * 0.09, -s * 0.07, s * 0.08, s * 0.025, 0.05, 0, Math.PI); ctx.fill();
+   852→   852→  // Big open mouth
+   853→   853→  ctx.fillStyle = '#3E2723';
+   854→   854→  ctx.beginPath(); ctx.ellipse(s * 0.02, s * 0.1, s * 0.11, s * 0.07, 0, 0, Math.PI * 2); ctx.fill();
+   855→   855→  ctx.fillStyle = '#B71C1C';
+   856→   856→  ctx.beginPath(); ctx.ellipse(s * 0.02, s * 0.12, s * 0.07, s * 0.035, 0, 0, Math.PI * 2); ctx.fill();
+   857→   857→  // Teeth (top)
+   858→   858→  ctx.fillStyle = '#FFF8E1';
+   859→   859→  const teethTop = s * 0.04;
+   860→   860→  for (let i = -2; i <= 2; i++) {
+   861→   861→    ctx.beginPath(); ctx.roundRect(i * s * 0.035 - s * 0.012, s * 0.045, s * 0.022, teethTop, 2); ctx.fill();
+   862→   862→  }
+   863→   863→  for (let i = -1; i <= 1; i++) {
+   864→   864→    ctx.beginPath(); ctx.roundRect(i * s * 0.035 - s * 0.01, s * 0.1, s * 0.02, teethTop * 0.7, 2); ctx.fill();
+   865→   865→  }
+   866→   866→  // Drool
+   867→   867→   ctx.fillStyle = 'rgba(120,200,120,0.4)';
+   868→   868→  ctx.beginPath();
+   869→   869→  ctx.moveTo(s * 0.06, s * 0.16); ctx.quadraticCurveTo(s * 0.08, s * 0.22, s * 0.06 + Math.sin(animPhase * 2) * s * 0.02, s * 0.25);
+   870→   870→  ctx.quadraticCurveTo(s * 0.04, s * 0.22, s * 0.04, s * 0.16); ctx.closePath(); ctx.fill();
+   871→   871→  // Stubble
+   872→   872→   ctx.fillStyle = skinDk;
+   873→   873→  for (let i = 0; i < 5; i++) {
+   874→   874→    ctx.beginPath(); ctx.arc(-s * 0.05 + i * s * 0.03, s * 0.2 + (i % 2) * s * 0.012, s * 0.006, 0, Math.PI * 2); ctx.fill();
+   875→   875→  }
+   876→   876→  ctx.restore();
+   877→   877→  return { s, bob, skin };
+   878→   878→}
+   879→   879→
+   880→   880→function drawZombie(ctx: CanvasRenderingContext2D, zombie: Zombie, cellW: number, cellH: number, ox: number, oy: number) {
+   881→   881→  const zy = oy + zombie.row * cellH + cellH / 2;
+   882→   882→  const bob = zombie.eating ? 0 : Math.sin(zombie.animPhase) * 3;
+   883→   883→  const alpha = zombie.dead ? Math.max(0, zombie.deathTimer / 500) : 1;
+   884→   884→  ctx.globalAlpha = alpha;
+   885→   885→  // Shadow
+   886→   886→  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+   887→   887→  ctx.beginPath(); ctx.ellipse(zombie.x, oy + zombie.row * cellH + cellH - 6, cellW * 0.2, 5, 0, 0, Math.PI * 2); ctx.fill();
+   888→   888→  const { s, bob: b } = drawZombieBase(ctx, zombie.x, zy, bob, cellW, cellH, zombie.animPhase, zombie.slowed, zombie.eating);
+   889→   889→
+   890→   890→  // Accessories
+   891→   891→  if (zombie.type === 'cone') {
+   892→   892→    const cg = ctx.createLinearGradient(zombie.x - s * 0.14, zy - s * 0.6 + b, zombie.x + s * 0.14, zy - s * 0.25 + b);
+   893→   893→    cg.addColorStop(0, '#FFB74D'); cg.addColorStop(0.5, '#FF9800'); cg.addColorStop(1, '#E65100');
+   894→   894→    ctx.fillStyle = cg;
+   895→   895→    ctx.beginPath(); ctx.moveTo(zombie.x, zy - s * 0.65 + b);
+   896→   896→    ctx.lineTo(zombie.x - s * 0.17, zy - s * 0.28 + b); ctx.lineTo(zombie.x + s * 0.17, zy - s * 0.28 + b); ctx.closePath(); ctx.fill();
+   897→   897→    // Stripes
+   898→   898→    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+   899→   899→    ctx.fillRect(zombie.x - s * 0.1, zy - s * 0.48 + b, s * 0.2, s * 0.04);
+   900→   900→    ctx.fillRect(zombie.x - s * 0.08, zy - s * 0.39 + b, s * 0.16, s * 0.035);
+   901→   901→    ctx.fillRect(zombie.x - s * 0.05, zy - s * 0.3 + b, s * 0.1, s * 0.03);
+   902→   902→    // Tip
+   903→   903→    ctx.fillStyle = '#fff';
+   904→   904→    ctx.beginPath(); ctx.arc(zombie.x, zy - s * 0.65 + b, s * 0.03, 0, Math.PI * 2); ctx.fill();
+   905→   905→    // Scratch marks
+   906→   906→    ctx.strokeStyle = 'rgba(180,100,30,0.5)'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+   907→   907→    ctx.beginPath(); ctx.moveTo(zombie.x - s * 0.12, zy - s * 0.55 + b); ctx.lineTo(zombie.x - s * 0.06, zy - s * 0.48 + b); ctx.stroke();
+   908→   908→    ctx.beginPath(); ctx.moveTo(zombie.x + s * 0.08, zy - s * 0.45 + b); ctx.lineTo(zombie.x + s * 0.13, zy - s * 0.38 + b); ctx.stroke();
+   909→   909→    // Dark edge at bottom
+   910→   910→    ctx.strokeStyle = 'rgba(180,100,30,0.3)'; ctx.lineWidth = 1.5;
+   911→   911→    ctx.beginPath(); ctx.moveTo(zombie.x - s * 0.17, zy - s * 0.28 + b); ctx.lineTo(zombie.x + s * 0.17, zy - s * 0.28 + b); ctx.stroke();
+   912→   912→  } else if (zombie.type === 'bucket') {
+   913→   913→    const bg = ctx.createLinearGradient(zombie.x - s * 0.16, zy - s * 0.55 + b, zombie.x + s * 0.16, zy - s * 0.25 + b);
+   914→   914→    bg.addColorStop(0, '#CFD8DC'); bg.addColorStop(0.3, '#90A4AE'); bg.addColorStop(0.7, '#607D8B'); bg.addColorStop(1, '#455A64');
+   915→   915→    ctx.fillStyle = bg;
+   916→   916→    ctx.beginPath(); ctx.roundRect(zombie.x - s * 0.16, zy - s * 0.55 + b, s * 0.32, s * 0.32, 3); ctx.fill();
+   917→   917→    ctx.fillStyle = '#CFD8DC'; ctx.fillRect(zombie.x - s * 0.17, zy - s * 0.55 + b, s * 0.34, s * 0.05);
+   918→   918→    // Handle
+   919→   919→    ctx.strokeStyle = '#78909C'; ctx.lineWidth = 2.5;
+   920→   920→    ctx.beginPath(); ctx.arc(zombie.x, zy - s * 0.55 + b, s * 0.1, Math.PI, 0); ctx.stroke();
+   921→   921→    // Rivets (more)
+   922→   922→    ctx.fillStyle = '#B0BEC5';
+   923→   923→    ctx.beginPath(); ctx.arc(zombie.x - s * 0.1, zy - s * 0.38 + b, s * 0.02, 0, Math.PI * 2); ctx.fill();
+   924→   924→    ctx.beginPath(); ctx.arc(zombie.x + s * 0.1, zy - s * 0.38 + b, s * 0.02, 0, Math.PI * 2); ctx.fill();
+   925→   925→    ctx.beginPath(); ctx.arc(zombie.x - s * 0.1, zy - s * 0.32 + b, s * 0.015, 0, Math.PI * 2); ctx.fill();
+   926→   926→    ctx.beginPath(); ctx.arc(zombie.x + s * 0.1, zy - s * 0.32 + b, s * 0.015, 0, Math.PI * 2); ctx.fill();
+   927→   927→    // Rust spots
+   928→   928→    ctx.fillStyle = 'rgba(183,130,90,0.4)';
+   929→   929→    ctx.beginPath(); ctx.ellipse(zombie.x + s * 0.06, zy - s * 0.48 + b, s * 0.04, s * 0.03, 0.3, 0, Math.PI * 2); ctx.fill();
+   930→   930→    ctx.fillStyle = 'rgba(160,110,60,0.3)';
+   931→   931→    ctx.beginPath(); ctx.ellipse(zombie.x - s * 0.08, zy - s * 0.35 + b, s * 0.035, s * 0.025, -0.2, 0, Math.PI * 2); ctx.fill();
+   932→   932→    // Dents (more)
+   933→   933→    ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 1;
+   934→   934→    ctx.beginPath(); ctx.arc(zombie.x + s * 0.04, zy - s * 0.42 + b, s * 0.04, 0, 1.5); ctx.stroke();
+   935→   935→    ctx.beginPath(); ctx.arc(zombie.x - s * 0.06, zy - s * 0.45 + b, s * 0.03, 0.5, 1.2); ctx.stroke();
+   936→   936→    ctx.beginPath(); ctx.arc(zombie.x + s * 0.1, zy - s * 0.32 + b, s * 0.025, 2.0, 2.0); ctx.stroke();
+   937→   937→  } else if (zombie.type === 'flag') {
+   938→   938→    ctx.strokeStyle = '#5D4037'; ctx.lineWidth = 3;
+   939→   939→    ctx.beginPath(); ctx.moveTo(zombie.x + s * 0.14, zy - s * 0.18 + b);
+   940→   940→    ctx.lineTo(zombie.x + s * 0.14, zy - s * 0.68 + b); ctx.stroke();
+   941→   941→    const wave = Math.sin(zombie.animPhase * 2) * s * 0.04;
+   942→   942→    const wave2 = Math.sin(zombie.animPhase * 3) * s * 0.02;
+   943→   943→    // Flag with gradient and wave
+   944→   944→    const fg = ctx.createLinearGradient(zombie.x + s * 0.14, zy - s * 0.68 + b, zombie.x + s * 0.4, zy - s * 0.52 + b);
+   945→   945→    fg.addColorStop(0, '#EF5350'); fg.addColorStop(0.5, '#F44336'); fg.addColorStop(1, '#C62828');
+   946→   946→    ctx.fillStyle = fg;
+   947→   947→    ctx.beginPath();
+   948→   948→    ctx.moveTo(zombie.x + s * 0.14, zy - s * 0.68 + b);
+   949→   949→    ctx.quadraticCurveTo(zombie.x + s * 0.32 + wave, zy - s * 0.6 + b + wave2, zombie.x + s * 0.4, zy - s * 0.52 + b);
+   950→   950→    ctx.lineTo(zombie.x + s * 0.14, zy - s * 0.42 + b);
+   951→   951→    ctx.closePath(); ctx.fill();
+   952→   952→    // Flag edge highlight
+   953→   953→    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
+   954→   954→    ctx.beginPath();
+   955→   955→    ctx.moveTo(zombie.x + s * 0.14, zy - s * 0.68 + b);
+   956→   956→    ctx.quadraticCurveTo(zombie.x + s * 0.32 + wave, zy - s * 0.6 + b + wave2, zombie.x + s * 0.4, zy - s * 0.52 + b);
+   957→   957→    ctx.stroke();
+   958→   958→    // Flag text
+   959→   959→    ctx.fillStyle = '#fff'; ctx.font = `bold ${s * 0.09}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+   960→   960→    ctx.fillText('Z', zombie.x + s * 0.25 + wave * 0.5, zy - s * 0.55 + b);
+   961→   961→    // Skull on flag (small)
+   962→   962→    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+   963→   963→    ctx.beginPath(); ctx.arc(zombie.x + s * 0.25 + wave * 0.5, zy - s * 0.55 + b, s * 0.02, 0, Math.PI * 2); ctx.fill();
+   964→   964→  }
+   965→   965→
+   966→   966→  if (zombie.slowed && !zombie.dead) {
+   967→   967→    ctx.fillStyle = 'rgba(100,220,255,0.12)';
+   968→   968→    ctx.beginPath(); ctx.arc(zombie.x, zy + bob, s * 0.35, 0, Math.PI * 2); ctx.fill();
+   969→   969→  }
+   970→   970→  ctx.globalAlpha = 1;
+   971→   971→}
+   972→   972→
+   973→   973→// ============ Game Effect Helpers ============
+   974→   974→function spawnParticles(state: GameState, x: number, y: number, color: string, count: number) {
+   975→   975→  for (let i = 0; i < count; i++) {
+   976→   976→    const angle = Math.random() * Math.PI * 2;
+   977→   977→    const speed = 40 + Math.random() * 120;
+   978→   978→    state.particles.push({
+   979→   979→      x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 40,
+   980→   980→      size: 2 + Math.random() * 4, color, alpha: 1,
+   981→   981→      life: 500 + Math.random() * 700, maxLife: 1200,
+   982→   982→      gravity: 100,
+   983→   983→    });
+   984→   984→  }
+   985→   985→}
+   986→   986→
+   987→   987→function spawnZombieDeathParticles(state: GameState, x: number, y: number, cellW: number) {
+   988→   988→  const colors = ['#9EC05A', '#7BAFD4', '#5D4037', '#8D6E63', '#FFD54F'];
+   989→   989→  for (let i = 0; i < 15; i++) {
+   990→   990→    const angle = Math.random() * Math.PI * 2;
+   991→   991→    const speed = 30 + Math.random() * 100;
+   992→   992→    state.particles.push({
+   993→   993→      x: x + (Math.random() - 0.5) * cellW * 0.15, y: y - cellW * 0.1,
+   994→   994→      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 60,
+   995→   995→      size: 2 + Math.random() * 4, color: colors[Math.floor(Math.random() * colors.length)],
+   996→   996→      alpha: 1, life: 400 + Math.random() * 500, maxLife: 900,
+   997→   997→      gravity: 150,
+   998→   998→    });
+   999→   999→  }
+  1000→  1000→}
+  1001→  1001→
+  1002→  1002→function trySpawnDrop(state: GameState, zombie: Zombie, cellW: number) {
+  1003→  1003→  let dropChance = 0.2;
+  1004→  1004→  if (zombie.type === 'cone') dropChance = 0.3;
+  1005→  1005→  if (zombie.type === 'bucket') dropChance = 0.4;
+  1006→  1006→  if (zombie.type === 'flag') dropChance = 0.55;
+  1007→  1007→  if (Math.random() < dropChance) {
+  1008→  1008→    const typeRand = Math.random();
+  1009→  1009→    let type: Pickup['type'] = 'sun';
+  1010→  1010→    let value = 25 + Math.floor(Math.random() * 20);
+  1011→  1011→    if (zombie.type === 'bucket' || zombie.type === 'flag') value = 35 + Math.floor(Math.random() * 25);
+  1012→  1012→    if (typeRand > 0.85) { type = 'double'; value = 0; }
+  1013→  1013→    else if (typeRand > 0.7) { type = 'freeze'; value = 0; }
+  1014→  1014→    state.pickups.push({
+  1015→  1015→      id: uid(), x: zombie.x, row: zombie.row,
+  1016→  1016→      type, timer: 8000, maxTimer: 8000, collected: false,
+  1017→  1017→      bobPhase: Math.random() * Math.PI * 2, value,
+  1018→  1018→    });
+  1019→  1019→  }
+  1020→  1020→}
+  1021→  1021→
+  1022→  1022→function collectPickup(state: GameState, pk: Pickup, cellW: number, cellH: number, ox: number, oy: number) {
+  1023→  1023→  pk.collected = true;
+  1024→  1024→  const py = oy + pk.row * cellH + cellH / 2;
+  1025→  1025→  if (pk.type === 'sun') {
+  1026→  1026→    state.sun += pk.value;
+  1027→  1027→    state.score += pk.value;
+  1028→  1028→    state.floatingTexts.push({ id: uid(), x: pk.x, y: py, text: `+${pk.value}☀️`, color: '#FFD54F', timer: 1000, maxTimer: 1000 });
+  1029→  1029→  } else if (pk.type === 'double') {
+  1030→  1030→    state.doubleDamageEnd = Date.now() + 6000;
+  1031→  1031→    state.floatingTexts.push({ id: uid(), x: pk.x, y: py, text: '⚡双倍伤害 6s!', color: '#FF6F00', timer: 1500, maxTimer: 1500 });
+  1032→  1032→  } else if (pk.type === 'freeze') {
+  1033→  1033→    state.zombies.forEach(z => { if (!z.dead) { z.slowed = true; z.slowTimer = 4000; } });
+  1034→  1034→    state.floatingTexts.push({ id: uid(), x: pk.x, y: py, text: '🧊全屏冰冻 4s!', color: '#29B6F6', timer: 1500, maxTimer: 1500 });
+  1035→  1035→  }
+  1036→  1036→  spawnParticles(state, pk.x, py, pk.type === 'sun' ? '#FFD54F' : pk.type === 'double' ? '#FF6F00' : '#29B6F6', 15);
+  1037→  1037→}
+  1038→  1038→
+  1039→  1039→// ============ Component ============
+  1040→  1040→export default function PvZGame() {
+  1041→  1041→  const canvasRef = useRef<HTMLCanvasElement>(null);
+  1042→  1042→  const containerRef = useRef<HTMLDivElement>(null);
+  1043→  1043→  const gs = useRef<GameState | null>(null);
+  1044→  1044→  const rafRef = useRef<number>(0);
+  1045→  1045→  const [phase, setPhase] = useState<GamePhase>('menu');
+  1046→  1046→  const [uiTick, setUiTick] = useState(0);
+  1047→  1047→  const forceUpdate = useCallback(() => setUiTick(t => t + 1), []);
+  1048→  1048→  const dims = useRef({ w: 900, h: 500, cellW: 80, cellH: 90, ox: 30, oy: 15 });
+  1049→  1049→
+  1050→  1050→  const recalcDims = useCallback(() => {
+  1051→  1051→    const canvas = canvasRef.current;
+  1052→  1052→    const container = containerRef.current;
+  1053→  1053→    if (!canvas || !container) return;
+  1054→  1054→    const rect = container.getBoundingClientRect();
+  1055→  1055→    const dpr = window.devicePixelRatio || 1;
+  1056→  1056→    const w = rect.width; const h = rect.height;
+  1057→  1057→    canvas.width = w * dpr; canvas.height = h * dpr;
+  1058→  1058→    canvas.style.width = `${w}px`; canvas.style.height = `${h}px`;
+  1059→  1059→    const ctx = canvas.getContext('2d');
+  1060→  1060→    if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  1061→  1061→    const cellW = (w * 0.9) / GRID_COLS;
+  1062→  1062→    const cellH = (h * 0.95) / GRID_ROWS;
+  1063→  1063→    const ox = w * 0.07; const oy = h * 0.025;
+  1064→  1064→    dims.current = { w, h, cellW, cellH, ox, oy };
+  1065→  1065→  }, []);
+  1066→  1066→
+  1067→  1067→  const initGame = useCallback(() => {
+  1068→  1068→    _idCounter = 0;
+  1069→  1069→    const state: GameState = {
+  1070→  1070→      phase: 'playing', sun: STARTING_SUN, score: 0, wave: 0,
+  1071→  1071→      plants: [], zombies: [], projectiles: [],
+  1072→  1072→      explosions: [], floatingTexts: [],
+  1073→  1073→      selectedPlant: null, currentQuiz: null, quizCooldown: 0,
+  1074→  1074→      wordsAnswered: 0, wordsCorrect: 0,
+  1075→  1075→      waveStartTime: Date.now() + 3000, waveZombiesSpawned: 0,
+  1076→  1076→      totalKills: 0, lastTime: Date.now(),
+  1077→  1077→      zombieSpeedBoostEnd: 0, usedWordIndices: new Set(),
+  1078→  1078→      shakeTimer: 0, comboCount: 0,
+  1079→  1079→      particles: [], pickups: [],
+  1080→  1080→      doubleDamageEnd: 0, screenFlash: 0, screenFlashColor: '#fff',
+  1081→  1081→      waveCountdown: 3000, bestCombo: 0,
+  1082→  1082→    };
+  1083→  1083→    gs.current = state;
+  1084→  1084→    setPhase('playing');
+  1085→  1085→    generateQuiz(state);
+  1086→  1086→    forceUpdate();
+  1087→  1087→  }, [forceUpdate]);
+  1088→  1088→
+  1089→  1089→  const generateQuiz = useCallback((state: GameState) => {
+  1090→  1090→    const maxDiff = state.wordsAnswered < 5 ? 1 : state.wordsAnswered < 12 ? 2 : 3;
+  1091→  1091→    let available = WORD_BANK.map((_, i) => i).filter(
+  1092→  1092→      i => !state.usedWordIndices.has(i) && WORD_BANK[i].difficulty <= maxDiff
+  1093→  1093→    );
+  1094→  1094→    if (available.length < 4) { state.usedWordIndices.clear(); }
+  1095→  1095→    available = WORD_BANK.map((_, i) => i).filter(
+  1096→  1096→      i => !state.usedWordIndices.has(i) && WORD_BANK[i].difficulty <= maxDiff
+  1097→  1097→    );
+  1098→  1098→    if (available.length < 4) available = WORD_BANK.map((_, i) => i);
+  1099→  1099→    const shuffled = shuffle(available);
+  1100→  1100→    const correctIdx = shuffled[0];
+  1101→  1101→    const correctWord = WORD_BANK[correctIdx];
+  1102→  1102→    state.usedWordIndices.add(correctIdx);
+  1103→  1103→    const wrongPool = WORD_BANK.map((_, i) => i).filter(
+  1104→  1104→      i => i !== correctIdx && WORD_BANK[i].difficulty <= maxDiff
+  1105→  1105→    );
+  1106→  1106→    const wrongShuffled = shuffle(wrongPool).slice(0, 3);
+  1107→  1107→    const options = shuffle([correctWord.zh, ...wrongShuffled.map(i => WORD_BANK[i].zh)]);
+  1108→  1108→    state.currentQuiz = {
+  1109→  1109→      word: correctWord, options,
+  1110→  1110→      correctIndex: options.indexOf(correctWord.zh),
+  1111→  1111→      timer: QUIZ_TIME_LIMIT, answered: false, wasCorrect: undefined,
+  1112→  1112→    };
+  1113→  1113→    forceUpdate();
+  1114→  1114→  }, [forceUpdate]);
+  1115→  1115→
+  1116→  1116→  const handleAnswer = useCallback((index: number) => {
+  1117→  1117→    const state = gs.current;
+  1118→  1118→    if (!state || !state.currentQuiz || state.currentQuiz.answered || state.phase !== 'playing') return;
+  1119→  1119→    const quiz = state.currentQuiz;
+  1120→  1120→    quiz.answered = true;
+  1121→  1121→    const isCorrect = index === quiz.correctIndex;
+  1122→  1122→    quiz.wasCorrect = isCorrect;
+  1123→  1123→    state.wordsAnswered++;
+  1124→  1124→    const now = Date.now();
+  1125→  1125→    const { w, h } = dims.current;
+  1126→  1126→    if (isCorrect) {
+  1127→  1127→      state.wordsCorrect++;
+  1128→  1128→      state.comboCount++;
+  1129→  1129→      if (state.comboCount > state.bestCombo) state.bestCombo = state.comboCount;
+  1130→  1130→      const reward = QUIZ_SUN_REWARD[quiz.word.difficulty];
+  1131→  1131→      const comboBonus = state.comboCount >= 3 ? Math.floor(reward * 0.5) : 0;
+  1132→  1132→      state.sun += reward + comboBonus;
+  1133→  1133→      state.score += reward + comboBonus;
+  1134→  1134→      state.screenFlash = 200; state.screenFlashColor = 'rgba(139,195,74,0.12)';
+  1135→  1135→      state.floatingTexts.push({
+  1136→  1136→        id: uid(), x: w / 2, y: h - 100,
+  1137→  1137→        text: `+${reward + comboBonus} ${comboBonus > 0 ? ' x' + state.comboCount + '连击!' : ''}`,
+  1138→  1138→        color: '#FF8F00', timer: 1500, maxTimer: 1500,
+  1139→  1139→      });
+  1140→  1140→      // Combo milestone celebrations
+  1141→  1141→      if (state.comboCount === 5) {
+  1142→  1142→        state.floatingTexts.push({ id: uid(), x: w / 2, y: h / 2 - 30, text: '🔥 超级连击! 🔥', color: '#FF6F00', timer: 2000, maxTimer: 2000 });
+  1143→  1143→        state.sun += 30; state.score += 30;
+  1144→  1144→        spawnParticles(state, w / 2, h / 2, '#FFD54F', 20);
+  1145→  1145→        state.screenFlash = 300; state.screenFlashColor = 'rgba(255,183,77,0.18)';
+  1146→  1146→      } else if (state.comboCount === 10) {
+  1147→  1147→        state.floatingTexts.push({ id: uid(), x: w / 2, y: h / 2 - 30, text: '⚡ 无敌连击!! ⚡', color: '#E65100', timer: 2500, maxTimer: 2500 });
+  1148→  1148→        state.sun += 60; state.score += 60;
+  1149→  1149→        spawnParticles(state, w / 2, h / 2, '#FF6F00', 25);
+  1150→  1150→        spawnParticles(state, w / 2, h / 2, '#FFD54F', 20);
+  1151→  1151→        state.screenFlash = 400; state.screenFlashColor = 'rgba(255,111,0,0.22)';
+  1152→  1152→      } else if (state.comboCount > 10 && state.comboCount % 5 === 0) {
+  1153→  1153→        state.floatingTexts.push({ id: uid(), x: w / 2, y: h / 2 - 30, text: `💥 ${state.comboCount}连击!! 💥`, color: '#D50000', timer: 2500, maxTimer: 2500 });
+  1154→  1154→        state.sun += 50; state.score += 50;
+  1155→  1155→        spawnParticles(state, w / 2, h / 2, '#FF1744', 20);
+  1156→  1156→        spawnParticles(state, w / 2, h / 2, '#FFD54F', 20);
+  1157→  1157→        state.screenFlash = 400; state.screenFlashColor = 'rgba(255,23,68,0.18)';
+  1158→  1158→      }
+  1159→  1159→    } else {
+  1160→  1160→      state.comboCount = 0;
+  1161→  1161→      state.zombieSpeedBoostEnd = now + ZOMBIE_SPEED_BOOST_DURATION;
+  1162→  1162→      state.shakeTimer = 300;
+  1163→  1163→      state.screenFlash = 250; state.screenFlashColor = 'rgba(229,57,53,0.18)';
+  1164→  1164→      state.floatingTexts.push({
+  1165→  1165→        id: uid(), x: w / 2, y: h - 100,
+  1166→  1166→        text: '答错了! 僵尸加速!', color: '#E53935', timer: 1500, maxTimer: 1500,
+  1167→  1167→      });
+  1168→  1168→    }
+  1169→  1169→    state.quizCooldown = QUIZ_COOLDOWN;
+  1170→  1170→    forceUpdate();
+  1171→  1171→  }, [forceUpdate]);
+  1172→  1172→
+  1173→  1173→  const handleCanvasClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  1174→  1174→    const state = gs.current;
+  1175→  1175→    if (!state || state.phase !== 'playing') return;
+  1176→  1176→    const canvas = canvasRef.current; if (!canvas) return;
+  1177→  1177→    const rect = canvas.getBoundingClientRect();
+  1178→  1178→    let cx: number, cy: number;
+  1179→  1179→    if ('touches' in e) { if (!e.touches.length) return; cx = e.touches[0].clientX; cy = e.touches[0].clientY; }
+  1180→  1180→    else { cx = e.clientX; cy = e.clientY; }
+  1181→  1181→    const x = cx - rect.left; const y = cy - rect.top;
+  1182→  1182→    const { cellW, cellH, ox, oy } = dims.current;
+  1183→  1183→    // Check pickup collection first
+  1184→  1184→    for (const pk of state.pickups) {
+  1185→  1185→      if (pk.collected) continue;
+  1186→  1186→      const pkY = oy + pk.row * cellH + cellH * 0.5;
+  1187→  1187→      if (Math.abs(x - pk.x) < cellW * 0.4 && Math.abs(y - pkY) < cellH * 0.4) {
+  1188→  1188→        collectPickup(state, pk, cellW, cellH, ox, oy);
+  1189→  1189→        forceUpdate();
+  1190→  1190→        return;
+  1191→  1191→      }
+  1192→  1192→    }
+  1193→  1193→    if (!state.selectedPlant) return;
+  1194→  1194→    const col = Math.floor((x - ox) / cellW);
+  1195→  1195→    const row = Math.floor((y - oy) / cellH);
+  1196→  1196→    if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return;
+  1197→  1197→    if (state.plants.some(p => p.row === row && p.col === col)) return;
+  1198→  1198→    const def = PLANT_DEFS[state.selectedPlant];
+  1199→  1199→    if (state.sun < def.cost) {
+  1200→  1200→      state.floatingTexts.push({ id: uid(), x, y, text: '阳光不足!', color: '#E53935', timer: 1000, maxTimer: 1000 });
+  1201→  1201→      return;
+  1202→  1202→    }
+  1203→  1203→    state.sun -= def.cost;
+  1204→  1204→    const plant: Plant = { id: uid(), type: state.selectedPlant, row, col, hp: def.hp, maxHp: def.hp, lastAttack: Date.now(), animPhase: Math.random() * Math.PI * 2 };
+  1205→  1205→    state.plants.push(plant);
+  1206→  1206→    spawnParticles(state, ox + col * cellW + cellW / 2, oy + row * cellH + cellH / 2, '#A5D6A7', 8);
+  1207→  1207→    if (def.explosive) {
+  1208→  1208→      const cs = state; const cp = plant; const cc = col; const cr = row;
+  1209→  1209→      setTimeout(() => {
+  1210→  1210→        if (cs.phase !== 'playing') return;
+  1211→  1211→        const { ox: oX, oy: oY, cellW: cW, cellH: cH } = dims.current;
+  1212→  1212→        const ex = oX + cc * cW + cW / 2; const ey = oY + cr * cH + cH / 2;
+  1213→  1213→        cs.explosions.push({ id: uid(), x: ex, y: ey, radius: 0, maxRadius: cW * 2, timer: 0, maxTimer: 600 });
+  1214→  1214→        cs.zombies.forEach(z => {
+  1215→  1215→          if (!z.dead && Math.abs(z.row - cr) <= 1) {
+  1216→  1216→            const zzy = oY + z.row * cH + cH / 2;
+  1217→  1217→            if (Math.sqrt((z.x - ex) ** 2 + (zzy - ey) ** 2) < cW * 2.5) {
+  1218→  1218→              z.hp -= 1800;
+  1219→  1219→              if (z.hp <= 0) { z.dead = true; z.deathTimer = 500; cs.totalKills++; cs.score += 50; spawnZombieDeathParticles(cs, z.x, oY + z.row * cH + cH / 2, cW); }
+  1220→  1220→            }
+  1221→  1221→          }
+  1222→  1222→        });
+  1223→  1223→        cs.plants = cs.plants.filter(p => p.id !== cp.id);
+  1224→  1224→        forceUpdate();
+  1225→  1225→      }, 500);
+  1226→  1226→    }
+  1227→  1227→    forceUpdate();
+  1228→  1228→  }, [forceUpdate]);
+  1229→  1229→
+  1230→  1230→  // ---- Game loop ----
+  1231→  1231→  const gameLoop = useCallback(() => {
+  1232→  1232→    const state = gs.current; const canvas = canvasRef.current;
+  1233→  1233→    if (!state || !canvas || state.phase !== 'playing') return;
+  1234→  1234→    const ctx = canvas.getContext('2d'); if (!ctx) return;
+  1235→  1235→    const now = Date.now();
+  1236→  1236→    const dt = Math.min(now - state.lastTime, 50);
+  1237→  1237→    state.lastTime = now;
+  1238→  1238→    const { w, h, cellW, cellH, ox, oy } = dims.current;
+  1239→  1239→    const isBoosted = now < state.zombieSpeedBoostEnd;
+  1240→  1240→    const speedMult = isBoosted ? ZOMBIE_SPEED_BOOST : 1;
+  1241→  1241→
+  1242→  1242→    // Spawn
+  1243→  1243→    const waveConfig = WAVE_CONFIGS[state.wave];
+  1244→  1244→    if (waveConfig) {
+  1245→  1245→      const elapsed = now - state.waveStartTime;
+  1246→  1246→      for (let i = state.waveZombiesSpawned; i < waveConfig.zombies.length; i++) {
+  1247→  1247→        if (elapsed >= waveConfig.zombies[i].delay) {
+  1248→  1248→          state.waveZombiesSpawned = i + 1;
+  1249→  1249→          const zc = waveConfig.zombies[i]; const def = ZOMBIE_DEFS[zc.type];
+  1250→  1250→          const row = zc.row ?? Math.floor(Math.random() * GRID_ROWS);
+  1251→  1251→          state.zombies.push({ id: uid(), type: zc.type, row, x: ox + (GRID_COLS + 0.8) * cellW, hp: def.hp, maxHp: def.hp, speed: def.speed, baseSpeed: def.speed, eating: false, slowed: false, slowTimer: 0, lastHit: now, animPhase: Math.random() * Math.PI * 2, dead: false, deathTimer: 0 });
+  1252→  1252→        } else break;
+  1253→  1253→      }
+  1254→  1254→    }
+  1255→  1255→
+  1256→  1256→    // Wave check
+  1257→  1257→    const allSpawned = waveConfig ? state.waveZombiesSpawned >= waveConfig.zombies.length : true;
+  1258→  1258→    const allDead = state.zombies.length === 0 || state.zombies.every(z => z.dead);
+  1259→  1259→    if (allSpawned && allDead && state.zombies.length > 0) {
+  1260→  1260→      if (state.wave < WAVE_CONFIGS.length - 1) {
+  1261→  1261→        state.wave++; state.waveStartTime = now + 3000; state.waveZombiesSpawned = 0;
+  1262→  1262→        state.waveCountdown = 3000;
+  1263→  1263→        state.floatingTexts.push({ id: uid(), x: w / 2, y: h / 2, text: `第 ${state.wave + 1} 波即将来袭!`, color: '#E65100', timer: 2500, maxTimer: 2500 });
+  1264→  1264→        forceUpdate();
+  1265→  1265→      } else { state.phase = 'victory'; setPhase('victory'); return; }
+  1266→  1266→    }
+  1267→  1267→
+  1268→  1268→    // Zombies
+  1269→  1269→    let gameOver = false;
+  1270→  1270→    for (const z of state.zombies) {
+  1271→  1271→      if (z.dead) { z.deathTimer -= dt; continue; }
+  1272→  1272→      if (z.slowed) { z.slowTimer -= dt; if (z.slowTimer <= 0) z.slowed = false; }
+  1273→  1273→      z.animPhase += dt * 0.005 * (z.slowed ? 0.5 : 1);
+  1274→  1274→      const spd = z.baseSpeed * speedMult * (z.slowed ? 0.5 : 1);
+  1275→  1275→      const ep = state.plants.find(p => p.row === z.row && Math.abs(z.x - (ox + p.col * cellW + cellW / 2)) < cellW * 0.35);
+  1276→  1276→      if (ep) {
+  1277→  1277→        z.eating = true;
+  1278→  1278→        if (now - z.lastHit > 1000) { z.lastHit = now; ep.hp -= 100; if (ep.hp <= 0) state.plants = state.plants.filter(p => p.id !== ep.id); }
+  1279→  1279→      } else { z.eating = false; z.x -= spd * (dt / 1000); }
+  1280→  1280→      if (z.x < ox - cellW * 0.5) gameOver = true;
+  1281→  1281→    }
+  1282→  1282→    state.zombies = state.zombies.filter(z => !(z.dead && z.deathTimer <= 0));
+  1283→  1283→    if (gameOver) { state.phase = 'gameover'; setPhase('gameover'); return; }
+  1284→  1284→
+  1285→  1285→    // Plants
+  1286→  1286→    for (const p of state.plants) {
+  1287→  1287→      p.animPhase += dt * 0.003;
+  1288→  1288→      const d = PLANT_DEFS[p.type];
+  1289→  1289→      if (d.attack && d.attackSpeed) {
+  1290→  1290→        const hz = state.zombies.some(z => !z.dead && z.row === p.row && z.x > ox + p.col * cellW);
+  1291→  1291→        if (hz && now - p.lastAttack >= d.attackSpeed) {
+  1292→  1292→          p.lastAttack = now;
+  1293→  1293→          const px = ox + p.col * cellW + cellW * 0.7;
+  1294→  1294→          state.projectiles.push({ id: uid(), row: p.row, x: px, speed: 250, damage: d.attack, slow: !!d.slowEffect, active: true });
+  1295→  1295→          if (d.doubleShot) { setTimeout(() => { if (gs.current?.phase === 'playing') gs.current.projectiles.push({ id: uid(), row: p.row, x: px, speed: 250, damage: d.attack, slow: false, active: true }); }, 150); }
+  1296→  1296→        }
+  1297→  1297→      }
+  1298→  1298→    }
+  1299→  1299→
+
+[showing lines 800-1299 of 1795; use offset=1300 with limit to continue reading]
