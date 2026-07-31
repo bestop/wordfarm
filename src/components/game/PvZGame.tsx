@@ -1635,73 +1635,179 @@ export default function PvZGame() {
             </div>
           </div>
 
-                            )}
-                            {!quiz.wasCorrect && (
-                              <span className="text-xs" style={{ color: '#EF5350' }}>僵尸正在加速! 5秒后恢复</span>
-                            )}
-                          </div>
-                          <div className="ml-auto text-center">
-                            <div className="text-xs font-bold" style={{ color: '#A1887F' }}>下一题</div>
-                            <div className="text-xl font-extrabold tabular-nums" style={{ color: '#5D4037' }}>{Math.max(0, Math.ceil(state.quizCooldown / 1000))}<span className="text-sm font-bold">s</span></div>
-                          </div>
-                        </div>
-                      ) : (
-                        <React.Fragment>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <div className="flex items-center gap-2">
-                              <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${diff === 1 ? 'text-emerald-900' : diff === 2 ? 'text-amber-900' : 'text-red-900'}`} style={{ background: diff === 1 ? 'linear-gradient(135deg, #C8E6C9, #A5D6A7)' : diff === 2 ? 'linear-gradient(135deg, #FFE082, #FFD54F)' : 'linear-gradient(135deg, #FFAB91, #FF8A65)', boxShadow: diff === 1 ? '0 1px 4px rgba(102,187,106,0.3)' : diff === 2 ? '0 1px 4px rgba(255,183,77,0.3)' : '0 1px 4px rgba(239,83,80,0.3)' }}>{diff === 1 ? '🌱简单' : diff === 2 ? '⚡中等' : '🔥困难'} +{QUIZ_SUN_REWARD[diff]}☀</span>
-                              <span className="font-extrabold text-xl md:text-2xl tracking-wide" style={{ color: '#3E2723' }}>{quiz.word.en}</span>
-                            </div>
-                            <div className="relative flex-shrink-0" style={{ width: '38px', height: '38px' }}>
-                              <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
-                                <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,152,0,0.12)" strokeWidth="3" />
-                                <circle cx="18" cy="18" r="15.5" fill="none" stroke={quiz.timer < 3000 ? '#EF5350' : '#FFB74D'} strokeWidth="3" strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 15.5}`} strokeDashoffset={`${2 * Math.PI * 15.5 * (1 - quiz.timer / QUIZ_TIME_LIMIT)}`} style={{ transition: 'stroke-dashoffset 0.15s linear, stroke 0.3s' }} />
-                              </svg>
-                              <span className={`absolute inset-0 flex items-center justify-center text-[11px] font-extrabold tabular-nums ${quiz.timer < 3000 ? 'animate-pulse' : ''}`} style={{ color: quiz.timer < 3000 ? '#D32F2F' : '#5D4037' }}>{Math.max(0, Math.ceil(quiz.timer / 1000))}</span>
-                            </div>
-                          </div>
-                          <div className="w-full h-1.5 rounded-full mb-2 overflow-hidden" style={{ background: 'rgba(255,152,0,0.1)' }}>
-                            <div className={`h-full rounded-full transition-all duration-150 ${quiz.timer < 3000 ? 'bg-red-400' : 'bg-amber-400'}`} style={{ width: `${(quiz.timer / QUIZ_TIME_LIMIT) * 100}%` }} />
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            {quiz.options.map((opt, i) => (
-                              <button key={i} onClick={() => handleAnswer(i)} className="py-2.5 md:py-3 px-3 md:px-4 rounded-2xl text-sm md:text-base font-semibold transition-all hover:scale-[1.03] active:scale-[0.97]" style={{ color: '#3E2723', background: 'linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.75))', border: '1.5px solid rgba(255,183,77,0.25)', boxShadow: '0 2px 8px rgba(255,152,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)' }}>
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-md text-[11px] font-extrabold mr-1.5" style={{ background: 'linear-gradient(180deg, #FFE082, #FFD54F)', color: '#5D4037', boxShadow: '0 1px 3px rgba(255,152,0,0.2)' }}>{String.fromCharCode(65 + i)}</span>
-                                {opt}
-                              </button>
-                            ))}
-                          </div>
-                        </React.Fragment>
+          {/* ===== Plant Selection Toolbar ===== */}
+          <div className="flex items-center gap-1.5 px-2 py-1.5 flex-shrink-0 relative z-10 overflow-x-auto"
+            style={{ background: 'linear-gradient(180deg, #FFF3E0, #FFE0B2)', borderBottom: '2px solid rgba(255,152,0,0.15)', boxShadow: '0 2px 8px rgba(255,152,0,0.1)' }}>
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              {PLANT_ORDER.map(type => {
+                const def = PLANT_DEFS[type];
+                const selected = state.selectedPlant === type;
+                const canAfford = state.sun >= def.cost;
+                return (
+                  <button key={type}
+                    onClick={() => { state.selectedPlant = selected ? null : type; forceUpdate(); }}
+                    className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all duration-150 flex-shrink-0"
+                    style={{
+                      background: selected
+                        ? 'linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,243,224,0.9))'
+                        : 'rgba(255,255,255,0.45)',
+                      border: selected
+                        ? '2.5px solid ' + def.color
+                        : '2px solid ' + (canAfford ? 'rgba(255,183,77,0.25)' : 'rgba(0,0,0,0.08)'),
+                      boxShadow: selected
+                        ? '0 3px 12px ' + def.color + '40, inset 0 1px 0 rgba(255,255,255,0.9)'
+                        : 'inset 0 1px 0 rgba(255,255,255,0.6)',
+                      opacity: canAfford ? 1 : 0.45,
+                      transform: selected ? 'scale(1.08)' : 'scale(1)',
+                      cursor: canAfford ? 'pointer' : 'not-allowed',
+                    }}>
+                    <div className="relative">
+                      <span className="text-2xl leading-none" style={{ filter: selected ? 'drop-shadow(0 2px 4px ' + def.color + '60)' : 'none' }}>{def.emoji}</span>
+                      {selected && (
+                        <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px]"
+                          style={{ background: def.color, color: '#fff', boxShadow: '0 1px 4px ' + def.color + '80' }}>✓</div>
                       )}
                     </div>
-                  </div>
+                    <div className="text-[10px] font-bold leading-tight whitespace-nowrap" style={{ color: selected ? def.color : '#5D4037' }}>{def.name}</div>
+                    <div className="flex items-center gap-0.5">
+                      <span className="text-[10px]">☀️</span>
+                      <span className="text-[11px] font-extrabold tabular-nums" style={{ color: canAfford ? '#E65100' : '#BDBDBD' }}>{def.cost}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            {state.selectedPlant && (
+              <div className="flex-shrink-0 ml-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold"
+                style={{ background: 'rgba(255,255,255,0.7)', color: '#6D4C41', border: '1px solid rgba(255,152,0,0.15)' }}>
+                点击草地种植
+              </div>
+            )}
+            <div className="flex-shrink-0 ml-auto">
+              <button onClick={() => { state.selectedPlant = null; forceUpdate(); }}
+                className="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 active:scale-95"
+                style={{ background: 'rgba(255,255,255,0.6)', color: '#8D6E63', border: '1.5px solid rgba(0,0,0,0.08)' }}>
+                ✕ 取消
+              </button>
+            </div>
+          </div>
+
+          {/* ===== Game Area (Canvas + Overlays) ===== */}
+          <div ref={containerRef} className="relative flex-1 min-h-0">
+            <canvas ref={canvasRef} onClick={handleCanvasClick}
+              className="absolute inset-0 w-full h-full" style={{ cursor: state.selectedPlant ? 'crosshair' : 'default' }} />
+
+            {/* ===== Quiz Panel ===== */}
+            {quiz && (
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 w-[94%] max-w-lg">
+                <div className="rounded-2xl px-4 py-3 shadow-xl"
+                  style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', border: '2px solid rgba(255,183,77,0.2)', boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(255,152,0,0.08)' }}>
+                  {quiz.answered ? (
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        {quiz.wasCorrect ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg flex-shrink-0"
+                              style={{ background: 'linear-gradient(135deg, #C8E6C9, #A5D6A7)', boxShadow: '0 2px 8px rgba(76,175,80,0.3)' }}>✅</div>
+                            <div>
+                              <div className="font-bold text-sm" style={{ color: '#2E7D32' }}>答对了! +{QUIZ_SUN_REWARD[quiz.word.difficulty]}☀</div>
+                              <div className="text-xs" style={{ color: '#5D4037' }}>{quiz.word.en} = {quiz.word.zh}</div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg flex-shrink-0"
+                              style={{ background: 'linear-gradient(135deg, #FFCDD2, #EF9A9A)', boxShadow: '0 2px 8px rgba(244,67,54,0.3)' }}>❌</div>
+                            <div>
+                              <div className="font-bold text-sm" style={{ color: '#C62828' }}>答错了</div>
+                              <div className="text-xs" style={{ color: '#5D4037' }}>{quiz.word.en} = {quiz.word.zh}</div>
+                            </div>
+                          </div>
+                        )}
+                        {!quiz.wasCorrect && (
+                          <span className="text-[11px] ml-10 font-semibold" style={{ color: '#EF5350' }}>⚡ 僵尸加速中!</span>
+                        )}
+                      </div>
+                      <div className="flex-shrink-0 text-center rounded-xl px-3 py-1.5"
+                        style={{ background: 'rgba(255,152,0,0.08)', border: '1px solid rgba(255,152,0,0.12)' }}>
+                        <div className="text-[10px] font-bold" style={{ color: '#A1887F' }}>下一题</div>
+                        <div className="text-lg font-extrabold tabular-nums" style={{ color: '#5D4037' }}>{Math.max(0, Math.ceil(state.quizCooldown / 1000))}<span className="text-xs font-bold">s</span></div>
+                      </div>
+                    </div>
+                  ) : (
+                    <React.Fragment>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${diff === 1 ? 'text-emerald-800' : diff === 2 ? 'text-amber-800' : 'text-red-800'}`}
+                            style={{ background: diff === 1 ? 'linear-gradient(135deg, #C8E6C9, #A5D6A7)' : diff === 2 ? 'linear-gradient(135deg, #FFE082, #FFD54F)' : 'linear-gradient(135deg, #FFAB91, #FF8A65)', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+                            {diff === 1 ? '🌱 简单' : diff === 2 ? '⚡ 中等' : '🔥 困难'} +{QUIZ_SUN_REWARD[diff]}☀
+                          </span>
+                          <span className="font-extrabold text-2xl md:text-3xl tracking-wide" style={{ color: '#3E2723', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>{quiz.word.en}</span>
+                        </div>
+                        <div className="relative flex-shrink-0" style={{ width: '42px', height: '42px' }}>
+                          <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
+                            <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,152,0,0.1)" strokeWidth="3" />
+                            <circle cx="18" cy="18" r="15.5" fill="none" stroke={quiz.timer < 3000 ? '#EF5350' : '#FFB74D'} strokeWidth="3" strokeLinecap="round"
+                              strokeDasharray={`${2 * Math.PI * 15.5}`}
+                              strokeDashoffset={`${2 * Math.PI * 15.5 * (1 - quiz.timer / QUIZ_TIME_LIMIT)}`}
+                              style={{ transition: 'stroke-dashoffset 0.15s linear, stroke 0.3s' }} />
+                          </svg>
+                          <span className={`absolute inset-0 flex items-center justify-center text-[12px] font-extrabold tabular-nums ${quiz.timer < 3000 ? 'animate-pulse' : ''}`}
+                            style={{ color: quiz.timer < 3000 ? '#D32F2F' : '#5D4037' }}>{Math.max(0, Math.ceil(quiz.timer / 1000))}</span>
+                        </div>
+                      </div>
+                      <div className="w-full h-1 rounded-full mb-2.5 overflow-hidden" style={{ background: 'rgba(255,152,0,0.08)' }}>
+                        <div className={`h-full rounded-full transition-all duration-150 ${quiz.timer < 3000 ? 'bg-red-400' : 'bg-amber-400'}`}
+                          style={{ width: `${(quiz.timer / QUIZ_TIME_LIMIT) * 100}%`, boxShadow: quiz.timer < 3000 ? '0 0 8px rgba(239,83,80,0.4)' : '0 0 8px rgba(255,183,77,0.3)' }} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {quiz.options.map((opt, i) => (
+                          <button key={i} onClick={() => handleAnswer(i)}
+                            className="py-2.5 md:py-3 px-3 md:px-4 rounded-xl text-sm md:text-base font-semibold transition-all duration-100 hover:scale-[1.03] active:scale-[0.97]"
+                            style={{
+                              color: '#3E2723',
+                              background: 'linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,253,245,0.85))',
+                              border: '1.5px solid rgba(255,183,77,0.2)',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
+                            }}>
+                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-md text-[10px] font-extrabold mr-1.5"
+                              style={{ background: 'linear-gradient(180deg, #FFE082, #FFD54F)', color: '#5D4037', boxShadow: '0 1px 2px rgba(255,152,0,0.2)' }}>
+                              {String.fromCharCode(65 + i)}
+                            </span>
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    </React.Fragment>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Game Over overlay - upgraded with star rating, wrong words review */}
+            {/* ===== Game Over Overlay ===== */}
             {phase === 'gameover' && (
-              <div className="absolute inset-0 flex items-center justify-center z-30" style={{ background: 'rgba(62,39,35,0.5)', backdropFilter: 'blur(8px)' }}>
-                <div className="rounded-3xl text-center max-w-md w-full mx-4 shadow-2xl overflow-hidden"
-                  style={{ background: 'linear-gradient(180deg, #FFF8E1, #FFECB3)', border: '2px solid rgba(229,57,53,0.3)', boxShadow: '0 16px 60px rgba(0,0,0,0.25)' }}>
-                  {/* Header */}
-                  <div className="py-5 px-6" style={{ background: 'linear-gradient(180deg, rgba(229,57,53,0.08), transparent)' }}>
-                    <div className="text-6xl mb-2" style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' }}>💀</div>
-                    <h2 className="text-3xl font-extrabold" style={{ color: '#C62828', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>游戏结束</h2>
-                    <p className="text-sm mt-1" style={{ color: '#8D6E63' }}>僵尸突破了防线...</p>
+              <div className="absolute inset-0 flex items-center justify-center z-30"
+                style={{ background: 'rgba(62,39,35,0.55)', backdropFilter: 'blur(10px)' }}>
+                <div className="rounded-3xl text-center max-w-sm w-full mx-4 shadow-2xl overflow-hidden animate-[fadeIn_0.4s_ease-out]"
+                  style={{ background: 'linear-gradient(180deg, #FFF8E1, #FFECB3 60%, #FFE0B2)', border: '2.5px solid rgba(229,57,53,0.25)', boxShadow: '0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1)' }}>
+                  <div className="py-6 px-6 relative" style={{ background: 'linear-gradient(180deg, rgba(229,57,53,0.06), transparent)' }}>
+                    <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(90deg, #EF5350, #FF7043, #FF8A65)' }} />
+                    <div className="text-6xl mb-3 animate-bounce" style={{ filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.15))' }}>💀</div>
+                    <h2 className="text-3xl font-extrabold" style={{ color: '#C62828', textShadow: '0 2px 0 rgba(255,255,255,0.4)' }}>游戏结束</h2>
+                    <p className="text-sm mt-1.5 font-medium" style={{ color: '#8D6E63' }}>僵尸突破了防线...</p>
                   </div>
-                  {/* Stats */}
-                  <div className="px-6 pb-3">
+                  <div className="px-5 pb-4">
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       {[
-                        { icon: '🌊', label: '存活波次', value: `${state.wave + 1}/${WAVE_CONFIGS.length}`, accent: false },
-                        { icon: '⚔️', label: '消灭僵尸', value: `${state.totalKills}`, accent: false },
-                        { icon: '🔥', label: '最高连击', value: `${state.bestCombo}`, accent: false },
-                        { icon: '📝', label: '答题正确率', value: `${state.wordsAnswered > 0 ? Math.round(state.wordsCorrect / state.wordsAnswered * 100) : 0}%`, accent: false },
+                        { icon: '🌊', label: '存活波次', value: `${state.wave + 1}/${WAVE_CONFIGS.length}` },
+                        { icon: '⚔️', label: '消灭僵尸', value: `${state.totalKills}` },
+                        { icon: '🔥', label: '最高连击', value: `${state.bestCombo}` },
+                        { icon: '📝', label: '答题正确率', value: `${state.wordsAnswered > 0 ? Math.round(state.wordsCorrect / state.wordsAnswered * 100) : 0}%` },
                       ].map((item, i) => (
-                        <div key={i} className="rounded-2xl px-3 py-2.5 flex items-center gap-2"
-                          style={{ background: 'rgba(255,255,255,0.6)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)' }}>
-                          <span className="text-lg">{item.icon}</span>
+                        <div key={i} className="rounded-2xl px-3 py-2.5 flex items-center gap-2.5"
+                          style={{ background: 'rgba(255,255,255,0.65)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 3px rgba(0,0,0,0.04)' }}>
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base flex-shrink-0"
+                            style={{ background: 'linear-gradient(135deg, rgba(255,183,77,0.15), rgba(255,152,0,0.08))' }}>{item.icon}</div>
                           <div className="text-left">
                             <div className="text-[10px] font-bold" style={{ color: '#A1887F' }}>{item.label}</div>
                             <div className="font-extrabold text-base" style={{ color: '#3E2723' }}>{item.value}</div>
@@ -1709,42 +1815,42 @@ export default function PvZGame() {
                         </div>
                       ))}
                     </div>
-                    {/* Score banner */}
-                    <div className="mt-3 rounded-2xl py-3 px-4"
-                      style={{ background: 'linear-gradient(135deg, rgba(255,183,77,0.15), rgba(255,152,0,0.1))', border: '1px solid rgba(255,183,77,0.2)' }}>
-                      <div className="text-[11px] font-bold" style={{ color: '#A1887F' }}>最终得分</div>
-                      <div className="text-3xl font-extrabold" style={{ color: '#E65100', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>{state.score}</div>
+                    <div className="mt-3 rounded-2xl py-3.5 px-4 relative overflow-hidden"
+                      style={{ background: 'linear-gradient(135deg, rgba(255,183,77,0.12), rgba(255,152,0,0.06))', border: '1px solid rgba(255,183,77,0.15)' }}>
+                      <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 20% 50%, rgba(255,183,77,0.08), transparent 60%)' }} />
+                      <div className="relative">
+                        <div className="text-[10px] font-bold tracking-wider uppercase" style={{ color: '#A1887F' }}>最终得分</div>
+                        <div className="text-4xl font-extrabold mt-0.5" style={{ color: '#E65100', textShadow: '0 2px 0 rgba(255,255,255,0.4)' }}>{state.score}</div>
+                      </div>
                     </div>
-                    {/* Wrong words review */}
                     {state.wrongWords.length > 0 && (
                       <div className="mt-3 text-left">
                         <div className="flex items-center gap-1.5 mb-2">
-                          <span className="text-sm">📖</span>
+                          <div className="w-5 h-5 rounded-md flex items-center justify-center text-xs" style={{ background: 'linear-gradient(135deg, #FFCDD2, #EF9A9A)' }}>📖</div>
                           <span className="text-xs font-bold" style={{ color: '#6D4C41' }}>错题回顾 ({state.wrongWords.length}个)</span>
                         </div>
-                        <div className="max-h-28 overflow-y-auto rounded-xl space-y-1 pr-1"
-                          style={{ scrollbarWidth: 'thin', scrollbarColor: '#FFE082 transparent' }}>
+                        <div className="max-h-32 overflow-y-auto rounded-xl space-y-1.5 pr-1"
+                          style={{ scrollbarWidth: 'thin', scrollbarColor: '#FFCDD2 transparent' }}>
                           {state.wrongWords.slice(0, 10).map((w, i) => (
-                            <div key={i} className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs"
-                              style={{ background: 'rgba(255,235,238,0.5)', border: '1px solid rgba(239,83,80,0.15)' }}>
-                              <span className="font-bold" style={{ color: '#3E2723' }}>{w.en}</span>
-                              <span style={{ color: '#C62828' }}>{w.zh}</span>
-                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold"
+                            <div key={i} className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
+                              style={{ background: 'rgba(255,235,238,0.5)', border: '1px solid rgba(239,83,80,0.1)' }}>
+                              <span className="font-bold flex-1" style={{ color: '#3E2723' }}>{w.en}</span>
+                              <span className="font-semibold" style={{ color: '#C62828' }}>{w.zh}</span>
+                              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold flex-shrink-0"
                                 style={{ background: w.difficulty === 1 ? '#C8E6C9' : w.difficulty === 2 ? '#FFE082' : '#FFAB91', color: w.difficulty === 1 ? '#2E7D32' : w.difficulty === 2 ? '#E65100' : '#C62828' }}>
                                 {w.difficulty === 1 ? '简单' : w.difficulty === 2 ? '中等' : '困难'}
                               </span>
                             </div>
                           ))}
                           {state.wrongWords.length > 10 && (
-                            <div className="text-center text-[11px] py-1" style={{ color: '#A1887F' }}>...还有 {state.wrongWords.length - 10} 个错词</div>
+                            <div className="text-center text-[11px] py-1 font-medium" style={{ color: '#A1887F' }}>...还有 {state.wrongWords.length - 10} 个错词</div>
                           )}
                         </div>
                       </div>
                     )}
                   </div>
-                  {/* Retry button */}
-                  <div className="px-6 pb-6 pt-2">
-                    <button onClick={initGame} className="w-full py-3.5 font-bold text-lg rounded-2xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  <div className="px-5 pb-5 pt-3">
+                    <button onClick={initGame} className="w-full py-3.5 font-bold text-lg rounded-2xl shadow-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                       style={{ background: 'linear-gradient(180deg, #FF8A65, #EF5350)', color: '#fff', boxShadow: '0 4px 20px rgba(229,57,53,0.35)', border: '2px solid rgba(255,255,255,0.2)' }}>
                       🔄 再来一局
                     </button>
@@ -1753,26 +1859,27 @@ export default function PvZGame() {
               </div>
             )}
 
-            {/* Victory overlay - upgraded with star rating, wrong words */}
+            {/* ===== Victory Overlay ===== */}
             {phase === 'victory' && state && (
-              <div className="absolute inset-0 flex items-center justify-center z-30" style={{ background: 'rgba(62,39,35,0.35)', backdropFilter: 'blur(8px)' }}>
-                <div className="rounded-3xl text-center max-w-md w-full mx-4 shadow-2xl overflow-hidden"
-                  style={{ background: 'linear-gradient(180deg, #FFFDE7, #FFF8E1)', border: '2px solid rgba(255,183,77,0.5)', boxShadow: '0 16px 60px rgba(255,152,0,0.2)' }}>
-                  {/* Header with stars */}
-                  <div className="py-5 px-6" style={{ background: 'linear-gradient(180deg, rgba(255,183,77,0.12), transparent)' }}>
-                    <div className="flex justify-center gap-2 mb-3">
+              <div className="absolute inset-0 flex items-center justify-center z-30"
+                style={{ background: 'rgba(62,39,35,0.35)', backdropFilter: 'blur(10px)' }}>
+                <div className="rounded-3xl text-center max-w-sm w-full mx-4 shadow-2xl overflow-hidden animate-[fadeIn_0.4s_ease-out]"
+                  style={{ background: 'linear-gradient(180deg, #FFFDE7, #FFF8E1 50%, #FFF3E0)', border: '2.5px solid rgba(255,183,77,0.4)', boxShadow: '0 20px 60px rgba(255,152,0,0.15), 0 0 0 1px rgba(255,255,255,0.1)' }}>
+                  <div className="py-6 px-6 relative" style={{ background: 'linear-gradient(180deg, rgba(255,183,77,0.1), transparent)' }}>
+                    <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(90deg, #FFD54F, #FFB74D, #FFA726)' }} />
+                    <div className="flex justify-center gap-3 mb-3">
                       {[1, 2, 3].map(i => (
                         <span key={i} className={`text-4xl transition-all duration-500 ${i <= victoryStars ? 'drop-shadow-lg' : 'opacity-20'}`}
-                          style={{ filter: i <= victoryStars ? 'drop-shadow(0 2px 8px rgba(255,183,77,0.6))' : 'none' }}>
+                          style={{ filter: i <= victoryStars ? 'drop-shadow(0 3px 10px rgba(255,183,77,0.6))' : 'none', transform: i <= victoryStars ? 'scale(1.1)' : 'scale(0.9)' }}>
                           {i <= victoryStars ? '⭐' : '☆'}
                         </span>
                       ))}
                     </div>
-                    <div className="text-5xl mb-2" style={{ filter: 'drop-shadow(0 4px 8px rgba(255,152,0,0.3))' }}>🏆</div>
-                    <h2 className="text-3xl font-extrabold" style={{ color: '#E65100', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>胜利!</h2>
-                    <p className="text-sm mt-1 font-bold" style={{ color: '#558B2F' }}>{victoryStars >= 3 ? '完美通关!' : victoryStars >= 2 ? '表现不错!' : victoryStars >= 1 ? '继续加油!' : ''}</p>
+                    <div className="text-5xl mb-2" style={{ filter: 'drop-shadow(0 4px 10px rgba(255,152,0,0.3))' }}>🏆</div>
+                    <h2 className="text-3xl font-extrabold" style={{ color: '#E65100', textShadow: '0 2px 0 rgba(255,255,255,0.4)' }}>胜利!</h2>
+                    <p className="text-sm mt-1.5 font-bold" style={{ color: '#558B2F' }}>{victoryStars >= 3 ? '完美通关!' : victoryStars >= 2 ? '表现不错!' : victoryStars >= 1 ? '继续加油!' : ''}</p>
                   </div>
-                  <div className="px-6 pb-3">
+                  <div className="px-5 pb-4">
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       {[
                         { icon: '⚔️', label: '消灭僵尸', value: `${state.totalKills}` },
@@ -1780,9 +1887,10 @@ export default function PvZGame() {
                         { icon: '📝', label: '答题正确率', value: `${Math.round(victoryAccuracy * 100)}%` },
                         { icon: '📖', label: '答对/总数', value: `${state.wordsCorrect}/${state.wordsAnswered}` },
                       ].map((item, i) => (
-                        <div key={i} className="rounded-2xl px-3 py-2.5 flex items-center gap-2"
-                          style={{ background: 'rgba(255,255,255,0.6)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)' }}>
-                          <span className="text-lg">{item.icon}</span>
+                        <div key={i} className="rounded-2xl px-3 py-2.5 flex items-center gap-2.5"
+                          style={{ background: 'rgba(255,255,255,0.65)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 3px rgba(0,0,0,0.04)' }}>
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base flex-shrink-0"
+                            style={{ background: 'linear-gradient(135deg, rgba(255,183,77,0.2), rgba(255,152,0,0.1))' }}>{item.icon}</div>
                           <div className="text-left">
                             <div className="text-[10px] font-bold" style={{ color: '#A1887F' }}>{item.label}</div>
                             <div className="font-extrabold text-base" style={{ color: '#3E2723' }}>{item.value}</div>
@@ -1790,39 +1898,42 @@ export default function PvZGame() {
                         </div>
                       ))}
                     </div>
-                    <div className="mt-3 rounded-2xl py-3 px-4"
-                      style={{ background: 'linear-gradient(135deg, rgba(255,183,77,0.2), rgba(255,152,0,0.12))', border: '1px solid rgba(255,183,77,0.3)' }}>
-                      <div className="text-[11px] font-bold" style={{ color: '#A1887F' }}>最终得分</div>
-                      <div className="text-3xl font-extrabold" style={{ color: '#E65100', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>{state.score}</div>
+                    <div className="mt-3 rounded-2xl py-3.5 px-4 relative overflow-hidden"
+                      style={{ background: 'linear-gradient(135deg, rgba(255,183,77,0.15), rgba(255,152,0,0.08))', border: '1px solid rgba(255,183,77,0.2)' }}>
+                      <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 80% 50%, rgba(255,183,77,0.1), transparent 60%)' }} />
+                      <div className="relative">
+                        <div className="text-[10px] font-bold tracking-wider uppercase" style={{ color: '#A1887F' }}>最终得分</div>
+                        <div className="text-4xl font-extrabold mt-0.5" style={{ color: '#E65100', textShadow: '0 2px 0 rgba(255,255,255,0.4)' }}>{state.score}</div>
+                      </div>
                     </div>
                     {state.wrongWords.length > 0 && (
                       <div className="mt-3 text-left">
                         <div className="flex items-center gap-1.5 mb-2">
-                          <span className="text-sm">📖</span>
+                          <div className="w-5 h-5 rounded-md flex items-center justify-center text-xs" style={{ background: 'linear-gradient(135deg, #FFE082, #FFD54F)' }}>📖</div>
                           <span className="text-xs font-bold" style={{ color: '#6D4C41' }}>错题回顾 ({state.wrongWords.length}个)</span>
                         </div>
-                        <div className="max-h-28 overflow-y-auto rounded-xl space-y-1 pr-1"
+                        <div className="max-h-32 overflow-y-auto rounded-xl space-y-1.5 pr-1"
                           style={{ scrollbarWidth: 'thin', scrollbarColor: '#FFE082 transparent' }}>
                           {state.wrongWords.slice(0, 10).map((w, i) => (
-                            <div key={i} className="flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs"
-                              style={{ background: 'rgba(255,243,224,0.7)', border: '1px solid rgba(255,183,77,0.15)' }}>
-                              <span className="font-bold" style={{ color: '#3E2723' }}>{w.en}</span>
-                              <span style={{ color: '#E65100' }}>{w.zh}</span>
-                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold"
+                            <div key={i} className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
+                              style={{ background: 'rgba(255,243,224,0.6)', border: '1px solid rgba(255,183,77,0.1)' }}>
+                              <span className="font-bold flex-1" style={{ color: '#3E2723' }}>{w.en}</span>
+                              <span className="font-semibold" style={{ color: '#E65100' }}>{w.zh}</span>
+                              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold flex-shrink-0"
                                 style={{ background: w.difficulty === 1 ? '#C8E6C9' : w.difficulty === 2 ? '#FFE082' : '#FFAB91', color: w.difficulty === 1 ? '#2E7D32' : w.difficulty === 2 ? '#E65100' : '#C62828' }}>
                                 {w.difficulty === 1 ? '简单' : w.difficulty === 2 ? '中等' : '困难'}
                               </span>
                             </div>
                           ))}
                           {state.wrongWords.length > 10 && (
-                            <div className="text-center text-[11px] py-1" style={{ color: '#A1887F' }}>...还有 {state.wrongWords.length - 10} 个错词</div>
+                            <div className="text-center text-[11px] py-1 font-medium" style={{ color: '#A1887F' }}>...还有 {state.wrongWords.length - 10} 个错词</div>
                           )}
                         </div>
                       </div>
                     )}
                   </div>
-                  <div className="px-6 pb-6 pt-2">
-                    <button onClick={initGame} className="w-full py-3.5 font-bold text-lg rounded-2xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  <div className="px-5 pb-5 pt-3">
+                    <button onClick={initGame} className="w-full py-3.5 font-bold text-lg rounded-2xl shadow-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                       style={{ background: 'linear-gradient(180deg, #FFD54F, #FFB74D)', color: '#3E2723', boxShadow: '0 6px 28px rgba(255,152,0,0.4)', border: '2px solid rgba(255,255,255,0.4)' }}>
                       🎮 再玩一次
                     </button>
