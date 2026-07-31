@@ -46,6 +46,19 @@ interface WordQuestion {
   timer: number; answered: boolean; wasCorrect?: boolean;
 }
 
+interface Particle {
+  x: number; y: number; vx: number; vy: number;
+  size: number; color: string; alpha: number;
+  life: number; maxLife: number; gravity?: number;
+}
+
+interface Pickup {
+  id: string; x: number; row: number;
+  type: 'sun' | 'double' | 'freeze';
+  timer: number; maxTimer: number; collected: boolean;
+  bobPhase: number; value: number;
+}
+
 interface GameState {
   phase: GamePhase;
   sun: number; score: number; wave: number;
@@ -61,6 +74,13 @@ interface GameState {
   usedWordIndices: Set<number>;
   shakeTimer: number;
   comboCount: number;
+  particles: Particle[];
+  pickups: Pickup[];
+  doubleDamageEnd: number;
+  screenFlash: number;
+  screenFlashColor: string;
+  waveCountdown: number;
+  bestCombo: number;
 }
 
 // ============ Helpers ============
@@ -950,6 +970,72 @@ function drawZombie(ctx: CanvasRenderingContext2D, zombie: Zombie, cellW: number
   ctx.globalAlpha = 1;
 }
 
+// ============ Game Effect Helpers ============
+function spawnParticles(state: GameState, x: number, y: number, color: string, count: number) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 40 + Math.random() * 120;
+    state.particles.push({
+      x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 40,
+      size: 2 + Math.random() * 4, color, alpha: 1,
+      life: 500 + Math.random() * 700, maxLife: 1200,
+      gravity: 100,
+    });
+  }
+}
+
+function spawnZombieDeathParticles(state: GameState, x: number, y: number, cellW: number) {
+  const colors = ['#9EC05A', '#7BAFD4', '#5D4037', '#8D6E63', '#FFD54F'];
+  for (let i = 0; i < 15; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 30 + Math.random() * 100;
+    state.particles.push({
+      x: x + (Math.random() - 0.5) * cellW * 0.15, y: y - cellW * 0.1,
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 60,
+      size: 2 + Math.random() * 4, color: colors[Math.floor(Math.random() * colors.length)],
+      alpha: 1, life: 400 + Math.random() * 500, maxLife: 900,
+      gravity: 150,
+    });
+  }
+}
+
+function trySpawnDrop(state: GameState, zombie: Zombie, cellW: number) {
+  let dropChance = 0.2;
+  if (zombie.type === 'cone') dropChance = 0.3;
+  if (zombie.type === 'bucket') dropChance = 0.4;
+  if (zombie.type === 'flag') dropChance = 0.55;
+  if (Math.random() < dropChance) {
+    const typeRand = Math.random();
+    let type: Pickup['type'] = 'sun';
+    let value = 25 + Math.floor(Math.random() * 20);
+    if (zombie.type === 'bucket' || zombie.type === 'flag') value = 35 + Math.floor(Math.random() * 25);
+    if (typeRand > 0.85) { type = 'double'; value = 0; }
+    else if (typeRand > 0.7) { type = 'freeze'; value = 0; }
+    state.pickups.push({
+      id: uid(), x: zombie.x, row: zombie.row,
+      type, timer: 8000, maxTimer: 8000, collected: false,
+      bobPhase: Math.random() * Math.PI * 2, value,
+    });
+  }
+}
+
+function collectPickup(state: GameState, pk: Pickup, cellW: number, cellH: number, ox: number, oy: number) {
+  pk.collected = true;
+  const py = oy + pk.row * cellH + cellH / 2;
+  if (pk.type === 'sun') {
+    state.sun += pk.value;
+    state.score += pk.value;
+    state.floatingTexts.push({ id: uid(), x: pk.x, y: py, text: `+${pk.value}☀️`, color: '#FFD54F', timer: 1000, maxTimer: 1000 });
+  } else if (pk.type === 'double') {
+    state.doubleDamageEnd = Date.now() + 6000;
+    state.floatingTexts.push({ id: uid(), x: pk.x, y: py, text: '⚡双倍伤害 6s!', color: '#FF6F00', timer: 1500, maxTimer: 1500 });
+  } else if (pk.type === 'freeze') {
+    state.zombies.forEach(z => { if (!z.dead) { z.slowed = true; z.slowTimer = 4000; } });
+    state.floatingTexts.push({ id: uid(), x: pk.x, y: py, text: '🧊全屏冰冻 4s!', color: '#29B6F6', timer: 1500, maxTimer: 1500 });
+  }
+  spawnParticles(state, pk.x, py, pk.type === 'sun' ? '#FFD54F' : pk.type === 'double' ? '#FF6F00' : '#29B6F6', 15);
+}
+
 // ============ Component ============
 export default function PvZGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -986,10 +1072,13 @@ export default function PvZGame() {
       explosions: [], floatingTexts: [],
       selectedPlant: null, currentQuiz: null, quizCooldown: 0,
       wordsAnswered: 0, wordsCorrect: 0,
-      waveStartTime: Date.now(), waveZombiesSpawned: 0,
+      waveStartTime: Date.now() + 3000, waveZombiesSpawned: 0,
       totalKills: 0, lastTime: Date.now(),
       zombieSpeedBoostEnd: 0, usedWordIndices: new Set(),
       shakeTimer: 0, comboCount: 0,
+      particles: [], pickups: [],
+      doubleDamageEnd: 0, screenFlash: 0, screenFlashColor: '#fff',
+      waveCountdown: 3000, bestCombo: 0,
     };
     gs.current = state;
     setPhase('playing');
@@ -998,13 +1087,13 @@ export default function PvZGame() {
   }, [forceUpdate]);
 
   const generateQuiz = useCallback((state: GameState) => {
-    const difficultyFilter = state.wordsAnswered < 3 ? 1 : 0;
+    const maxDiff = state.wordsAnswered < 5 ? 1 : state.wordsAnswered < 12 ? 2 : 3;
     let available = WORD_BANK.map((_, i) => i).filter(
-      i => !state.usedWordIndices.has(i) && (!difficultyFilter || WORD_BANK[i].difficulty === 1)
+      i => !state.usedWordIndices.has(i) && WORD_BANK[i].difficulty <= maxDiff
     );
     if (available.length < 4) { state.usedWordIndices.clear(); }
     available = WORD_BANK.map((_, i) => i).filter(
-      i => !state.usedWordIndices.has(i) && (!difficultyFilter || WORD_BANK[i].difficulty === 1)
+      i => !state.usedWordIndices.has(i) && WORD_BANK[i].difficulty <= maxDiff
     );
     if (available.length < 4) available = WORD_BANK.map((_, i) => i);
     const shuffled = shuffle(available);
@@ -1012,7 +1101,7 @@ export default function PvZGame() {
     const correctWord = WORD_BANK[correctIdx];
     state.usedWordIndices.add(correctIdx);
     const wrongPool = WORD_BANK.map((_, i) => i).filter(
-      i => i !== correctIdx && (!difficultyFilter || WORD_BANK[i].difficulty === 1)
+      i => i !== correctIdx && WORD_BANK[i].difficulty <= maxDiff
     );
     const wrongShuffled = shuffle(wrongPool).slice(0, 3);
     const options = shuffle([correctWord.zh, ...wrongShuffled.map(i => WORD_BANK[i].zh)]);
@@ -1037,19 +1126,41 @@ export default function PvZGame() {
     if (isCorrect) {
       state.wordsCorrect++;
       state.comboCount++;
+      if (state.comboCount > state.bestCombo) state.bestCombo = state.comboCount;
       const reward = QUIZ_SUN_REWARD[quiz.word.difficulty];
       const comboBonus = state.comboCount >= 3 ? Math.floor(reward * 0.5) : 0;
       state.sun += reward + comboBonus;
       state.score += reward + comboBonus;
+      state.screenFlash = 200; state.screenFlashColor = 'rgba(139,195,74,0.12)';
       state.floatingTexts.push({
         id: uid(), x: w / 2, y: h - 100,
         text: `+${reward + comboBonus} ${comboBonus > 0 ? ' x' + state.comboCount + '连击!' : ''}`,
         color: '#FF8F00', timer: 1500, maxTimer: 1500,
       });
+      // Combo milestone celebrations
+      if (state.comboCount === 5) {
+        state.floatingTexts.push({ id: uid(), x: w / 2, y: h / 2 - 30, text: '🔥 超级连击! 🔥', color: '#FF6F00', timer: 2000, maxTimer: 2000 });
+        state.sun += 30; state.score += 30;
+        spawnParticles(state, w / 2, h / 2, '#FFD54F', 20);
+        state.screenFlash = 300; state.screenFlashColor = 'rgba(255,183,77,0.18)';
+      } else if (state.comboCount === 10) {
+        state.floatingTexts.push({ id: uid(), x: w / 2, y: h / 2 - 30, text: '⚡ 无敌连击!! ⚡', color: '#E65100', timer: 2500, maxTimer: 2500 });
+        state.sun += 60; state.score += 60;
+        spawnParticles(state, w / 2, h / 2, '#FF6F00', 25);
+        spawnParticles(state, w / 2, h / 2, '#FFD54F', 20);
+        state.screenFlash = 400; state.screenFlashColor = 'rgba(255,111,0,0.22)';
+      } else if (state.comboCount > 10 && state.comboCount % 5 === 0) {
+        state.floatingTexts.push({ id: uid(), x: w / 2, y: h / 2 - 30, text: `💥 ${state.comboCount}连击!! 💥`, color: '#D50000', timer: 2500, maxTimer: 2500 });
+        state.sun += 50; state.score += 50;
+        spawnParticles(state, w / 2, h / 2, '#FF1744', 20);
+        spawnParticles(state, w / 2, h / 2, '#FFD54F', 20);
+        state.screenFlash = 400; state.screenFlashColor = 'rgba(255,23,68,0.18)';
+      }
     } else {
       state.comboCount = 0;
       state.zombieSpeedBoostEnd = now + ZOMBIE_SPEED_BOOST_DURATION;
       state.shakeTimer = 300;
+      state.screenFlash = 250; state.screenFlashColor = 'rgba(229,57,53,0.18)';
       state.floatingTexts.push({
         id: uid(), x: w / 2, y: h - 100,
         text: '答错了! 僵尸加速!', color: '#E53935', timer: 1500, maxTimer: 1500,
@@ -1061,7 +1172,7 @@ export default function PvZGame() {
 
   const handleCanvasClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     const state = gs.current;
-    if (!state || state.phase !== 'playing' || !state.selectedPlant) return;
+    if (!state || state.phase !== 'playing') return;
     const canvas = canvasRef.current; if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     let cx: number, cy: number;
@@ -1069,6 +1180,17 @@ export default function PvZGame() {
     else { cx = e.clientX; cy = e.clientY; }
     const x = cx - rect.left; const y = cy - rect.top;
     const { cellW, cellH, ox, oy } = dims.current;
+    // Check pickup collection first
+    for (const pk of state.pickups) {
+      if (pk.collected) continue;
+      const pkY = oy + pk.row * cellH + cellH * 0.5;
+      if (Math.abs(x - pk.x) < cellW * 0.4 && Math.abs(y - pkY) < cellH * 0.4) {
+        collectPickup(state, pk, cellW, cellH, ox, oy);
+        forceUpdate();
+        return;
+      }
+    }
+    if (!state.selectedPlant) return;
     const col = Math.floor((x - ox) / cellW);
     const row = Math.floor((y - oy) / cellH);
     if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return;
@@ -1081,6 +1203,7 @@ export default function PvZGame() {
     state.sun -= def.cost;
     const plant: Plant = { id: uid(), type: state.selectedPlant, row, col, hp: def.hp, maxHp: def.hp, lastAttack: Date.now(), animPhase: Math.random() * Math.PI * 2 };
     state.plants.push(plant);
+    spawnParticles(state, ox + col * cellW + cellW / 2, oy + row * cellH + cellH / 2, '#A5D6A7', 8);
     if (def.explosive) {
       const cs = state; const cp = plant; const cc = col; const cr = row;
       setTimeout(() => {
@@ -1093,7 +1216,7 @@ export default function PvZGame() {
             const zzy = oY + z.row * cH + cH / 2;
             if (Math.sqrt((z.x - ex) ** 2 + (zzy - ey) ** 2) < cW * 2.5) {
               z.hp -= 1800;
-              if (z.hp <= 0) { z.dead = true; z.deathTimer = 500; cs.totalKills++; cs.score += 50; }
+              if (z.hp <= 0) { z.dead = true; z.deathTimer = 500; cs.totalKills++; cs.score += 50; spawnZombieDeathParticles(cs, z.x, oY + z.row * cH + cH / 2, cW); }
             }
           }
         });
@@ -1135,8 +1258,9 @@ export default function PvZGame() {
     const allDead = state.zombies.length === 0 || state.zombies.every(z => z.dead);
     if (allSpawned && allDead && state.zombies.length > 0) {
       if (state.wave < WAVE_CONFIGS.length - 1) {
-        state.wave++; state.waveStartTime = now; state.waveZombiesSpawned = 0;
-        state.floatingTexts.push({ id: uid(), x: w / 2, y: h / 2, text: `第 ${state.wave + 1} 波!`, color: '#E65100', timer: 2000, maxTimer: 2000 });
+        state.wave++; state.waveStartTime = now + 3000; state.waveZombiesSpawned = 0;
+        state.waveCountdown = 3000;
+        state.floatingTexts.push({ id: uid(), x: w / 2, y: h / 2, text: `第 ${state.wave + 1} 波即将来袭!`, color: '#E65100', timer: 2500, maxTimer: 2500 });
         forceUpdate();
       } else { state.phase = 'victory'; setPhase('victory'); return; }
     }
@@ -1179,10 +1303,12 @@ export default function PvZGame() {
       pr.x += pr.speed * (dt / 1000);
       const hz = state.zombies.find(z => !z.dead && z.row === pr.row && Math.abs(z.x - pr.x) < cellW * 0.25);
       if (hz) {
-        pr.active = false; hz.hp -= pr.damage;
+        pr.active = false;
+        const dmg = pr.damage * (now < state.doubleDamageEnd ? 2 : 1);
+        hz.hp -= dmg;
         if (pr.slow) { hz.slowed = true; hz.slowTimer = 3000; }
-        if (hz.hp <= 0) { hz.dead = true; hz.deathTimer = 500; state.totalKills++; state.score += 50; }
-        state.floatingTexts.push({ id: uid(), x: pr.x, y: oy + pr.row * cellH + cellH * 0.25, text: `-${pr.damage}`, color: pr.slow ? '#29B6F6' : '#FF6D00', timer: 600, maxTimer: 600 });
+        if (hz.hp <= 0) { hz.dead = true; hz.deathTimer = 500; state.totalKills++; state.score += 50; spawnZombieDeathParticles(state, hz.x, oy + hz.row * cellH + cellH / 2, cellW); trySpawnDrop(state, hz, cellW); }
+        state.floatingTexts.push({ id: uid(), x: pr.x, y: oy + pr.row * cellH + cellH * 0.25, text: `-${dmg}`, color: now < state.doubleDamageEnd ? '#FF6F00' : pr.slow ? '#29B6F6' : '#FF6D00', timer: 600, maxTimer: 600 });
       }
       if (pr.x > ox + (GRID_COLS + 1) * cellW) pr.active = false;
     }
@@ -1204,12 +1330,33 @@ export default function PvZGame() {
           state.wordsAnswered++; state.comboCount = 0;
           state.zombieSpeedBoostEnd = now + ZOMBIE_SPEED_BOOST_DURATION;
           state.shakeTimer = 300; state.quizCooldown = QUIZ_COOLDOWN;
+          state.screenFlash = 250; state.screenFlashColor = 'rgba(229,57,53,0.18)';
           state.floatingTexts.push({ id: uid(), x: w / 2, y: h - 100, text: '超时! 僵尸加速!', color: '#E53935', timer: 1500, maxTimer: 1500 });
           forceUpdate();
         }
       }
     }
     if (state.shakeTimer > 0) state.shakeTimer -= dt;
+    // Wave countdown
+    if (state.waveCountdown > 0) {
+      state.waveCountdown = Math.max(0, state.waveStartTime - now);
+    }
+    // Pickups
+    for (const pk of state.pickups) {
+      if (pk.collected) continue;
+      pk.timer -= dt; pk.bobPhase += dt * 0.004;
+      if (pk.timer <= 0) pk.collected = true;
+    }
+    state.pickups = state.pickups.filter(p => !p.collected);
+    // Particles
+    for (const p of state.particles) {
+      p.life -= dt; p.x += p.vx * (dt / 1000); p.y += p.vy * (dt / 1000);
+      if (p.gravity) p.vy += p.gravity * (dt / 1000);
+      p.alpha = Math.max(0, p.life / p.maxLife); p.size *= 0.997;
+    }
+    state.particles = state.particles.filter(p => p.life > 0 && p.size > 0.3);
+    // Screen flash
+    if (state.screenFlash > 0) state.screenFlash -= dt;
 
     // ======== RENDER ========
     const dpr = window.devicePixelRatio || 1;
@@ -1307,6 +1454,29 @@ export default function PvZGame() {
       }
     }
 
+    // Pickups
+    for (const pk of state.pickups) {
+      if (pk.collected) continue;
+      const pkBob = Math.sin(pk.bobPhase) * 4;
+      const pkY = oy + pk.row * cellH + cellH * 0.5 + pkBob;
+      const pkAlpha = pk.timer < 2000 ? (0.5 + Math.sin(now * 0.01) * 0.5) : 1;
+      ctx.globalAlpha = pkAlpha;
+      const glow = ctx.createRadialGradient(pk.x, pkY, 0, pk.x, pkY, cellW * 0.3);
+      if (pk.type === 'sun') { glow.addColorStop(0, 'rgba(255,213,79,0.5)'); glow.addColorStop(1, 'rgba(255,213,79,0)'); }
+      else if (pk.type === 'double') { glow.addColorStop(0, 'rgba(255,111,0,0.5)'); glow.addColorStop(1, 'rgba(255,111,0,0)'); }
+      else { glow.addColorStop(0, 'rgba(100,200,255,0.5)'); glow.addColorStop(1, 'rgba(100,200,255,0)'); }
+      ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(pk.x, pkY, cellW * 0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.font = `${Math.max(16, cellW * 0.35)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(pk.type === 'sun' ? '☀️' : pk.type === 'double' ? '⚡' : '🧊', pk.x, pkY);
+      ctx.globalAlpha = 1;
+    }
+    // Particles
+    for (const p of state.particles) {
+      ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(0.5, p.size), 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
     // Explosions
     for (const e of state.explosions) {
       const p = e.timer / e.maxTimer; const a = 1 - p;
@@ -1347,6 +1517,36 @@ export default function PvZGame() {
       const p = 0.25 + Math.sin(now * 0.008) * 0.1;
       ctx.strokeStyle = `rgba(255,87,34,${p})`; ctx.lineWidth = 3; ctx.strokeRect(2, 2, w - 4, h - 4);
     }
+    // Double damage border
+    if (now < state.doubleDamageEnd) {
+      const dp = 0.3 + Math.sin(now * 0.008) * 0.15;
+      ctx.strokeStyle = `rgba(255,111,0,${dp})`; ctx.lineWidth = 3; ctx.strokeRect(2, 2, w - 4, h - 4);
+      ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillStyle = `rgba(255,111,0,${0.7 + Math.sin(now * 0.006) * 0.3})`;
+      ctx.fillText('⚡ 双倍伤害!', w / 2, 22);
+    }
+    // Wave countdown
+    if (state.waveCountdown > 0) {
+      const sec = Math.ceil(state.waveCountdown / 1000);
+      const cAlpha = 0.6 + Math.sin(now * 0.008) * 0.3;
+      ctx.globalAlpha = cAlpha;
+      ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 4;
+      ctx.strokeText(`${sec}`, w / 2, h / 2 + 15);
+      ctx.fillStyle = '#FFF'; ctx.fillText(`${sec}`, w / 2, h / 2 + 15);
+      ctx.font = '16px sans-serif';
+      ctx.strokeText('准备防御!', w / 2, h / 2 + 45);
+      ctx.fillStyle = '#FFE082'; ctx.fillText('准备防御!', w / 2, h / 2 + 45);
+      ctx.globalAlpha = 1;
+    }
+    // Screen flash
+    if (state.screenFlash > 0) {
+      const flashAlpha = Math.min(1, state.screenFlash / 200);
+      ctx.fillStyle = state.screenFlashColor;
+      ctx.globalAlpha = flashAlpha;
+      ctx.fillRect(0, 0, w, h);
+      ctx.globalAlpha = 1;
+    }
     ctx.restore();
     rafRef.current = requestAnimationFrame(gameLoop);
   }, [generateQuiz, forceUpdate]);
@@ -1385,8 +1585,9 @@ export default function PvZGame() {
             style={{ background: 'rgba(255,255,255,0.65)', backdropFilter: 'blur(10px)', color: '#4E342E', boxShadow: '0 4px 20px rgba(255,152,0,0.15)' }}>
             <p>📝 答对单词自动获得阳光</p>
             <p>🌱 用阳光种植植物抵御僵尸</p>
+            <p>🎯 击杀僵尸可掉落增益道具</p>
+            <p>🔥 连续答对触发连击庆祝</p>
             <p>🧟 不要让僵尸到达你的房子!</p>
-            <p>🔥 连续答对获得连击加成</p>
           </div>
           <button onClick={initGame}
             className="mt-4 px-12 py-3.5 font-bold text-xl rounded-2xl shadow-lg z-10 transition-all hover:scale-105 active:scale-95"
@@ -1541,12 +1742,13 @@ export default function PvZGame() {
                   <h2 className="text-3xl font-extrabold mb-3" style={{ color: '#C62828', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>游戏结束</h2>
                   <div className="space-y-2 text-sm mb-5">
                     {[['存活波次', `${state.wave + 1}/${WAVE_CONFIGS.length}`], ['消灭僵尸', `${state.totalKills}`],
+                      ['最高连击', `${state.bestCombo}🔥`],
                       ['答题正确率', `${state.wordsAnswered > 0 ? Math.round(state.wordsCorrect / state.wordsAnswered * 100) : 0}% (${state.wordsCorrect}/${state.wordsAnswered})`],
                       ['最终得分', `${state.score}`]
                     ].map(([l, v], i) => (
                       <div key={i} className="flex justify-between rounded-lg px-3 py-1.5" style={{ background: 'rgba(255,255,255,0.55)' }}>
                         <span style={{ color: '#6D4C41' }}>{l}</span>
-                        <span className="font-bold" style={{ color: i === 3 ? '#E65100' : '#3E2723' }}>{v}</span>
+                        <span className="font-bold" style={{ color: i === 4 ? '#E65100' : '#3E2723' }}>{v}</span>
                       </div>
                     ))}
                   </div>
@@ -1568,12 +1770,13 @@ export default function PvZGame() {
                   <p className="text-sm mb-4" style={{ color: '#558B2F' }}>成功抵御了所有僵尸!</p>
                   <div className="space-y-2 text-sm mb-5">
                     {[['消灭僵尸', `${state.totalKills}`],
+                      ['最高连击', `${state.bestCombo}🔥`],
                       ['答题正确率', `${state.wordsAnswered > 0 ? Math.round(state.wordsCorrect / state.wordsAnswered * 100) : 0}% (${state.wordsCorrect}/${state.wordsAnswered})`],
                       ['最终得分', `${state.score}`]
                     ].map(([l, v], i) => (
                       <div key={i} className="flex justify-between rounded-lg px-3 py-1.5" style={{ background: 'rgba(255,255,255,0.55)' }}>
                         <span style={{ color: '#6D4C41' }}>{l}</span>
-                        <span className="font-bold" style={{ color: i === 2 ? '#E65100' : '#3E2723' }}>{v}</span>
+                        <span className="font-bold" style={{ color: i === 3 ? '#E65100' : '#3E2723' }}>{v}</span>
                       </div>
                     ))}
                   </div>
