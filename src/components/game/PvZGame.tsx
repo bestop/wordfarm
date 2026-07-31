@@ -1699,52 +1699,47 @@ export default function PvZGame() {
 
             {/* ===== Quiz Panel ===== */}
             {quiz && (
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 w-[94%] max-w-lg">
-                <div className="rounded-2xl px-4 py-3 shadow-xl"
-                  style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', border: '2px solid rgba(255,183,77,0.2)', boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(255,152,0,0.08)' }}>
+              <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-20 w-[88%] max-w-sm">
+                <div className="rounded-xl px-3 py-2"
+                  style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(10px)', border: '1.5px solid rgba(255,183,77,0.18)', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }}>
                   {quiz.answered ? (
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="flex-1">
                         {quiz.wasCorrect ? (
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg flex-shrink-0"
-                              style={{ background: 'linear-gradient(135deg, #C8E6C9, #A5D6A7)', boxShadow: '0 2px 8px rgba(76,175,80,0.3)' }}>✅</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-base flex-shrink-0">✅</span>
                             <div>
-                              <div className="font-bold text-sm" style={{ color: '#2E7D32' }}>答对了! +{QUIZ_SUN_REWARD[quiz.word.difficulty]}☀</div>
-                              <div className="text-xs" style={{ color: '#5D4037' }}>{quiz.word.en} = {quiz.word.zh}</div>
+                              <span className="font-bold text-xs" style={{ color: '#2E7D32' }}>+{QUIZ_SUN_REWARD[quiz.word.difficulty]}☀</span>
+                              <span className="text-[11px] ml-1" style={{ color: '#5D4037' }}>{quiz.word.en}={quiz.word.zh}</span>
                             </div>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-lg flex-shrink-0"
-                              style={{ background: 'linear-gradient(135deg, #FFCDD2, #EF9A9A)', boxShadow: '0 2px 8px rgba(244,67,54,0.3)' }}>❌</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-base flex-shrink-0">❌</span>
                             <div>
-                              <div className="font-bold text-sm" style={{ color: '#C62828' }}>答错了</div>
-                              <div className="text-xs" style={{ color: '#5D4037' }}>{quiz.word.en} = {quiz.word.zh}</div>
+                              <span className="font-bold text-xs" style={{ color: '#C62828' }}>答错</span>
+                              <span className="text-[11px] ml-1" style={{ color: '#5D4037' }}>{quiz.word.en}={quiz.word.zh}</span>
                             </div>
+                            <span className="text-[10px] font-semibold" style={{ color: '#EF5350' }}>⚡加速!</span>
                           </div>
                         )}
-                        {!quiz.wasCorrect && (
-                          <span className="text-[11px] ml-10 font-semibold" style={{ color: '#EF5350' }}>⚡ 僵尸加速中!</span>
-                        )}
                       </div>
-                      <div className="flex-shrink-0 text-center rounded-xl px-3 py-1.5"
-                        style={{ background: 'rgba(255,152,0,0.08)', border: '1px solid rgba(255,152,0,0.12)' }}>
-                        <div className="text-[10px] font-bold" style={{ color: '#A1887F' }}>下一题</div>
-                        <div className="text-lg font-extrabold tabular-nums" style={{ color: '#5D4037' }}>{Math.max(0, Math.ceil(state.quizCooldown / 1000))}<span className="text-xs font-bold">s</span></div>
+                      <div className="flex-shrink-0 text-center rounded-lg px-2 py-0.5"
+                        style={{ background: 'rgba(255,152,0,0.06)' }}>
+                        <div className="text-[10px] font-bold tabular-nums" style={{ color: '#5D4037' }}>{Math.max(0, Math.ceil(state.quizCooldown / 1000))}s</div>
                       </div>
                     </div>
                   ) : (
                     <React.Fragment>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${diff === 1 ? 'text-emerald-800' : diff === 2 ? 'text-amber-800' : 'text-red-800'}`}
-                            style={{ background: diff === 1 ? 'linear-gradient(135deg, #C8E6C9, #A5D6A7)' : diff === 2 ? 'linear-gradient(135deg, #FFE082, #FFD54F)' : 'linear-gradient(135deg, #FFAB91, #FF8A65)', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-                            {diff === 1 ? '🌱 简单' : diff === 2 ? '⚡ 中等' : '🔥 困难'} +{QUIZ_SUN_REWARD[diff]}☀
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`px-1.5 py-px rounded text-[9px] font-bold ${diff === 1 ? 'text-emerald-800' : diff === 2 ? 'text-amber-800' : 'text-red-800'}`}
+                            style={{ background: diff === 1 ? '#C8E6C9' : diff === 2 ? '#FFE082' : '#FFAB91' }}>
+                            {diff === 1 ? '🌱' : diff === 2 ? '⚡' : '🔥'}+{QUIZ_SUN_REWARD[diff]}
                           </span>
-                          <span className="font-extrabold text-2xl md:text-3xl tracking-wide" style={{ color: '#3E2723', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>{quiz.word.en}</span>
+                          <span className="font-extrabold text-lg tracking-wide" style={{ color: '#3E2723' }}>{quiz.word.en}</span>
                         </div>
-                        <div className="relative flex-shrink-0" style={{ width: '42px', height: '42px' }}>
+                        <div className="relative flex-shrink-0" style={{ width: '30px', height: '30px' }}>
                           <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
                             <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,152,0,0.1)" strokeWidth="3" />
                             <circle cx="18" cy="18" r="15.5" fill="none" stroke={quiz.timer < 3000 ? '#EF5350' : '#FFB74D'} strokeWidth="3" strokeLinecap="round"
@@ -1752,29 +1747,25 @@ export default function PvZGame() {
                               strokeDashoffset={`${2 * Math.PI * 15.5 * (1 - quiz.timer / QUIZ_TIME_LIMIT)}`}
                               style={{ transition: 'stroke-dashoffset 0.15s linear, stroke 0.3s' }} />
                           </svg>
-                          <span className={`absolute inset-0 flex items-center justify-center text-[12px] font-extrabold tabular-nums ${quiz.timer < 3000 ? 'animate-pulse' : ''}`}
+                          <span className={`absolute inset-0 flex items-center justify-center text-[10px] font-extrabold tabular-nums ${quiz.timer < 3000 ? 'animate-pulse' : ''}`}
                             style={{ color: quiz.timer < 3000 ? '#D32F2F' : '#5D4037' }}>{Math.max(0, Math.ceil(quiz.timer / 1000))}</span>
                         </div>
                       </div>
-                      <div className="w-full h-1 rounded-full mb-2.5 overflow-hidden" style={{ background: 'rgba(255,152,0,0.08)' }}>
+                      <div className="w-full h-0.5 rounded-full mb-1.5 overflow-hidden" style={{ background: 'rgba(255,152,0,0.08)' }}>
                         <div className={`h-full rounded-full transition-all duration-150 ${quiz.timer < 3000 ? 'bg-red-400' : 'bg-amber-400'}`}
-                          style={{ width: `${(quiz.timer / QUIZ_TIME_LIMIT) * 100}%`, boxShadow: quiz.timer < 3000 ? '0 0 8px rgba(239,83,80,0.4)' : '0 0 8px rgba(255,183,77,0.3)' }} />
+                          style={{ width: `${(quiz.timer / QUIZ_TIME_LIMIT) * 100}%` }} />
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-4 gap-1">
                         {quiz.options.map((opt, i) => (
                           <button key={i} onClick={() => handleAnswer(i)}
-                            className="py-2.5 md:py-3 px-3 md:px-4 rounded-xl text-sm md:text-base font-semibold transition-all duration-100 hover:scale-[1.03] active:scale-[0.97]"
+                            className="py-1.5 px-1 rounded-lg text-xs font-semibold transition-all duration-100 hover:scale-[1.04] active:scale-[0.96] truncate"
                             style={{
                               color: '#3E2723',
-                              background: 'linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,253,245,0.85))',
-                              border: '1.5px solid rgba(255,183,77,0.2)',
-                              boxShadow: '0 2px 6px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.9)',
+                              background: 'rgba(255,255,255,0.9)',
+                              border: '1px solid rgba(255,183,77,0.18)',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                             }}>
-                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-md text-[10px] font-extrabold mr-1.5"
-                              style={{ background: 'linear-gradient(180deg, #FFE082, #FFD54F)', color: '#5D4037', boxShadow: '0 1px 2px rgba(255,152,0,0.2)' }}>
-                              {String.fromCharCode(65 + i)}
-                            </span>
-                            {opt}
+                            <span className="font-extrabold mr-0.5" style={{ color: '#E65100' }}>{String.fromCharCode(65 + i)}</span>{opt}
                           </button>
                         ))}
                       </div>
