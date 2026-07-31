@@ -1,0 +1,1592 @@
+     1→     1→'use client';
+     2→     2→
+     3→     3→import React, { useCallback, useEffect, useRef, useState } from 'react';
+     4→     4→import {
+     5→     5→  WORD_BANK, PLANT_DEFS, PLANT_ORDER, ZOMBIE_DEFS,
+     6→     6→  GRID_COLS, GRID_ROWS, STARTING_SUN, QUIZ_SUN_REWARD,
+     7→     7→  QUIZ_TIME_LIMIT, QUIZ_COOLDOWN,
+     8→     8→  ZOMBIE_SPEED_BOOST, ZOMBIE_SPEED_BOOST_DURATION,
+     9→     9→  WAVE_CONFIGS,
+    10→    10→} from '@/game/data';
+    11→    11→import type { PlantType, ZombieType, Word } from '@/game/data';
+    12→    12→
+    13→    13→// ============ Internal Types ============
+    14→    14→type GamePhase = 'menu' | 'playing' | 'gameover' | 'victory';
+    15→    15→
+    16→    16→interface Plant {
+    17→    17→  id: string; type: PlantType; row: number; col: number;
+    18→    18→  hp: number; maxHp: number; lastAttack: number;
+    19→    19→  animPhase: number;
+    20→    20→}
+    21→    21→
+    22→    22→interface Zombie {
+    23→    23→  id: string; type: ZombieType; row: number; x: number;
+    24→    24→  hp: number; maxHp: number; speed: number; baseSpeed: number;
+    25→    25→  eating: boolean; slowed: boolean; slowTimer: number;
+    26→    26→  lastHit: number; animPhase: number; dead: boolean; deathTimer: number;
+    27→    27→}
+    28→    28→
+    29→    29→interface Projectile {
+    30→    30→  id: string; row: number; x: number; speed: number;
+    31→    31→  damage: number; slow: boolean; active: boolean;
+    32→    32→}
+    33→    33→
+    34→    34→interface Explosion {
+    35→    35→  id: string; x: number; y: number; radius: number;
+    36→    36→  maxRadius: number; timer: number; maxTimer: number;
+    37→    37→}
+    38→    38→
+    39→    39→interface FloatingText {
+    40→    40→  id: string; x: number; y: number; text: string;
+    41→    41→  color: string; timer: number; maxTimer: number;
+    42→    42→}
+    43→    43→
+    44→    44→interface WordQuestion {
+    45→    45→  word: Word; options: string[]; correctIndex: number;
+    46→    46→  timer: number; answered: boolean; wasCorrect?: boolean;
+    47→    47→}
+    48→    48→
+    49→    49→interface GameState {
+    50→    50→  phase: GamePhase;
+    51→    51→  sun: number; score: number; wave: number;
+    52→    52→  plants: Plant[]; zombies: Zombie[]; projectiles: Projectile[];
+    53→    53→  explosions: Explosion[]; floatingTexts: FloatingText[];
+    54→    54→  selectedPlant: PlantType | null;
+    55→    55→  currentQuiz: WordQuestion | null;
+    56→    56→  quizCooldown: number;
+    57→    57→  wordsAnswered: number; wordsCorrect: number;
+    58→    58→  waveStartTime: number; waveZombiesSpawned: number;
+    59→    59→  totalKills: number; lastTime: number;
+    60→    60→  zombieSpeedBoostEnd: number;
+    61→    61→  usedWordIndices: Set<number>;
+    62→    62→  shakeTimer: number;
+    63→    63→  comboCount: number;
+    64→    64→}
+    65→    65→
+    66→    66→// ============ Helpers ============
+    67→    67→let _idCounter = 0;
+    68→    68→const uid = () => `e${++_idCounter}`;
+    69→    69→
+    70→    70→const shuffle = <T,>(arr: T[]): T[] => {
+    71→    71→  const a = [...arr];
+    72→    72→  for (let i = a.length - 1; i > 0; i--) {
+    73→    73→    const j = Math.floor(Math.random() * (i + 1));
+    74→    74→    [a[i], a[j]] = [a[j], a[i]];
+    75→    75→  }
+    76→    76→  return a;
+    77→    77→};
+    78→    78→
+    79→    79→// ============ Canvas Drawing Helpers ============
+    80→    80→const R = (r: number) => Math.max(0.5, r);
+    81→    81→
+    82→    82→// --- Plant Drawing ---
+    83→    83→function drawPeashooter(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, anim: number) {
+    84→    84→  const bob = Math.sin(anim) * 3;
+    85→    85→  const tilt = Math.sin(anim * 0.7) * 0.03;
+    86→    86→  ctx.save(); ctx.translate(x, y + s * 0.08); ctx.rotate(tilt); ctx.translate(-x, -y - s * 0.08);
+    87→    87→  // Pot/soil base (warmer terracotta)
+    88→    88→  const pg = ctx.createLinearGradient(x - s * 0.22, y + s * 0.38, x + s * 0.22, y + s * 0.45);
+    89→    89→  pg.addColorStop(0, '#BCAAA4'); pg.addColorStop(0.5, '#A1887F'); pg.addColorStop(1, '#795548');
+    90→    90→  ctx.fillStyle = pg;
+    91→    91→  ctx.beginPath(); ctx.ellipse(x, y + s * 0.42, s * 0.22, s * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+    92→    92→  // Pot rim
+    93→    93→  ctx.fillStyle = '#8D6E63';
+    94→    94→  ctx.beginPath(); ctx.ellipse(x, y + s * 0.38, s * 0.2, s * 0.04, 0, 0, Math.PI * 2); ctx.fill();
+    95→    95→  ctx.fillStyle = '#5D4037';
+    96→    96→  ctx.beginPath(); ctx.ellipse(x, y + s * 0.42, s * 0.22, s * 0.05, 0, 0, Math.PI * 2); ctx.fill();
+    97→    97→  // Thick stem
+    98→    98→  const sg = ctx.createLinearGradient(x - s * 0.055, 0, x + s * 0.055, 0);
+    99→    99→  sg.addColorStop(0, '#2E7D32'); sg.addColorStop(0.25, '#66BB6A'); sg.addColorStop(0.65, '#4CAF50'); sg.addColorStop(1, '#2E7D32');
+   100→   100→  ctx.fillStyle = sg;
+   101→   101→  ctx.beginPath(); ctx.roundRect(x - s * 0.055, y + s * 0.08, s * 0.11, s * 0.33, 5); ctx.fill();
+   102→   102→  // Stem highlight
+   103→   103→   ctx.fillStyle = 'rgba(255,255,255,0.08)';
+   104→   104→  ctx.beginPath(); ctx.roundRect(x - s * 0.02, y + s * 0.1, s * 0.04, s * 0.28, 3); ctx.fill();
+   105→   105→  // Left leaf (bigger, with veins)
+   106→   106→  ctx.fillStyle = '#81C784';
+   107→   107→  ctx.save(); ctx.translate(x - s * 0.055, y + s * 0.26); ctx.rotate(-0.5);
+   108→   108→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.21, s * 0.07, 0, 0, Math.PI * 2); ctx.fill();
+   109→   109→  ctx.strokeStyle = 'rgba(46,125,50,0.35)'; ctx.lineWidth = 0.8;
+   110→   110→  ctx.beginPath(); ctx.moveTo(-s * 0.17, 0); ctx.lineTo(s * 0.17, 0); ctx.stroke();
+   111→   111→  ctx.strokeStyle = 'rgba(46,125,50,0.2)'; ctx.lineWidth = 0.5;
+   112→   112→  ctx.beginPath(); ctx.moveTo(-s * 0.1, -s * 0.025); ctx.lineTo(s * 0.06, s * 0.02); ctx.stroke();
+   113→   113→  ctx.beginPath(); ctx.moveTo(-s * 0.08, s * 0.025); ctx.lineTo(s * 0.06, -s * 0.01); ctx.stroke();
+   114→   114→  ctx.restore();
+   115→   115→  // Right leaf
+   116→   116→  ctx.fillStyle = '#66BB6A';
+   117→   117→  ctx.save(); ctx.translate(x + s * 0.055, y + s * 0.33); ctx.rotate(0.4);
+   118→   118→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.19, s * 0.065, 0, 0, Math.PI * 2); ctx.fill();
+   119→   119→  ctx.strokeStyle = 'rgba(46,125,50,0.35)'; ctx.lineWidth = 0.8;
+   120→   120→  ctx.beginPath(); ctx.moveTo(-s * 0.15, 0); ctx.lineTo(s * 0.15, 0); ctx.stroke();
+   121→   121→  ctx.restore();
+   122→   122→  // Top sprout/crown leaf
+   123→   123→  ctx.fillStyle = '#A5D6A7';
+   124→   124→  ctx.save(); ctx.translate(x, y - s * 0.42 + bob); ctx.rotate(-0.2);
+   125→   125→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.06, s * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+   126→   126→  ctx.restore();
+   127→   127→  ctx.fillStyle = '#81C784';
+   128→   128→  ctx.save(); ctx.translate(x, y - s * 0.42 + bob); ctx.rotate(0.25);
+   129→   129→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.05, s * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+   130→   130→  ctx.restore();
+   131→   131→  // Big round head
+   132→   132→  const hg = ctx.createRadialGradient(x - s * 0.1, y - s * 0.2 + bob, s * 0.06, x, y - s * 0.1 + bob, s * 0.42);
+   133→   133→  hg.addColorStop(0, '#C8E6C9'); hg.addColorStop(0.25, '#A5D6A7'); hg.addColorStop(0.55, '#66BB6A'); hg.addColorStop(0.85, '#4CAF50'); hg.addColorStop(1, '#2E7D32');
+   134→   134→  ctx.fillStyle = hg;
+   135→   135→  ctx.beginPath(); ctx.arc(x, y - s * 0.12 + bob, s * 0.38, 0, Math.PI * 2); ctx.fill();
+   136→   136→  // Head highlight (larger, more obvious)
+   137→   137→  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+   138→   138→  ctx.beginPath(); ctx.ellipse(x - s * 0.12, y - s * 0.28 + bob, s * 0.16, s * 0.13, -0.3, 0, Math.PI * 2); ctx.fill();
+   139→   139→  // Cheek blush
+   140→   140→  ctx.fillStyle = 'rgba(255,138,128,0.4)';
+   141→   141→  ctx.beginPath(); ctx.ellipse(x - s * 0.25, y - s * 0.04 + bob, s * 0.08, s * 0.05, -0.2, 0, Math.PI * 2); ctx.fill();
+   142→   142→  ctx.beginPath(); ctx.ellipse(x + s * 0.25, y - s * 0.04 + bob, s * 0.08, s * 0.05, 0.2, 0, Math.PI * 2); ctx.fill();
+   143→   143→  // Big cute eyes with eyelids
+   144→   144→  ctx.fillStyle = '#fff';
+   145→   145→  ctx.beginPath(); ctx.ellipse(x - s * 0.13, y - s * 0.2 + bob, s * 0.13, s * 0.15, 0, 0, Math.PI * 2); ctx.fill();
+   146→   146→  ctx.beginPath(); ctx.ellipse(x + s * 0.1, y - s * 0.22 + bob, s * 0.11, s * 0.13, 0, 0, Math.PI * 2); ctx.fill();
+   147→   147→  // Eye shine on top
+   148→   148→  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+   149→   149→  ctx.beginPath(); ctx.ellipse(x - s * 0.15, y - s * 0.27 + bob, s * 0.06, s * 0.04, -0.3, 0, Math.PI * 2); ctx.fill();
+   150→   150→  ctx.beginPath(); ctx.ellipse(x + s * 0.08, y - s * 0.29 + bob, s * 0.05, s * 0.035, -0.3, 0, Math.PI * 2); ctx.fill();
+   151→   151→  // Eyelids
+   152→   152→  ctx.fillStyle = '#388E3C';
+   153→   153→  ctx.beginPath(); ctx.ellipse(x - s * 0.13, y - s * 0.26 + bob, s * 0.14, s * 0.05, 0, 0, Math.PI); ctx.fill();
+   154→   154→  ctx.beginPath(); ctx.ellipse(x + s * 0.1, y - s * 0.28 + bob, s * 0.12, s * 0.04, 0, 0, Math.PI); ctx.fill();
+   155→   155→  // Irises (bigger, more expressive)
+   156→   156→  ctx.fillStyle = '#1B5E20';
+   157→   157→  ctx.beginPath(); ctx.arc(x - s * 0.08, y - s * 0.19 + bob, s * 0.07, 0, Math.PI * 2); ctx.fill();
+   158→   158→  ctx.beginPath(); ctx.arc(x + s * 0.13, y - s * 0.21 + bob, s * 0.06, 0, Math.PI * 2); ctx.fill();
+   159→   159→  // Pupil highlights
+   160→   160→  ctx.fillStyle = '#fff';
+   161→   161→  ctx.beginPath(); ctx.arc(x - s * 0.05, y - s * 0.22 + bob, s * 0.035, 0, Math.PI * 2); ctx.fill();
+   162→   162→  ctx.beginPath(); ctx.arc(x + s * 0.16, y - s * 0.24 + bob, s * 0.028, 0, Math.PI * 2); ctx.fill();
+   163→   163→  // Nose (tiny)
+   164→   164→  ctx.fillStyle = '#2E7D32';
+   165→   165→  ctx.beginPath(); ctx.ellipse(x + s * 0.02, y - s * 0.1 + bob, s * 0.02, s * 0.015, 0, 0, Math.PI * 2); ctx.fill();
+   166→   166→  // Cute smile with teeth
+   167→   167→  ctx.strokeStyle = '#1B5E20'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+   168→   168→  ctx.beginPath(); ctx.arc(x + s * 0.02, y - s * 0.04 + bob, s * 0.1, 0.15, Math.PI - 0.15); ctx.stroke();
+   169→   169→  ctx.fillStyle = '#fff';
+   170→   170→  ctx.beginPath(); ctx.arc(x + s * 0.02, y - s * 0.04 + bob, s * 0.1, 0.3, Math.PI - 0.3); ctx.fill();
+   171→   171→  ctx.strokeStyle = '#1B5E20'; ctx.lineWidth = 1.5;
+   172→   172→  ctx.beginPath(); ctx.arc(x + s * 0.02, y - s * 0.04 + bob, s * 0.1, 0.3, Math.PI - 0.3); ctx.stroke();
+   173→   173→  // Tongue
+   174→   174→  ctx.fillStyle = '#EF9A9A';
+   175→   175→  ctx.beginPath(); ctx.ellipse(x + s * 0.04, y + s * 0.03 + bob, s * 0.03, s * 0.02, 0.2, 0, Math.PI * 2); ctx.fill();
+   176→   176→  // Big cannon tube (more 3D)
+   177→   177→  const cg = ctx.createRadialGradient(x + s * 0.26, y - s * 0.14 + bob, s * 0.04, x + s * 0.38, y - s * 0.12 + bob, s * 0.2);
+   178→   178→  cg.addColorStop(0, '#81C784'); cg.addColorStop(0.4, '#4CAF50'); cg.addColorStop(0.8, '#388E3C'); cg.addColorStop(1, '#1B5E20');
+   179→   179→  ctx.fillStyle = cg;
+   180→   180→  ctx.beginPath(); ctx.ellipse(x + s * 0.38, y - s * 0.12 + bob, s * 0.21, s * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+   181→   181→  // Cannon highlight stripe
+   182→   182→   ctx.fillStyle = 'rgba(255,255,255,0.1)';
+   183→   183→  ctx.beginPath(); ctx.ellipse(x + s * 0.35, y - s * 0.16 + bob, s * 0.14, s * 0.04, -0.1, 0, Math.PI * 2); ctx.fill();
+   184→   184→  // Cannon opening with depth
+   185→   185→  ctx.fillStyle = '#0D3B0F';
+   186→   186→  ctx.beginPath(); ctx.arc(x + s * 0.52, y - s * 0.12 + bob, s * 0.09, 0, Math.PI * 2); ctx.fill();
+   187→   187→  const ig = ctx.createRadialGradient(x + s * 0.5, y - s * 0.14 + bob, s * 0.02, x + s * 0.52, y - s * 0.12 + bob, s * 0.06);
+   188→   188→  ig.addColorStop(0, '#2E7D32'); ig.addColorStop(1, '#0D3B0F');
+   189→   189→  ctx.fillStyle = ig;
+   190→   190→  ctx.beginPath(); ctx.arc(x + s * 0.52, y - s * 0.12 + bob, s * 0.065, 0, Math.PI * 2); ctx.fill();
+   191→   191→  // Lip/rim
+   192→   192→  ctx.strokeStyle = '#2E7D32'; ctx.lineWidth = 2.5;
+   193→   193→  ctx.beginPath(); ctx.arc(x + s * 0.52, y - s * 0.12 + bob, s * 0.09, 0, Math.PI * 2); ctx.stroke();
+   194→   194→  // Muzzle energy glow (pulsing)
+   195→   195→  const glowPulse = 0.5 + Math.sin(anim * 2) * 0.3;
+   196→   196→  const mg = ctx.createRadialGradient(x + s * 0.52, y - s * 0.12 + bob, 0, x + s * 0.52, y - s * 0.12 + bob, s * 0.12);
+   197→   197→  mg.addColorStop(0, `rgba(139,195,74,${glowPulse * 0.4})`); mg.addColorStop(1, 'rgba(139,195,74,0)');
+   198→   198→  ctx.fillStyle = mg;
+   199→   199→  ctx.beginPath(); ctx.arc(x + s * 0.52, y - s * 0.12 + bob, s * 0.12, 0, Math.PI * 2); ctx.fill();
+   200→   200→  ctx.restore();
+   201→   201→}
+   202→   202→
+   203→   203→function drawWallnut(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, anim: number, hpRatio: number) {
+   204→   204→  const bob = Math.sin(anim * 0.8) * 2;
+   205→   205→  const sq = 1 + Math.sin(anim * 1.2) * 0.015;
+   206→   206→  // Shadow (larger for stability)
+   207→   207→  ctx.fillStyle = 'rgba(0,0,0,0.12)';
+   208→   208→  ctx.beginPath(); ctx.ellipse(x, y + s * 0.52, s * 0.32, s * 0.07, 0, 0, Math.PI * 2); ctx.fill();
+   209→   209→  // Short legs
+   210→   210→  const legW = s * 0.06; const legH = s * 0.08;
+   211→   211→  ctx.fillStyle = '#A0722A';
+   212→   212→  ctx.beginPath(); ctx.roundRect(x - s * 0.14 - legW / 2, y + s * 0.4 + bob, legW, legH, 3); ctx.fill();
+   213→   213→  ctx.beginPath(); ctx.roundRect(x + s * 0.14 - legW / 2, y + s * 0.4 + bob, legW, legH, 3); ctx.fill();
+   214→   214→  // Feet
+   215→   215→  ctx.fillStyle = '#8B631F';
+   216→   216→  ctx.beginPath(); ctx.ellipse(x - s * 0.14, y + s * 0.49 + bob, s * 0.055, s * 0.03, 0, 0, Math.PI * 2); ctx.fill();
+   217→   217→  ctx.beginPath(); ctx.ellipse(x + s * 0.14, y + s * 0.49 + bob, s * 0.055, s * 0.03, 0, 0, Math.PI * 2); ctx.fill();
+   218→   218→  // Big round body
+   219→   219→  const wg = ctx.createRadialGradient(x - s * 0.12, y - s * 0.12 + bob, s * 0.1, x, y + s * 0.05 + bob, s * 0.45 * sq);
+   220→   220→  wg.addColorStop(0, '#FFF3E0'); wg.addColorStop(0.2, '#F5E6B8'); wg.addColorStop(0.45, '#E8C96A'); wg.addColorStop(0.7, '#D4A34A'); wg.addColorStop(0.9, '#A0722A'); wg.addColorStop(1, '#6B4513');
+   221→   221→  ctx.fillStyle = wg;
+   222→   222→  ctx.beginPath(); ctx.ellipse(x, y + s * 0.05 + bob, s * 0.38 * sq, s * 0.44, 0, 0, Math.PI * 2); ctx.fill();
+   223→   223→  // Warm highlight (larger)
+   224→   224→  ctx.fillStyle = 'rgba(255,248,220,0.35)';
+   225→   225→  ctx.beginPath(); ctx.ellipse(x - s * 0.13, y - s * 0.18 + bob, s * 0.2, s * 0.18, -0.4, 0, Math.PI * 2); ctx.fill();
+   226→   226→  // Wood grain texture (more)
+   227→   227→  ctx.strokeStyle = 'rgba(120,70,20,0.12)'; ctx.lineWidth = 0.8;
+   228→   228→  ctx.beginPath(); ctx.arc(x + s * 0.08, y - s * 0.12 + bob, s * 0.18, 0.3, 2.0); ctx.stroke();
+   229→   229→  ctx.beginPath(); ctx.arc(x - s * 0.1, y + s * 0.12 + bob, s * 0.14, -0.6, 1.2); ctx.stroke();
+   230→   230→  ctx.beginPath(); ctx.arc(x + s * 0.02, y + s * 0.25 + bob, s * 0.1, 0, 1.5); ctx.stroke();
+   231→   231→  ctx.beginPath(); ctx.arc(x - s * 0.15, y - s * 0.02 + bob, s * 0.12, -0.3, 0.8); ctx.stroke();
+   232→   232→  // Small arms
+   233→   233→  ctx.strokeStyle = '#A0722A'; ctx.lineWidth = s * 0.04; ctx.lineCap = 'round';
+   234→   234→  ctx.beginPath(); ctx.moveTo(x - s * 0.35, y + s * 0.05 + bob);
+   235→   235→  ctx.quadraticCurveTo(x - s * 0.44, y + s * 0.12 + bob, x - s * 0.42, y + s * 0.22 + bob); ctx.stroke();
+   236→   236→  ctx.beginPath(); ctx.moveTo(x + s * 0.35, y + s * 0.05 + bob);
+   237→   237→  ctx.quadraticCurveTo(x + s * 0.44, y + s * 0.12 + bob, x + s * 0.42, y + s * 0.22 + bob); ctx.stroke();
+   238→   238→  // Fists
+   239→   239→  ctx.fillStyle = '#D4A34A';
+   240→   240→  ctx.beginPath(); ctx.arc(x - s * 0.42, y + s * 0.22 + bob, s * 0.04, 0, Math.PI * 2); ctx.fill();
+   241→   241→  ctx.beginPath(); ctx.arc(x + s * 0.42, y + s * 0.22 + bob, s * 0.04, 0, Math.PI * 2); ctx.fill();
+   242→   242→  // Big worried eyes
+   243→   243→  ctx.fillStyle = '#FFFDE7';
+   244→   244→  ctx.beginPath(); ctx.ellipse(x - s * 0.12, y - s * 0.08 + bob, s * 0.11, s * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+   245→   245→  ctx.beginPath(); ctx.ellipse(x + s * 0.12, y - s * 0.08 + bob, s * 0.11, s * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+   246→   246→  // Eye outlines
+   247→   247→  ctx.strokeStyle = 'rgba(93,64,55,0.25)'; ctx.lineWidth = 1;
+   248→   248→  ctx.beginPath(); ctx.ellipse(x - s * 0.12, y - s * 0.08 + bob, s * 0.11, s * 0.12, 0, 0, Math.PI * 2); ctx.stroke();
+   249→   249→  ctx.beginPath(); ctx.ellipse(x + s * 0.12, y - s * 0.08 + bob, s * 0.11, s * 0.12, 0, 0, Math.PI * 2); ctx.stroke();
+   250→   250→  ctx.fillStyle = '#4E342E';
+   251→   251→  const pupilSize = hpRatio < 0.33 ? s * 0.065 : s * 0.05;
+   252→   252→  const pupilDroop = hpRatio < 0.33 ? s * 0.015 : 0;
+   253→   253→  ctx.beginPath(); ctx.arc(x - s * 0.1, y - s * 0.07 + bob + pupilDroop, pupilSize, 0, Math.PI * 2); ctx.fill();
+   254→   254→  ctx.beginPath(); ctx.arc(x + s * 0.14, y - s * 0.07 + bob + pupilDroop, pupilSize, 0, Math.PI * 2); ctx.fill();
+   255→   255→  ctx.fillStyle = '#fff';
+   256→   256→  ctx.beginPath(); ctx.arc(x - s * 0.08, y - s * 0.09 + bob, s * 0.028, 0, Math.PI * 2); ctx.fill();
+   257→   257→  ctx.beginPath(); ctx.arc(x + s * 0.16, y - s * 0.09 + bob, s * 0.028, 0, Math.PI * 2); ctx.fill();
+   258→   258→  // Worried eyebrows (more expressive)
+   259→   259→  ctx.strokeStyle = '#5D4037'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+   260→   260→  const browDroop = hpRatio < 0.33 ? 0.05 : hpRatio < 0.66 ? 0.02 : 0;
+   261→   261→  ctx.beginPath(); ctx.moveTo(x - s * 0.22, y - s * 0.2 + bob + browDroop * s); ctx.quadraticCurveTo(x - s * 0.12, y - s * 0.27 + bob, x - s * 0.02, y - s * 0.18 + bob); ctx.stroke();
+   262→   262→  ctx.beginPath(); ctx.moveTo(x + s * 0.22, y - s * 0.2 + bob + browDroop * s); ctx.quadraticCurveTo(x + s * 0.12, y - s * 0.27 + bob, x + s * 0.02, y - s * 0.18 + bob); ctx.stroke();
+   263→   263→  // Nose
+   264→   264→  ctx.fillStyle = '#C4993A';
+   265→   265→  ctx.beginPath(); ctx.ellipse(x, y - s * 0.01 + bob, s * 0.025, s * 0.02, 0, 0, Math.PI * 2); ctx.fill();
+   266→   266→  // Mouth - more worried when damaged
+   267→   267→  if (hpRatio < 0.33) {
+   268→   268→    ctx.fillStyle = '#3E2723';
+   269→   269→    ctx.beginPath(); ctx.ellipse(x, y + s * 0.1 + bob, s * 0.09, s * 0.07, 0, 0, Math.PI * 2); ctx.fill();
+   270→   270→    ctx.fillStyle = '#D32F2F';
+   271→   271→    ctx.beginPath(); ctx.ellipse(x, y + s * 0.14 + bob, s * 0.045, s * 0.025, 0, 0, Math.PI * 2); ctx.fill();
+   272→   272→    // Sweat drop
+   273→   273→    ctx.fillStyle = 'rgba(100,181,246,0.6)';
+   274→   274→    const sweatY = y - s * 0.28 + bob + Math.sin(anim * 3) * s * 0.02;
+   275→   275→    ctx.beginPath(); ctx.ellipse(x + s * 0.3, sweatY, s * 0.025, s * 0.035, 0.15, 0, Math.PI * 2); ctx.fill();
+   276→   276→  } else if (hpRatio < 0.66) {
+   277→   277→    ctx.strokeStyle = '#5D4037'; ctx.lineWidth = 2;
+   278→   278→    ctx.beginPath(); ctx.moveTo(x - s * 0.08, y + s * 0.08 + bob); ctx.quadraticCurveTo(x, y + s * 0.13 + bob, x + s * 0.08, y + s * 0.08 + bob); ctx.stroke();
+   279→   279→  } else {
+   280→   280→    ctx.strokeStyle = '#5D4037'; ctx.lineWidth = 2;
+   281→   281→    ctx.beginPath(); ctx.ellipse(x, y + s * 0.08 + bob, s * 0.05, s * 0.04, 0, 0, Math.PI * 2); ctx.stroke();
+   282→   282→    ctx.fillStyle = '#5D4037';
+   283→   283→    ctx.beginPath(); ctx.ellipse(x, y + s * 0.08 + bob, s * 0.03, s * 0.025, 0, 0, Math.PI * 2); ctx.fill();
+   284→   284→  }
+   285→   285→  // Blush (warmer)
+   286→   286→  ctx.fillStyle = 'rgba(255,138,128,0.3)';
+   287→   287→  ctx.beginPath(); ctx.ellipse(x - s * 0.27, y + bob, s * 0.065, s * 0.04, 0, 0, Math.PI * 2); ctx.fill();
+   288→   288→  ctx.beginPath(); ctx.ellipse(x + s * 0.27, y + bob, s * 0.065, s * 0.04, 0, 0, Math.PI * 2); ctx.fill();
+   289→   289→  // Cracks with detail and debris
+   290→   290→  if (hpRatio < 0.66) {
+   291→   291→    ctx.strokeStyle = 'rgba(60,30,5,0.55)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+   292→   292→    ctx.beginPath(); ctx.moveTo(x - s * 0.1, y - s * 0.2 + bob); ctx.lineTo(x - s * 0.05, y + bob); ctx.lineTo(x - s * 0.15, y + s * 0.2 + bob); ctx.stroke();
+   293→   293→    ctx.lineWidth = 1;
+   294→   294→    ctx.beginPath(); ctx.moveTo(x - s * 0.05, y + bob); ctx.lineTo(x + s * 0.02, y - s * 0.05 + bob); ctx.stroke();
+   295→   295→    // Debris particles
+   296→   296→    ctx.fillStyle = 'rgba(160,114,42,0.4)';
+   297→   297→    ctx.beginPath(); ctx.arc(x - s * 0.12, y - s * 0.22 + bob, s * 0.02, 0, Math.PI * 2); ctx.fill();
+   298→   298→    ctx.beginPath(); ctx.arc(x + s * 0.04, y - s * 0.04 + bob, s * 0.015, 0, Math.PI * 2); ctx.fill();
+   299→   299→  }
+   300→   300→  if (hpRatio < 0.33) {
+   301→   301→    ctx.strokeStyle = 'rgba(60,30,5,0.65)'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+   302→   302→    ctx.beginPath(); ctx.moveTo(x + s * 0.15, y - s * 0.25 + bob); ctx.lineTo(x + s * 0.08, y - bob); ctx.lineTo(x + s * 0.2, y + s * 0.15 + bob); ctx.stroke();
+   303→   303→    ctx.lineWidth = 1;
+   304→   304→    ctx.beginPath(); ctx.moveTo(x + s * 0.08, y - bob); ctx.lineTo(x - s * 0.02, y - s * 0.12 + bob); ctx.stroke();
+   305→   305→    // More debris
+   306→   306→    ctx.fillStyle = 'rgba(160,114,42,0.5)';
+   307→   307→    ctx.beginPath(); ctx.arc(x + s * 0.18, y - s * 0.27 + bob, s * 0.02, 0, Math.PI * 2); ctx.fill();
+   308→   308→    ctx.beginPath(); ctx.arc(x - s * 0.14, y + s * 0.22 + bob, s * 0.018, 0, Math.PI * 2); ctx.fill();
+   309→   309→    ctx.beginPath(); ctx.arc(x + s * 0.22, y + s * 0.17 + bob, s * 0.015, 0, Math.PI * 2); ctx.fill();
+   310→   310→    ctx.strokeStyle = 'rgba(60,30,5,0.3)'; ctx.lineWidth = 0.8;
+   311→   311→    ctx.beginPath(); ctx.arc(x + s * 0.15, y - s * 0.25 + bob, s * 0.06, 0, 2); ctx.stroke();
+   312→   312→    ctx.beginPath(); ctx.arc(x - s * 0.1, y + s * 0.1 + bob, s * 0.05, -0.5, 1.8); ctx.stroke();
+   313→   313→  }
+   314→   314→}
+   315→   315→
+   316→   316→function drawSnowPea(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, anim: number) {
+   317→   317→  const bob = Math.sin(anim) * 3;
+   318→   318→  // Icy pot base with frost rim
+   319→   319→  const pg = ctx.createRadialGradient(x, y + s * 0.42, s * 0.05, x, y + s * 0.42, s * 0.22);
+   320→   320→  pg.addColorStop(0, '#E0F7FA'); pg.addColorStop(0.6, '#B2EBF2'); pg.addColorStop(1, '#80DEEA');
+   321→   321→  ctx.fillStyle = pg;
+   322→   322→  ctx.beginPath(); ctx.ellipse(x, y + s * 0.42, s * 0.22, s * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+   323→   323→  // Frost crystals on pot rim
+   324→   324→  ctx.strokeStyle = 'rgba(200,245,255,0.8)'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+   325→   325→  for (let i = 0; i < 5; i++) {
+   326→   326→    const a = -0.8 + i * 0.4;
+   327→   327→    const px = x + Math.cos(a) * s * 0.18;
+   328→   328→    const py = y + s * 0.39 + Math.sin(a) * s * 0.04;
+   329→   329→    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + Math.cos(a + 0.5) * s * 0.03, py - s * 0.03); ctx.stroke();
+   330→   330→    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + Math.cos(a - 0.8) * s * 0.025, py - s * 0.025); ctx.stroke();
+   331→   331→  }
+   332→   332→  // Frost aura glow (larger, pulsing)
+   333→   333→  const pulse = 1 + Math.sin(anim * 2) * 0.1;
+   334→   334→  const fg = ctx.createRadialGradient(x, y - s * 0.1 + bob, s * 0.1, x, y - s * 0.1 + bob, s * 0.62 * pulse);
+   335→   335→  fg.addColorStop(0, 'rgba(179,229,252,0.2)'); fg.addColorStop(0.4, 'rgba(179,229,252,0.1)'); fg.addColorStop(0.7, 'rgba(129,212,250,0.04)'); fg.addColorStop(1, 'rgba(129,212,250,0)');
+   336→   336→  ctx.fillStyle = fg;
+   337→   337→  ctx.beginPath(); ctx.arc(x, y - s * 0.1 + bob, s * 0.62 * pulse, 0, Math.PI * 2); ctx.fill();
+   338→   338→  // Stem
+   339→   339→  const sg = ctx.createLinearGradient(x - s * 0.045, 0, x + s * 0.045, 0);
+   340→   340→  sg.addColorStop(0, '#00838F'); sg.addColorStop(0.5, '#26C6DA'); sg.addColorStop(1, '#00838F');
+   341→   341→  ctx.fillStyle = sg;
+   342→   342→  ctx.beginPath(); ctx.roundRect(x - s * 0.05, y + s * 0.1, s * 0.1, s * 0.35, 4); ctx.fill();
+   343→   343→  // Icy leaves with frost edge
+   344→   344→  ctx.fillStyle = '#B2EBF2';
+   345→   345→  ctx.save(); ctx.translate(x - s * 0.05, y + s * 0.28); ctx.rotate(-0.5);
+   346→   346→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.18, s * 0.055, 0, 0, Math.PI * 2); ctx.fill();
+   347→   347→  ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1;
+   348→   348→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.18, s * 0.055, 0, 0, Math.PI * 2); ctx.stroke();
+   349→   349→  ctx.restore();
+   350→   350→  ctx.save(); ctx.translate(x + s * 0.05, y + s * 0.33); ctx.rotate(0.4);
+   351→   351→  ctx.fillStyle = '#80DEEA';
+   352→   352→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.16, s * 0.05, 0, 0, Math.PI * 2); ctx.fill();
+   353→   353→  ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1;
+   354→   354→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.16, s * 0.05, 0, 0, Math.PI * 2); ctx.stroke();
+   355→   355→  ctx.restore();
+   356→   356→  // Top sprout leaves (icy)
+   357→   357→  ctx.fillStyle = '#E0F7FA';
+   358→   358→  ctx.save(); ctx.translate(x, y - s * 0.42 + bob); ctx.rotate(-0.15);
+   359→   359→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.05, s * 0.11, 0, 0, Math.PI * 2); ctx.fill();
+   360→   360→  ctx.restore();
+   361→   361→  ctx.fillStyle = '#B2EBF2';
+   362→   362→  ctx.save(); ctx.translate(x, y - s * 0.42 + bob); ctx.rotate(0.3);
+   363→   363→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.04, s * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+   364→   364→  ctx.restore();
+   365→   365→  // Ice crystal crown (more elaborate)
+   366→   366→  ctx.strokeStyle = 'rgba(200,245,255,0.9)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+   367→   367→  for (let i = 0; i < 7; i++) {
+   368→   368→    const a = -Math.PI * 0.8 + i * 0.27 + Math.sin(anim * 0.5 + i) * 0.05;
+   369→   369→    const len = s * (0.08 + Math.sin(anim + i * 1.2) * 0.03);
+   370→   370→    const bx = x + Math.cos(a) * s * 0.33;
+   371→   371→    const by = y - s * 0.12 + bob + Math.sin(a) * s * 0.33;
+   372→   372→    ctx.beginPath(); ctx.moveTo(bx, by);
+   373→   373→    ctx.lineTo(bx + Math.cos(a) * len, by + Math.sin(a) * len); ctx.stroke();
+   374→   374→    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+   375→   375→    ctx.beginPath(); ctx.arc(bx + Math.cos(a) * len, by + Math.sin(a) * len, s * 0.015, 0, Math.PI * 2); ctx.fill();
+   376→   376→  }
+   377→   377→  // Big round head (icy blue, brighter)
+   378→   378→  const hg = ctx.createRadialGradient(x - s * 0.1, y - s * 0.2 + bob, s * 0.05, x, y - s * 0.12 + bob, s * 0.4);
+   379→   379→  hg.addColorStop(0, '#E8F8FF'); hg.addColorStop(0.2, '#E0F7FA'); hg.addColorStop(0.45, '#B2EBF2'); hg.addColorStop(0.7, '#4DD0E1'); hg.addColorStop(1, '#00838F');
+   380→   380→  ctx.fillStyle = hg;
+   381→   381→  ctx.beginPath(); ctx.arc(x, y - s * 0.12 + bob, s * 0.38, 0, Math.PI * 2); ctx.fill();
+   382→   382→  // Head highlight
+   383→   383→  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+   384→   384→  ctx.beginPath(); ctx.ellipse(x - s * 0.1, y - s * 0.28 + bob, s * 0.15, s * 0.12, -0.3, 0, Math.PI * 2); ctx.fill();
+   385→   385→  // Cheek blush (icy pink)
+   386→   386→  ctx.fillStyle = 'rgba(179,229,252,0.5)';
+   387→   387→  ctx.beginPath(); ctx.ellipse(x - s * 0.24, y - s * 0.04 + bob, s * 0.07, s * 0.045, -0.2, 0, Math.PI * 2); ctx.fill();
+   388→   388→  ctx.beginPath(); ctx.ellipse(x + s * 0.24, y - s * 0.04 + bob, s * 0.07, s * 0.045, 0.2, 0, Math.PI * 2); ctx.fill();
+   389→   389→  // Big cute eyes
+   390→   390→  ctx.fillStyle = '#E8F8FF';
+   391→   391→  ctx.beginPath(); ctx.ellipse(x - s * 0.12, y - s * 0.2 + bob, s * 0.12, s * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+   392→   392→  ctx.beginPath(); ctx.ellipse(x + s * 0.1, y - s * 0.22 + bob, s * 0.1, s * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+   393→   393→  // Eye shine
+   394→   394→  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+   395→   395→  ctx.beginPath(); ctx.ellipse(x - s * 0.14, y - s * 0.26 + bob, s * 0.055, s * 0.035, -0.3, 0, Math.PI * 2); ctx.fill();
+   396→   396→  ctx.beginPath(); ctx.ellipse(x + s * 0.08, y - s * 0.28 + bob, s * 0.045, s * 0.03, -0.3, 0, Math.PI * 2); ctx.fill();
+   397→   397→  // Eyelids
+   398→   398→  ctx.fillStyle = '#00ACC1';
+   399→   399→  ctx.beginPath(); ctx.ellipse(x - s * 0.12, y - s * 0.25 + bob, s * 0.13, s * 0.045, 0, 0, Math.PI); ctx.fill();
+   400→   400→  ctx.beginPath(); ctx.ellipse(x + s * 0.1, y - s * 0.27 + bob, s * 0.11, s * 0.035, 0, 0, Math.PI); ctx.fill();
+   401→   401→  // Irises
+   402→   402→  ctx.fillStyle = '#006064';
+   403→   403→  ctx.beginPath(); ctx.arc(x - s * 0.07, y - s * 0.19 + bob, s * 0.065, 0, Math.PI * 2); ctx.fill();
+   404→   404→  ctx.beginPath(); ctx.arc(x + s * 0.14, y - s * 0.21 + bob, s * 0.055, 0, Math.PI * 2); ctx.fill();
+   405→   405→  // Pupil highlights
+   406→   406→  ctx.fillStyle = '#fff';
+   407→   407→  ctx.beginPath(); ctx.arc(x - s * 0.05, y - s * 0.21 + bob, s * 0.03, 0, Math.PI * 2); ctx.fill();
+   408→   408→  ctx.beginPath(); ctx.arc(x + s * 0.16, y - s * 0.23 + bob, s * 0.025, 0, Math.PI * 2); ctx.fill();
+   409→   409→  // Nose
+   410→   410→  ctx.fillStyle = '#00838F';
+   411→   411→  ctx.beginPath(); ctx.ellipse(x + s * 0.02, y - s * 0.1 + bob, s * 0.018, s * 0.012, 0, 0, Math.PI * 2); ctx.fill();
+   412→   412→  // Smile
+   413→   413→  ctx.strokeStyle = '#006064'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+   414→   414→  ctx.beginPath(); ctx.arc(x + s * 0.02, y - s * 0.04 + bob, s * 0.08, 0.1, Math.PI - 0.1); ctx.stroke();
+   415→   415→  // Breath cloud (visible cold breath)
+   416→   416→  const breathAlpha = 0.3 + Math.sin(anim * 1.5) * 0.15;
+   417→   417→  ctx.fillStyle = `rgba(224,247,250,${breathAlpha})`;
+   418→   418→  const breathX = x + s * 0.15 + Math.sin(anim * 0.8) * s * 0.05;
+   419→   419→  const breathY = y - s * 0.02 + bob + Math.sin(anim * 1.2) * s * 0.02;
+   420→   420→  ctx.beginPath(); ctx.ellipse(breathX, breathY, s * 0.08, s * 0.05, 0.2, 0, Math.PI * 2); ctx.fill();
+   421→   421→  ctx.fillStyle = `rgba(255,255,255,${breathAlpha * 0.7})`;
+   422→   422→  ctx.beginPath(); ctx.ellipse(breathX + s * 0.04, breathY - s * 0.02, s * 0.04, s * 0.025, 0, 0, Math.PI * 2); ctx.fill();
+   423→   423→  // Cannon tube (icy, more 3D)
+   424→   424→  const cg = ctx.createRadialGradient(x + s * 0.26, y - s * 0.14 + bob, s * 0.04, x + s * 0.38, y - s * 0.12 + bob, s * 0.2);
+   425→   425→  cg.addColorStop(0, '#B2EBF2'); cg.addColorStop(0.4, '#4DD0E1'); cg.addColorStop(0.8, '#00ACC1'); cg.addColorStop(1, '#00695C');
+   426→   426→  ctx.fillStyle = cg;
+   427→   427→  ctx.beginPath(); ctx.ellipse(x + s * 0.38, y - s * 0.12 + bob, s * 0.21, s * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+   428→   428→  // Cannon highlight
+   429→   429→  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+   430→   430→  ctx.beginPath(); ctx.ellipse(x + s * 0.35, y - s * 0.16 + bob, s * 0.13, s * 0.035, -0.1, 0, Math.PI * 2); ctx.fill();
+   431→   431→  // Cannon opening
+   432→   432→  ctx.fillStyle = '#004D40';
+   433→   433→  ctx.beginPath(); ctx.arc(x + s * 0.52, y - s * 0.12 + bob, s * 0.085, 0, Math.PI * 2); ctx.fill();
+   434→   434→  const ig = ctx.createRadialGradient(x + s * 0.5, y - s * 0.14 + bob, s * 0.02, x + s * 0.52, y - s * 0.12 + bob, s * 0.06);
+   435→   435→  ig.addColorStop(0, '#00838F'); ig.addColorStop(1, '#004D40');
+   436→   436→  ctx.fillStyle = ig;
+   437→   437→  ctx.beginPath(); ctx.arc(x + s * 0.52, y - s * 0.12 + bob, s * 0.065, 0, Math.PI * 2); ctx.fill();
+   438→   438→  // Cannon rim
+   439→   439→  ctx.strokeStyle = '#00838F'; ctx.lineWidth = 2.5;
+   440→   440→  ctx.beginPath(); ctx.arc(x + s * 0.52, y - s * 0.12 + bob, s * 0.085, 0, Math.PI * 2); ctx.stroke();
+   441→   441→  // Ice muzzle glow
+   442→   442→  const icePulse = 0.5 + Math.sin(anim * 2.5) * 0.3;
+   443→   443→  const ig2 = ctx.createRadialGradient(x + s * 0.52, y - s * 0.12 + bob, 0, x + s * 0.52, y - s * 0.12 + bob, s * 0.12);
+   444→   444→  ig2.addColorStop(0, `rgba(100,220,255,${icePulse * 0.5})`); ig2.addColorStop(1, 'rgba(100,220,255,0)');
+   445→   445→  ctx.fillStyle = ig2;
+   446→   446→  ctx.beginPath(); ctx.arc(x + s * 0.52, y - s * 0.12 + bob, s * 0.12, 0, Math.PI * 2); ctx.fill();
+   447→   447→  // Frost particles (more)
+   448→   448→  ctx.fillStyle = 'rgba(200,245,255,0.75)';
+   449→   449→  for (let i = 0; i < 10; i++) {
+   450→   450→    const px = x + s * 0.5 + Math.sin(anim * 1.8 + i * 0.9) * s * 0.25;
+   451→   451→    const py = y - s * 0.15 + bob + Math.cos(anim * 1.3 + i * 1.1) * s * 0.25;
+   452→   452→    const sz = s * 0.018 + Math.sin(anim * 3 + i) * s * 0.008;
+   453→   453→    ctx.beginPath(); ctx.arc(px, py, sz, 0, Math.PI * 2); ctx.fill();
+   454→   454→  }
+   455→   455→  // Floating snowflakes around (more)
+   456→   456→  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1;
+   457→   457→  for (let i = 0; i < 4; i++) {
+   458→   458→    const sx = x + Math.sin(anim * 0.7 + i * 1.6) * s * 0.55;
+   459→   459→    const sy = y - s * 0.2 + bob + Math.cos(anim * 0.5 + i * 1.5) * s * 0.38;
+   460→   460→    ctx.save(); ctx.translate(sx, sy); ctx.rotate(anim * 0.5 + i);
+   461→   461→    for (let j = 0; j < 3; j++) {
+   462→   462→      const a = j * Math.PI / 3;
+   463→   463→      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * s * 0.04, Math.sin(a) * s * 0.04); ctx.stroke();
+   464→   464→      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a + Math.PI / 6) * s * 0.025, Math.sin(a + Math.PI / 6) * s * 0.025); ctx.stroke();
+   465→   465→    }
+   466→   466→    ctx.restore();
+   467→   467→  }
+   468→   468→}
+   469→   469→
+   470→   470→function drawRepeater(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, anim: number) {
+   471→   471→  const bob = Math.sin(anim) * 3;
+   472→   472→  // Pot (darker, solid)
+   473→   473→  const pg = ctx.createLinearGradient(x - s * 0.22, y + s * 0.38, x + s * 0.22, y + s * 0.45);
+   474→   474→  pg.addColorStop(0, '#8D6E63'); pg.addColorStop(0.5, '#6D4C41'); pg.addColorStop(1, '#4E342E');
+   475→   475→  ctx.fillStyle = pg;
+   476→   476→  ctx.beginPath(); ctx.ellipse(x, y + s * 0.42, s * 0.22, s * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+   477→   477→  ctx.fillStyle = '#8D6E63';
+   478→   478→  ctx.beginPath(); ctx.ellipse(x, y + s * 0.38, s * 0.2, s * 0.04, 0, 0, Math.PI * 2); ctx.fill();
+   479→   479→  ctx.fillStyle = '#3E2723';
+   480→   480→  ctx.beginPath(); ctx.ellipse(x, y + s * 0.42, s * 0.22, s * 0.05, 0, 0, Math.PI * 2); ctx.fill();
+   481→   481→  // Thick stem (stronger, with highlight)
+   482→   482→  const sg = ctx.createLinearGradient(x - s * 0.065, 0, x + s * 0.065, 0);
+   483→   483→  sg.addColorStop(0, '#1B5E20'); sg.addColorStop(0.25, '#2E7D32'); sg.addColorStop(0.65, '#388E3C'); sg.addColorStop(1, '#1B5E20');
+   484→   484→  ctx.fillStyle = sg;
+   485→   485→  ctx.beginPath(); ctx.roundRect(x - s * 0.065, y + s * 0.08, s * 0.13, s * 0.35, 5); ctx.fill();
+   486→   486→  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+   487→   487→  ctx.beginPath(); ctx.roundRect(x - s * 0.02, y + s * 0.1, s * 0.04, s * 0.3, 3); ctx.fill();
+   488→   488→  // Stronger leaves (veined)
+   489→   489→  ctx.fillStyle = '#388E3C';
+   490→   490→  ctx.save(); ctx.translate(x - s * 0.065, y + s * 0.26); ctx.rotate(-0.6);
+   491→   491→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.21, s * 0.07, 0, 0, Math.PI * 2); ctx.fill();
+   492→   492→  ctx.strokeStyle = 'rgba(27,94,32,0.3)'; ctx.lineWidth = 0.8;
+   493→   493→  ctx.beginPath(); ctx.moveTo(-s * 0.17, 0); ctx.lineTo(s * 0.17, 0); ctx.stroke(); ctx.restore();
+   494→   494→  ctx.save(); ctx.translate(x + s * 0.065, y + s * 0.32); ctx.rotate(0.5);
+   495→   495→  ctx.fillStyle = '#2E7D32';
+   496→   496→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.19, s * 0.065, 0, 0, Math.PI * 2); ctx.fill();
+   497→   497→  ctx.strokeStyle = 'rgba(27,94,32,0.3)'; ctx.lineWidth = 0.8;
+   498→   498→  ctx.beginPath(); ctx.moveTo(-s * 0.15, 0); ctx.lineTo(s * 0.15, 0); ctx.stroke(); ctx.restore();
+   499→   499→  // Neck (muscular)
+   500→   500→  ctx.fillStyle = '#2E7D32';
+   501→   501→  ctx.beginPath(); ctx.roundRect(x - s * 0.08, y - s * 0.08, s * 0.16, s * 0.16, 4); ctx.fill();
+   502→   502→  ctx.fillStyle = '#388E3C';
+   503→   503→  ctx.beginPath(); ctx.arc(x - s * 0.1, y - s * 0.04, s * 0.06, 0, Math.PI * 2); ctx.fill();
+   504→   504→  ctx.beginPath(); ctx.arc(x + s * 0.1, y - s * 0.04, s * 0.06, 0, Math.PI * 2); ctx.fill();
+   505→   505→  // Big head (darker green, tougher)
+   506→   506→  const hg = ctx.createRadialGradient(x - s * 0.08, y - s * 0.22 + bob, s * 0.05, x, y - s * 0.1 + bob, s * 0.44);
+   507→   507→  hg.addColorStop(0, '#A5D6A7'); hg.addColorStop(0.2, '#66BB6A'); hg.addColorStop(0.45, '#43A047'); hg.addColorStop(0.75, '#2E7D32'); hg.addColorStop(1, '#1B5E20');
+   508→   508→  ctx.fillStyle = hg;
+   509→   509→  ctx.beginPath(); ctx.arc(x, y - s * 0.12 + bob, s * 0.4, 0, Math.PI * 2); ctx.fill();
+   510→   510→  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+   511→   511→  ctx.beginPath(); ctx.ellipse(x - s * 0.1, y - s * 0.3 + bob, s * 0.14, s * 0.12, -0.3, 0, Math.PI * 2); ctx.fill();
+   512→   512→  // Forehead vein
+   513→   513→  ctx.strokeStyle = 'rgba(27,94,32,0.4)'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+   514→   514→  ctx.beginPath(); ctx.moveTo(x - s * 0.08, y - s * 0.35 + bob); ctx.quadraticCurveTo(x - s * 0.12, y - s * 0.28 + bob, x - s * 0.18, y - s * 0.3 + bob); ctx.stroke();
+   515→   515→  // Determined thick V-brows
+   516→   516→  ctx.strokeStyle = '#0D3B0F'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+   517→   517→  ctx.beginPath(); ctx.moveTo(x - s * 0.24, y - s * 0.32 + bob); ctx.lineTo(x - s * 0.03, y - s * 0.25 + bob); ctx.stroke();
+   518→   518→  ctx.beginPath(); ctx.moveTo(x + s * 0.24, y - s * 0.32 + bob); ctx.lineTo(x + s * 0.03, y - s * 0.25 + bob); ctx.stroke();
+   519→   519→  // Eyes
+   520→   520→  ctx.fillStyle = '#E8F5E9';
+   521→   521→  ctx.beginPath(); ctx.ellipse(x - s * 0.11, y - s * 0.18 + bob, s * 0.1, s * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+   522→   522→  ctx.beginPath(); ctx.ellipse(x + s * 0.11, y - s * 0.18 + bob, s * 0.08, s * 0.07, 0, 0, Math.PI * 2); ctx.fill();
+   523→   523→  // Heavy angry eyelids
+   524→   524→  ctx.fillStyle = '#2E7D32';
+   525→   525→  ctx.beginPath(); ctx.ellipse(x - s * 0.11, y - s * 0.21 + bob, s * 0.12, s * 0.045, 0.05, 0, Math.PI); ctx.fill();
+   526→   526→  ctx.beginPath(); ctx.ellipse(x + s * 0.11, y - s * 0.21 + bob, s * 0.1, s * 0.04, -0.05, 0, Math.PI); ctx.fill();
+   527→   527→  // Red-angry irises
+   528→   528→  const eg1 = ctx.createRadialGradient(x - s * 0.06, y - s * 0.17 + bob, s * 0.02, x - s * 0.06, y - s * 0.17 + bob, s * 0.055);
+   529→   529→  eg1.addColorStop(0, '#EF5350'); eg1.addColorStop(0.5, '#C62828'); eg1.addColorStop(1, '#0D3B0F');
+   530→   530→  ctx.fillStyle = eg1;
+   531→   531→  ctx.beginPath(); ctx.arc(x - s * 0.06, y - s * 0.17 + bob, s * 0.055, 0, Math.PI * 2); ctx.fill();
+   532→   532→  const eg2 = ctx.createRadialGradient(x + s * 0.15, y - s * 0.17 + bob, s * 0.015, x + s * 0.15, y - s * 0.17 + bob, s * 0.045);
+   533→   533→  eg2.addColorStop(0, '#EF5350'); eg2.addColorStop(0.5, '#C62828'); eg2.addColorStop(1, '#0D3B0F');
+   534→   534→  ctx.fillStyle = eg2;
+   535→   535→  ctx.beginPath(); ctx.arc(x + s * 0.15, y - s * 0.17 + bob, s * 0.045, 0, Math.PI * 2); ctx.fill();
+   536→   536→  ctx.fillStyle = '#fff';
+   537→   537→  ctx.beginPath(); ctx.arc(x - s * 0.04, y - s * 0.19 + bob, s * 0.022, 0, Math.PI * 2); ctx.fill();
+   538→   538→  ctx.beginPath(); ctx.arc(x + s * 0.17, y - s * 0.19 + bob, s * 0.018, 0, Math.PI * 2); ctx.fill();
+   539→   539→  // Wide grin with teeth lines
+   540→   540→  ctx.strokeStyle = '#0D3B0F'; ctx.lineWidth = 2;
+   541→   541→  ctx.beginPath(); ctx.arc(x + s * 0.02, y - s * 0.03 + bob, s * 0.12, 0, Math.PI); ctx.stroke();
+   542→   542→  ctx.fillStyle = '#fff';
+   543→   543→  ctx.beginPath(); ctx.arc(x + s * 0.02, y - s * 0.03 + bob, s * 0.12, 0.08, Math.PI - 0.08); ctx.fill();
+   544→   544→  ctx.strokeStyle = '#0D3B0F'; ctx.lineWidth = 1;
+   545→   545→  for (let t = -2; t <= 2; t++) { ctx.beginPath(); ctx.moveTo(x + s * 0.02 + t * s * 0.035, y - s * 0.03 + bob); ctx.lineTo(x + s * 0.02 + t * s * 0.035, y + s * 0.04 + bob); ctx.stroke(); }
+   546→   546→  // Double cannon (3D, with highlight)
+   547→   547→  const cg1 = ctx.createRadialGradient(x + s * 0.24, y - s * 0.24 + bob, s * 0.04, x + s * 0.36, y - s * 0.22 + bob, s * 0.18);
+   548→   548→  cg1.addColorStop(0, '#66BB6A'); cg1.addColorStop(0.5, '#388E3C'); cg1.addColorStop(1, '#1B5E20');
+   549→   549→  ctx.fillStyle = cg1;
+   550→   550→  ctx.beginPath(); ctx.ellipse(x + s * 0.36, y - s * 0.2 + bob, s * 0.18, s * 0.13, -0.12, 0, Math.PI * 2); ctx.fill();
+   551→   551→  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+   552→   552→  ctx.beginPath(); ctx.ellipse(x + s * 0.33, y - s * 0.24 + bob, s * 0.1, s * 0.03, -0.15, 0, Math.PI * 2); ctx.fill();
+   553→   553→  ctx.fillStyle = '#0D3B0F'; ctx.beginPath(); ctx.arc(x + s * 0.48, y - s * 0.2 + bob, s * 0.055, 0, Math.PI * 2); ctx.fill();
+   554→   554→  const ig1 = ctx.createRadialGradient(x + s * 0.46, y - s * 0.22 + bob, s * 0.015, x + s * 0.48, y - s * 0.2 + bob, s * 0.04);
+   555→   555→  ig1.addColorStop(0, '#2E7D32'); ig1.addColorStop(1, '#0D3B0F');
+   556→   556→  ctx.fillStyle = ig1; ctx.beginPath(); ctx.arc(x + s * 0.48, y - s * 0.2 + bob, s * 0.04, 0, Math.PI * 2); ctx.fill();
+   557→   557→  const cg2 = ctx.createRadialGradient(x + s * 0.26, y - s * 0.04 + bob, s * 0.04, x + s * 0.36, y - s * 0.04 + bob, s * 0.16);
+   558→   558→  cg2.addColorStop(0, '#4CAF50'); cg2.addColorStop(0.6, '#2E7D32'); cg2.addColorStop(1, '#1B5E20');
+   559→   559→  ctx.fillStyle = cg2;
+   560→   560→  ctx.beginPath(); ctx.ellipse(x + s * 0.36, y - s * 0.04 + bob, s * 0.18, s * 0.13, 0.12, 0, Math.PI * 2); ctx.fill();
+   561→   561→  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+   562→   562→  ctx.beginPath(); ctx.ellipse(x + s * 0.33, y - s * 0.08 + bob, s * 0.1, s * 0.03, 0.15, 0, Math.PI * 2); ctx.fill();
+   563→   563→  ctx.fillStyle = '#0D3B0F'; ctx.beginPath(); ctx.arc(x + s * 0.48, y - s * 0.04 + bob, s * 0.055, 0, Math.PI * 2); ctx.fill();
+   564→   564→  const ig2 = ctx.createRadialGradient(x + s * 0.46, y - s * 0.06 + bob, s * 0.015, x + s * 0.48, y - s * 0.04 + bob, s * 0.04);
+   565→   565→  ig2.addColorStop(0, '#2E7D32'); ig2.addColorStop(1, '#0D3B0F');
+   566→   566→  ctx.fillStyle = ig2; ctx.beginPath(); ctx.arc(x + s * 0.48, y - s * 0.04 + bob, s * 0.04, 0, Math.PI * 2); ctx.fill();
+   567→   567→  // Muzzle glow (both)
+   568→   568→  const mP = 0.4 + Math.sin(anim * 3) * 0.25;
+   569→   569→  const mg = ctx.createRadialGradient(x + s * 0.48, y - s * 0.2 + bob, 0, x + s * 0.48, y - s * 0.2 + bob, s * 0.1);
+   570→   570→  mg.addColorStop(0, `rgba(139,195,74,${mP})`); mg.addColorStop(1, 'rgba(139,195,74,0)');
+   571→   571→  ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(x + s * 0.48, y - s * 0.2 + bob, s * 0.1, 0, Math.PI * 2); ctx.fill();
+   572→   572→  const mg2 = ctx.createRadialGradient(x + s * 0.48, y - s * 0.04 + bob, 0, x + s * 0.48, y - s * 0.04 + bob, s * 0.1);
+   573→   573→  mg2.addColorStop(0, `rgba(139,195,74,${mP * 0.8})`); mg2.addColorStop(1, 'rgba(139,195,74,0)');
+   574→   574→  ctx.fillStyle = mg2; ctx.beginPath(); ctx.arc(x + s * 0.48, y - s * 0.04 + bob, s * 0.1, 0, Math.PI * 2); ctx.fill();
+   575→   575→}
+   576→   576→
+   577→   577→function drawCherryBomb(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, anim: number) {
+   578→   578→  const bob = Math.sin(anim * 2) * 2;
+   579→   579→  const pulse = 1 + Math.sin(anim * 4) * 0.05;
+   580→   580→  // Big warm glow
+   581→   581→  const gg = ctx.createRadialGradient(x, y + bob, s * 0.1, x, y + bob, s * 0.65 * pulse);
+   582→   582→  gg.addColorStop(0, 'rgba(255,152,0,0.18)'); gg.addColorStop(0.5, 'rgba(255,87,34,0.08)'); gg.addColorStop(1, 'rgba(255,87,34,0)');
+   583→   583→  ctx.fillStyle = gg;
+   584→   584→  ctx.beginPath(); ctx.arc(x, y + bob, s * 0.65 * pulse, 0, Math.PI * 2); ctx.fill();
+   585→   585→  // Stems
+   586→   586→  ctx.strokeStyle = '#33691E'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+   587→   587→  ctx.beginPath(); ctx.moveTo(x - s * 0.14, y - s * 0.15 + bob);
+   588→   588→  ctx.quadraticCurveTo(x - s * 0.05, y - s * 0.5 + bob, x + s * 0.12, y - s * 0.48 + bob); ctx.stroke();
+   589→   589→  ctx.beginPath(); ctx.moveTo(x + s * 0.14, y - s * 0.15 + bob);
+   590→   590→  ctx.quadraticCurveTo(x + s * 0.08, y - s * 0.45 + bob, x + s * 0.12, y - s * 0.48 + bob); ctx.stroke();
+   591→   591→  // Leaf
+   592→   592→  ctx.fillStyle = '#81C784';
+   593→   593→  ctx.save(); ctx.translate(x + s * 0.12, y - s * 0.48 + bob); ctx.rotate(0.3);
+   594→   594→  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.15, s * 0.05, 0, 0, Math.PI * 2); ctx.fill();
+   595→   595→  ctx.strokeStyle = 'rgba(46,125,50,0.4)'; ctx.lineWidth = 0.8;
+   596→   596→  ctx.beginPath(); ctx.moveTo(-s * 0.12, 0); ctx.lineTo(s * 0.12, 0); ctx.stroke();
+   597→   597→  ctx.restore();
+   598→   598→  // Bigger cherries with better shading
+   599→   599→  const cherryR = s * 0.28 * pulse;
+   600→   600→  // Left cherry
+   601→   601→  const lg = ctx.createRadialGradient(x - s * 0.2 - s * 0.07, y + s * 0.05 + bob - s * 0.07, s * 0.04, x - s * 0.18, y + s * 0.05 + bob, cherryR);
+   602→   602→  lg.addColorStop(0, '#FFCDD2'); lg.addColorStop(0.3, '#EF5350'); lg.addColorStop(0.7, '#E53935'); lg.addColorStop(1, '#B71C1C');
+   603→   603→  ctx.fillStyle = lg;
+   604→   604→  ctx.beginPath(); ctx.arc(x - s * 0.18, y + s * 0.05 + bob, cherryR, 0, Math.PI * 2); ctx.fill();
+   605→   605→  // Right cherry
+   606→   606→  const rg = ctx.createRadialGradient(x + s * 0.2 - s * 0.07, y + s * 0.05 + bob - s * 0.07, s * 0.04, x + s * 0.18, y + s * 0.05 + bob, cherryR);
+   607→   607→  rg.addColorStop(0, '#FFCDD2'); rg.addColorStop(0.3, '#EF5350'); rg.addColorStop(0.7, '#E53935'); rg.addColorStop(1, '#B71C1C');
+   608→   608→  ctx.fillStyle = rg;
+   609→   609→  ctx.beginPath(); ctx.arc(x + s * 0.18, y + s * 0.05 + bob, cherryR, 0, Math.PI * 2); ctx.fill();
+   610→   610→  // Highlights
+   611→   611→  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+   612→   612→  ctx.beginPath(); ctx.ellipse(x - s * 0.25, y - s * 0.02 + bob, s * 0.1, s * 0.06, -0.4, 0, Math.PI * 2); ctx.fill();
+   613→   613→  ctx.beginPath(); ctx.ellipse(x + s * 0.12, y - s * 0.02 + bob, s * 0.1, s * 0.06, -0.4, 0, Math.PI * 2); ctx.fill();
+   614→   614→  // Angry faces - Left
+   615→   615→  ctx.fillStyle = '#fff';
+   616→   616→  ctx.beginPath(); ctx.arc(x - s * 0.24, y + bob, s * 0.055, 0, Math.PI * 2); ctx.fill();
+   617→   617→  ctx.beginPath(); ctx.arc(x - s * 0.12, y + bob, s * 0.055, 0, Math.PI * 2); ctx.fill();
+   618→   618→  ctx.fillStyle = '#B71C1C';
+   619→   619→  ctx.beginPath(); ctx.arc(x - s * 0.23, y + bob, s * 0.035, 0, Math.PI * 2); ctx.fill();
+   620→   620→  ctx.beginPath(); ctx.arc(x - s * 0.13, y + bob, s * 0.035, 0, Math.PI * 2); ctx.fill();
+   621→   621→  // Angry brows left
+   622→   622→  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+   623→   623→  ctx.beginPath(); ctx.moveTo(x - s * 0.3, y - s * 0.06 + bob); ctx.lineTo(x - s * 0.19, y - s * 0.02 + bob); ctx.stroke();
+   624→   624→  ctx.beginPath(); ctx.moveTo(x - s * 0.07, y - s * 0.06 + bob); ctx.lineTo(x - s * 0.17, y - s * 0.02 + bob); ctx.stroke();
+   625→   625→  // Angry mouth left
+   626→   626→  ctx.fillStyle = '#7f0000';
+   627→   627→  ctx.beginPath(); ctx.ellipse(x - s * 0.18, y + s * 0.09 + bob, s * 0.05, s * 0.035, 0, 0, Math.PI * 2); ctx.fill();
+   628→   628→  // Teeth left
+   629→   629→  ctx.fillStyle = '#fff';
+   630→   630→  for (let t = -1; t <= 1; t++) {
+   631→   631→    ctx.beginPath(); ctx.roundRect(x - s * 0.18 + t * s * 0.025 - s * 0.008, y + s * 0.07 + bob, s * 0.016, s * 0.02, 1); ctx.fill();
+   632→   632→  }
+   633→   633→  // Right face
+   634→   634→  ctx.fillStyle = '#fff';
+   635→   635→  ctx.beginPath(); ctx.arc(x + s * 0.12, y + bob, s * 0.055, 0, Math.PI * 2); ctx.fill();
+   636→   636→  ctx.beginPath(); ctx.arc(x + s * 0.24, y + bob, s * 0.055, 0, Math.PI * 2); ctx.fill();
+   637→   637→  ctx.fillStyle = '#B71C1C';
+   638→   638→  ctx.beginPath(); ctx.arc(x + s * 0.13, y + bob, s * 0.035, 0, Math.PI * 2); ctx.fill();
+   639→   639→  ctx.beginPath(); ctx.arc(x + s * 0.23, y + bob, s * 0.035, 0, Math.PI * 2); ctx.fill();
+   640→   640→  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5;
+   641→   641→  ctx.beginPath(); ctx.moveTo(x + s * 0.07, y - s * 0.06 + bob); ctx.lineTo(x + s * 0.17, y - s * 0.02 + bob); ctx.stroke();
+   642→   642→  ctx.beginPath(); ctx.moveTo(x + s * 0.3, y - s * 0.06 + bob); ctx.lineTo(x + s * 0.19, y - s * 0.02 + bob); ctx.stroke();
+   643→   643→  ctx.fillStyle = '#7f0000';
+   644→   644→  ctx.beginPath(); ctx.ellipse(x + s * 0.18, y + s * 0.09 + bob, s * 0.05, s * 0.035, 0, 0, Math.PI * 2); ctx.fill();
+   645→   645→  ctx.fillStyle = '#fff';
+   646→   646→  for (let t = -1; t <= 1; t++) {
+   647→   647→    ctx.beginPath(); ctx.roundRect(x + s * 0.18 + t * s * 0.025 - s * 0.008, y + s * 0.07 + bob, s * 0.016, s * 0.02, 1); ctx.fill();
+   648→   648→  }
+   649→   649→  // Fuse
+   650→   650→  ctx.strokeStyle = '#FF8F00'; ctx.lineWidth = 2.5;
+   651→   651→  ctx.beginPath(); ctx.moveTo(x + s * 0.12, y - s * 0.48 + bob);
+   652→   652→  ctx.quadraticCurveTo(x + s * 0.15, y - s * 0.58 + bob, x + s * 0.1, y - s * 0.65 + bob); ctx.stroke();
+   653→   653→  // Spark (bigger, more dynamic)
+   654→   654→  const sparkS = s * 0.07 + Math.sin(anim * 8) * s * 0.04;
+   655→   655→  const sg = ctx.createRadialGradient(x + s * 0.1, y - s * 0.65 + bob, 0, x + s * 0.1, y - s * 0.65 + bob, sparkS * 1.5);
+   656→   656→  sg.addColorStop(0, '#FFF9C4'); sg.addColorStop(0.3, '#FFEB3B'); sg.addColorStop(0.7, '#FF6D00'); sg.addColorStop(1, 'rgba(255,109,0,0)');
+   657→   657→  ctx.fillStyle = sg;
+   658→   658→  ctx.beginPath(); ctx.arc(x + s * 0.1, y - s * 0.65 + bob, sparkS * 1.5, 0, Math.PI * 2); ctx.fill();
+   659→   659→  ctx.fillStyle = '#FFEB3B';
+   660→   660→  ctx.beginPath(); ctx.arc(x + s * 0.1, y - s * 0.65 + bob, sparkS * 0.5, 0, Math.PI * 2); ctx.fill();
+   661→   661→  // Spark rays
+   662→   662→  ctx.strokeStyle = 'rgba(255,235,59,0.7)'; ctx.lineWidth = 1.5;
+   663→   663→  for (let i = 0; i < 6; i++) {
+   664→   664→    const a = anim * 3 + i * Math.PI / 3;
+   665→   665→    ctx.beginPath();
+   666→   666→    ctx.moveTo(x + s * 0.1 + Math.cos(a) * sparkS * 0.6, y - s * 0.65 + bob + Math.sin(a) * sparkS * 0.6);
+   667→   667→    ctx.lineTo(x + s * 0.1 + Math.cos(a) * sparkS * 1.8, y - s * 0.65 + bob + Math.sin(a) * sparkS * 1.8);
+   668→   668→    ctx.stroke();
+   669→   669→  }
+   670→   670→  // Heat shimmer particles
+   671→   671→  ctx.fillStyle = 'rgba(255,200,50,0.4)';
+   672→   672→  for (let i = 0; i < 4; i++) {
+   673→   673→    const hx = x + Math.sin(anim * 3 + i * 1.5) * s * 0.35;
+   674→   674→    const hy = y - s * 0.3 + bob + Math.cos(anim * 2 + i * 1.8) * s * 0.25;
+   675→   675→    ctx.beginPath(); ctx.arc(hx, hy, s * 0.015, 0, Math.PI * 2); ctx.fill();
+   676→   676→  }
+   677→   677→}
+   678→   678→
+   679→   679→function drawPlant(ctx: CanvasRenderingContext2D, type: PlantType, x: number, y: number,
+   680→   680→  cellW: number, cellH: number, animPhase: number, hpRatio: number) {
+   681→   681→  const s = Math.min(cellW, cellH) * 0.9;
+   682→   682→  switch (type) {
+   683→   683→    case 'peashooter': drawPeashooter(ctx, x, y, s, animPhase); break;
+   684→   684→    case 'wallnut': drawWallnut(ctx, x, y, s, animPhase, hpRatio); break;
+   685→   685→    case 'snowpea': drawSnowPea(ctx, x, y, s, animPhase); break;
+   686→   686→    case 'repeater': drawRepeater(ctx, x, y, s, animPhase); break;
+   687→   687→    case 'cherrybomb': drawCherryBomb(ctx, x, y, s, animPhase); break;
+   688→   688→  }
+   689→   689→}
+   690→   690→
+   691→   691→// --- Zombie Drawing ---
+   692→   692→function drawZombieBase(ctx: CanvasRenderingContext2D, x: number, zy: number, bob: number,
+   693→   693→  cellW: number, cellH: number, animPhase: number, slowed: boolean, eating: boolean) {
+   694→   694→  const s = Math.min(cellW, cellH) * 0.95;
+   695→   695→  const skin = slowed ? '#7BAFD4' : '#9EC05A';
+   696→   696→  const skinDk = slowed ? '#5A8AB5' : '#7A9F3A';
+   697→   697→  const skinLt = slowed ? '#A5D0F0' : '#C5DD7A';
+   698→   698→  const walk = eating ? 0 : Math.sin(animPhase) * 12;
+   699→   699→  const armSw = eating ? Math.sin(animPhase * 3) * 5 : Math.sin(animPhase * 1.5) * 16;
+   700→   700→  const headTilt = eating ? Math.sin(animPhase * 4) * 0.07 : Math.sin(animPhase * 0.8) * 0.04;
+   701→   701→  const bodyBob = eating ? Math.sin(animPhase * 2) * 2 : 0;
+   702→   702→
+   703→   703→  // Shadow
+   704→   704→  ctx.fillStyle = 'rgba(0,0,0,0.13)';
+   705→   705→  ctx.beginPath(); ctx.ellipse(x, zy + s * 0.48, s * 0.19, s * 0.04, 0, 0, Math.PI * 2); ctx.fill();
+   706→   706→  // Legs (walking animation improved, with knee bend)
+   707→   707→  ctx.fillStyle = '#5D4037';
+   708→   708→  ctx.save(); ctx.translate(x - s * 0.08, zy + s * 0.25 + bob); ctx.rotate(walk * 0.022);
+   709→   709→  ctx.beginPath(); ctx.roundRect(-s * 0.05, 0, s * 0.1, s * 0.2, 4); ctx.fill();
+   710→   710→  // Knee shadow
+   711→   711→  ctx.fillStyle = 'rgba(0,0,0,0.1)';
+   712→   712→  ctx.beginPath(); ctx.ellipse(0, s * 0.1, s * 0.055, s * 0.025, 0, 0, Math.PI * 2); ctx.fill();
+   713→   713→  ctx.restore();
+   714→   714→  ctx.fillStyle = '#5D4037';
+   715→   715→  ctx.save(); ctx.translate(x + s * 0.08, zy + s * 0.25 + bob); ctx.rotate(-walk * 0.022);
+   716→   716→  ctx.beginPath(); ctx.roundRect(-s * 0.05, 0, s * 0.1, s * 0.2, 4); ctx.fill();
+   717→   717→  ctx.fillStyle = 'rgba(0,0,0,0.1)';
+   718→   718→  ctx.beginPath(); ctx.ellipse(0, s * 0.1, s * 0.055, s * 0.025, 0, 0, Math.PI * 2); ctx.fill();
+   719→   719→  ctx.restore();
+   720→   720→  // Torn pants (visible at knees)
+   721→   721→  ctx.fillStyle = skin;
+   722→   722→  ctx.save(); ctx.translate(x - s * 0.08, zy + s * 0.25 + bob); ctx.rotate(walk * 0.022);
+   723→   723→  ctx.beginPath(); ctx.moveTo(-s * 0.05, s * 0.08); ctx.lineTo(-s * 0.02, s * 0.14); ctx.lineTo(-s * 0.05, s * 0.12); ctx.closePath(); ctx.fill();
+   724→   724→  ctx.restore();
+   725→   725→  // Shoes (with sole detail)
+   726→   726→  ctx.fillStyle = '#4E342E';
+   727→   727→  ctx.beginPath(); ctx.ellipse(x - s * 0.08 + walk * 0.015, zy + s * 0.47 + bob, s * 0.1, s * 0.045, 0, 0, Math.PI * 2); ctx.fill();
+   728→   728→  ctx.beginPath(); ctx.ellipse(x + s * 0.08 - walk * 0.015, zy + s * 0.47 + bob, s * 0.1, s * 0.045, 0, 0, Math.PI * 2); ctx.fill();
+   729→   729→  // Soles
+   730→   730→  ctx.fillStyle = '#3E2723';
+   731→   731→  ctx.beginPath(); ctx.ellipse(x - s * 0.08 + walk * 0.015, zy + s * 0.485 + bob, s * 0.08, s * 0.02, 0, 0, Math.PI * 2); ctx.fill();
+   732→   732→  ctx.beginPath(); ctx.ellipse(x + s * 0.08 - walk * 0.015, zy + s * 0.485 + bob, s * 0.08, s * 0.02, 0, 0, Math.PI * 2); ctx.fill();
+   733→   733→
+   734→   734→  // Body (suit jacket)
+   735→   735→  const bg = ctx.createLinearGradient(x - s * 0.18, zy - s * 0.06 + bob + bodyBob, x + s * 0.18, zy + s * 0.28 + bob + bodyBob);
+   736→   736→  bg.addColorStop(0, '#7B6B5D'); bg.addColorStop(0.5, '#6B5B4D'); bg.addColorStop(1, '#5B4B3D');
+   737→   737→  ctx.fillStyle = bg;
+   738→   738→  ctx.beginPath(); ctx.roundRect(x - s * 0.18, zy - s * 0.06 + bob + bodyBob, s * 0.36, s * 0.34, 5); ctx.fill();
+   739→   739→  // Shirt collar visible at neck
+   740→   740→  ctx.fillStyle = '#E8E8E8';
+   741→   741→  ctx.beginPath(); ctx.ellipse(x, zy - s * 0.08 + bob + bodyBob, s * 0.12, s * 0.04, 0, 0, Math.PI * 2); ctx.fill();
+   742→   742→  ctx.fillStyle = '#D0D0D0';
+   743→   743→  ctx.beginPath(); ctx.ellipse(x - s * 0.04, zy - s * 0.06 + bob + bodyBob, s * 0.03, s * 0.03, -0.3, 0, Math.PI * 2); ctx.fill();
+   744→   744→  ctx.beginPath(); ctx.ellipse(x + s * 0.04, zy - s * 0.06 + bob + bodyBob, s * 0.03, s * 0.03, 0.3, 0, Math.PI * 2); ctx.fill();
+   745→   745→  // Lapel
+   746→   746→  ctx.fillStyle = '#5D4037';
+   747→   747→  ctx.beginPath(); ctx.moveTo(x, zy - s * 0.06 + bob + bodyBob); ctx.lineTo(x - s * 0.06, zy + s * 0.15 + bob + bodyBob); ctx.lineTo(x, zy + s * 0.28 + bob + bodyBob); ctx.closePath(); ctx.fill();
+   748→   748→  ctx.fillStyle = '#6D4C41';
+   749→   749→  ctx.beginPath(); ctx.moveTo(x, zy - s * 0.06 + bob + bodyBob); ctx.lineTo(x + s * 0.06, zy + s * 0.15 + bob + bodyBob); ctx.lineTo(x, zy + s * 0.28 + bob + bodyBob); ctx.closePath(); ctx.fill();
+   750→   750→  // Tie (bright red, wobbly)
+   751→   751→  const tieWobble = Math.sin(animPhase * 2) * s * 0.018;
+   752→   752→  ctx.fillStyle = '#E53935';
+   753→   753→  ctx.beginPath(); ctx.moveTo(x - s * 0.02 + tieWobble, zy - s * 0.02 + bob + bodyBob); ctx.lineTo(x + s * 0.03 + tieWobble, zy + s * 0.12 + bob + bodyBob); ctx.lineTo(x - s * 0.02 + tieWobble, zy + s * 0.2 + bob + bodyBob); ctx.closePath(); ctx.fill();
+   754→   754→  // Tie knot
+   755→   755→  ctx.fillStyle = '#C62828';
+   756→   756→  ctx.beginPath(); ctx.ellipse(x + tieWobble * 0.5, zy - s * 0.01 + bob + bodyBob, s * 0.02, s * 0.015, 0, 0, Math.PI * 2); ctx.fill();
+   757→   757→  // Shirt tear
+   758→   758→  ctx.fillStyle = skin;
+   759→   759→  ctx.beginPath();
+   760→   760→  ctx.moveTo(x + s * 0.06, zy + s * 0.02 + bob + bodyBob);
+   761→   761→  ctx.lineTo(x + s * 0.16, zy + s * 0.14 + bob + bodyBob);
+   762→   762→  ctx.lineTo(x + s * 0.1, zy + s * 0.26 + bob + bodyBob);
+   763→   763→  ctx.closePath(); ctx.fill();
+   764→   764→  // Buttons
+   765→   765→  ctx.fillStyle = '#FFD54F';
+   766→   766→  for (let b = 0; b < 3; b++) {
+   767→   767→    ctx.beginPath(); ctx.arc(x - s * 0.01, zy + b * s * 0.08 + bob + bodyBob + s * 0.02, s * 0.015, 0, Math.PI * 2); ctx.fill();
+   768→   768→  }
+   769→   769→
+   770→   770→  // Arms (thicker, with sleeve)
+   771→   771→  ctx.strokeStyle = skin; ctx.lineWidth = s * 0.1; ctx.lineCap = 'round';
+   772→   772→  // Left sleeve
+   773→   773→  ctx.fillStyle = '#6B5B4D';
+   774→   774→  ctx.beginPath(); ctx.arc(x - s * 0.18, zy + bob + bodyBob, s * 0.07, 0, Math.PI * 2); ctx.fill();
+   775→   775→  ctx.beginPath(); ctx.moveTo(x - s * 0.18, zy + bob + bodyBob);
+   776→   776→  ctx.quadraticCurveTo(x - s * 0.32, zy - s * 0.08 + bob + bodyBob + armSw, x - s * 0.44, zy - s * 0.18 + bob + bodyBob + armSw);
+   777→   777→  ctx.stroke();
+   778→   778→  // Right sleeve
+   779→   779→  ctx.fillStyle = '#6B5B4D';
+   780→   780→  ctx.beginPath(); ctx.arc(x + s * 0.18, zy + bob + bodyBob, s * 0.07, 0, Math.PI * 2); ctx.fill();
+   781→   781→  ctx.beginPath(); ctx.moveTo(x + s * 0.18, zy + bob + bodyBob);
+   782→   782→  ctx.quadraticCurveTo(x + s * 0.34, zy - s * 0.1 + bob + bodyBob - armSw, x + s * 0.42, zy - s * 0.22 + bob + bodyBob - armSw);
+   783→   783→  ctx.stroke();
+   784→   784→  // Hands (bigger)
+   785→   785→  ctx.fillStyle = skinLt;
+   786→   786→  ctx.beginPath(); ctx.arc(x - s * 0.44, zy - s * 0.18 + bob + bodyBob + armSw, s * 0.07, 0, Math.PI * 2); ctx.fill();
+   787→   787→  ctx.beginPath(); ctx.arc(x + s * 0.42, zy - s * 0.22 + bob + bodyBob - armSw, s * 0.07, 0, Math.PI * 2); ctx.fill();
+   788→   788→  // Fingers (more detail)
+   789→   789→  ctx.strokeStyle = skinLt; ctx.lineWidth = 2;
+   790→   790→  for (let f = -1; f <= 1; f++) {
+   791→   791→    ctx.beginPath(); ctx.moveTo(x - s * 0.44, zy - s * 0.18 + bob + bodyBob + armSw);
+   792→   792→    ctx.lineTo(x - s * 0.48 + f * s * 0.022, zy - s * 0.26 + bob + bodyBob + armSw); ctx.stroke();
+   793→   793→    ctx.beginPath(); ctx.moveTo(x + s * 0.42, zy - s * 0.22 + bob + bodyBob - armSw);
+   794→   794→    ctx.lineTo(x + s * 0.46 + f * s * 0.022, zy - s * 0.3 + bob + bodyBob - armSw); ctx.stroke();
+   795→   795→  }
+   796→   796→
+   797→   797→  // Neck
+   798→   798→  ctx.fillStyle = skinDk;
+   799→   799→  ctx.beginPath(); ctx.roundRect(x - s * 0.06, zy - s * 0.14 + bob + bodyBob, s * 0.12, s * 0.1, 3); ctx.fill();
+   800→   800→
+   801→   801→  // Head (bigger, rounder)
+   802→   802→  ctx.save(); ctx.translate(x, zy - s * 0.22 + bob + bodyBob); ctx.rotate(headTilt);
+   803→   803→  const hg = ctx.createRadialGradient(-s * 0.06, -s * 0.06, s * 0.05, 0, 0, s * 0.25);
+   804→   804→  hg.addColorStop(0, skinLt); hg.addColorStop(0.6, skin); hg.addColorStop(1, skinDk);
+   805→   805→  ctx.fillStyle = hg;
+   806→   806→  ctx.beginPath(); ctx.arc(0, 0, s * 0.25, 0, Math.PI * 2); ctx.fill();
+   807→   807→  // Ears
+   808→   808→  ctx.fillStyle = skinDk;
+   809→   809→  ctx.beginPath(); ctx.ellipse(-s * 0.24, s * 0.02, s * 0.04, s * 0.06, -0.3, 0, Math.PI * 2); ctx.fill();
+   810→   810→  ctx.beginPath(); ctx.ellipse(s * 0.24, s * 0.02, s * 0.04, s * 0.06, 0.3, 0, Math.PI * 2); ctx.fill();
+   811→   811→  // Bald head highlight
+   812→   812→  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+   813→   813→  ctx.beginPath(); ctx.ellipse(-s * 0.05, -s * 0.15, s * 0.12, s * 0.08, -0.2, 0, Math.PI * 2); ctx.fill();
+   814→   814→  // Eyes (googly, bigger)
+   815→   815→  ctx.fillStyle = '#FFF9C4';
+   816→   816→  ctx.beginPath(); ctx.ellipse(-s * 0.09, -s * 0.04, s * 0.085, s * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+   817→   817→  ctx.beginPath(); ctx.ellipse(s * 0.09, -s * 0.02, s * 0.075, s * 0.09, 0.1, 0, Math.PI * 2); ctx.fill();
+   818→   818→  ctx.strokeStyle = 'rgba(0,0,0,0.12)'; ctx.lineWidth = 1;
+   819→   819→  ctx.beginPath(); ctx.ellipse(-s * 0.09, -s * 0.04, s * 0.085, s * 0.1, 0, 0, Math.PI * 2); ctx.stroke();
+   820→   820→  ctx.beginPath(); ctx.ellipse(s * 0.09, -s * 0.02, s * 0.075, s * 0.09, 0.1, 0, Math.PI * 2); ctx.stroke();
+   821→   821→  // Red pupils
+   822→   822→   ctx.fillStyle = '#D32F2F';
+   823→   823→  ctx.beginPath(); ctx.arc(-s * 0.075, -s * 0.04, s * 0.048, 0, Math.PI * 2); ctx.fill();
+   824→   824→  ctx.beginPath(); ctx.arc(s * 0.1, -s * 0.02, s * 0.04, 0, Math.PI * 2); ctx.fill();
+   825→   825→  ctx.fillStyle = '#fff';
+   826→   826→  ctx.beginPath(); ctx.arc(-s * 0.06, -s * 0.06, s * 0.02, 0, Math.PI * 2); ctx.fill();
+   827→   827→  ctx.beginPath(); ctx.arc(s * 0.12, -s * 0.04, s * 0.016, 0, Math.PI * 2); ctx.fill();
+   828→   828→  // Droopy eyelids
+   829→   829→  ctx.fillStyle = skinDk;
+   830→   830→  ctx.beginPath(); ctx.ellipse(-s * 0.09, -s * 0.09, s * 0.09, s * 0.03, 0, 0, Math.PI); ctx.fill();
+   831→   831→  ctx.beginPath(); ctx.ellipse(s * 0.09, -s * 0.07, s * 0.08, s * 0.025, 0.05, 0, Math.PI); ctx.fill();
+   832→   832→  // Big open mouth
+   833→   833→  ctx.fillStyle = '#3E2723';
+   834→   834→  ctx.beginPath(); ctx.ellipse(s * 0.02, s * 0.1, s * 0.11, s * 0.07, 0, 0, Math.PI * 2); ctx.fill();
+   835→   835→  ctx.fillStyle = '#B71C1C';
+   836→   836→  ctx.beginPath(); ctx.ellipse(s * 0.02, s * 0.12, s * 0.07, s * 0.035, 0, 0, Math.PI * 2); ctx.fill();
+   837→   837→  // Teeth (top)
+   838→   838→  ctx.fillStyle = '#FFF8E1';
+   839→   839→  const teethTop = s * 0.04;
+   840→   840→  for (let i = -2; i <= 2; i++) {
+   841→   841→    ctx.beginPath(); ctx.roundRect(i * s * 0.035 - s * 0.012, s * 0.045, s * 0.022, teethTop, 2); ctx.fill();
+   842→   842→  }
+   843→   843→  for (let i = -1; i <= 1; i++) {
+   844→   844→    ctx.beginPath(); ctx.roundRect(i * s * 0.035 - s * 0.01, s * 0.1, s * 0.02, teethTop * 0.7, 2); ctx.fill();
+   845→   845→  }
+   846→   846→  // Drool
+   847→   847→   ctx.fillStyle = 'rgba(120,200,120,0.4)';
+   848→   848→  ctx.beginPath();
+   849→   849→  ctx.moveTo(s * 0.06, s * 0.16); ctx.quadraticCurveTo(s * 0.08, s * 0.22, s * 0.06 + Math.sin(animPhase * 2) * s * 0.02, s * 0.25);
+   850→   850→  ctx.quadraticCurveTo(s * 0.04, s * 0.22, s * 0.04, s * 0.16); ctx.closePath(); ctx.fill();
+   851→   851→  // Stubble
+   852→   852→   ctx.fillStyle = skinDk;
+   853→   853→  for (let i = 0; i < 5; i++) {
+   854→   854→    ctx.beginPath(); ctx.arc(-s * 0.05 + i * s * 0.03, s * 0.2 + (i % 2) * s * 0.012, s * 0.006, 0, Math.PI * 2); ctx.fill();
+   855→   855→  }
+   856→   856→  ctx.restore();
+   857→   857→  return { s, bob, skin };
+   858→   858→}
+   859→   859→
+   860→   860→function drawZombie(ctx: CanvasRenderingContext2D, zombie: Zombie, cellW: number, cellH: number, ox: number, oy: number) {
+   861→   861→  const zy = oy + zombie.row * cellH + cellH / 2;
+   862→   862→  const bob = zombie.eating ? 0 : Math.sin(zombie.animPhase) * 3;
+   863→   863→  const alpha = zombie.dead ? Math.max(0, zombie.deathTimer / 500) : 1;
+   864→   864→  ctx.globalAlpha = alpha;
+   865→   865→  // Shadow
+   866→   866→  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+   867→   867→  ctx.beginPath(); ctx.ellipse(zombie.x, oy + zombie.row * cellH + cellH - 6, cellW * 0.2, 5, 0, 0, Math.PI * 2); ctx.fill();
+   868→   868→  const { s, bob: b } = drawZombieBase(ctx, zombie.x, zy, bob, cellW, cellH, zombie.animPhase, zombie.slowed, zombie.eating);
+   869→   869→
+   870→   870→  // Accessories
+   871→   871→  if (zombie.type === 'cone') {
+   872→   872→    const cg = ctx.createLinearGradient(zombie.x - s * 0.14, zy - s * 0.6 + b, zombie.x + s * 0.14, zy - s * 0.25 + b);
+   873→   873→    cg.addColorStop(0, '#FFB74D'); cg.addColorStop(0.5, '#FF9800'); cg.addColorStop(1, '#E65100');
+   874→   874→    ctx.fillStyle = cg;
+   875→   875→    ctx.beginPath(); ctx.moveTo(zombie.x, zy - s * 0.65 + b);
+   876→   876→    ctx.lineTo(zombie.x - s * 0.17, zy - s * 0.28 + b); ctx.lineTo(zombie.x + s * 0.17, zy - s * 0.28 + b); ctx.closePath(); ctx.fill();
+   877→   877→    // Stripes
+   878→   878→    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+   879→   879→    ctx.fillRect(zombie.x - s * 0.1, zy - s * 0.48 + b, s * 0.2, s * 0.04);
+   880→   880→    ctx.fillRect(zombie.x - s * 0.08, zy - s * 0.39 + b, s * 0.16, s * 0.035);
+   881→   881→    ctx.fillRect(zombie.x - s * 0.05, zy - s * 0.3 + b, s * 0.1, s * 0.03);
+   882→   882→    // Tip
+   883→   883→    ctx.fillStyle = '#fff';
+   884→   884→    ctx.beginPath(); ctx.arc(zombie.x, zy - s * 0.65 + b, s * 0.03, 0, Math.PI * 2); ctx.fill();
+   885→   885→    // Scratch marks
+   886→   886→    ctx.strokeStyle = 'rgba(180,100,30,0.5)'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+   887→   887→    ctx.beginPath(); ctx.moveTo(zombie.x - s * 0.12, zy - s * 0.55 + b); ctx.lineTo(zombie.x - s * 0.06, zy - s * 0.48 + b); ctx.stroke();
+   888→   888→    ctx.beginPath(); ctx.moveTo(zombie.x + s * 0.08, zy - s * 0.45 + b); ctx.lineTo(zombie.x + s * 0.13, zy - s * 0.38 + b); ctx.stroke();
+   889→   889→    // Dark edge at bottom
+   890→   890→    ctx.strokeStyle = 'rgba(180,100,30,0.3)'; ctx.lineWidth = 1.5;
+   891→   891→    ctx.beginPath(); ctx.moveTo(zombie.x - s * 0.17, zy - s * 0.28 + b); ctx.lineTo(zombie.x + s * 0.17, zy - s * 0.28 + b); ctx.stroke();
+   892→   892→  } else if (zombie.type === 'bucket') {
+   893→   893→    const bg = ctx.createLinearGradient(zombie.x - s * 0.16, zy - s * 0.55 + b, zombie.x + s * 0.16, zy - s * 0.25 + b);
+   894→   894→    bg.addColorStop(0, '#CFD8DC'); bg.addColorStop(0.3, '#90A4AE'); bg.addColorStop(0.7, '#607D8B'); bg.addColorStop(1, '#455A64');
+   895→   895→    ctx.fillStyle = bg;
+   896→   896→    ctx.beginPath(); ctx.roundRect(zombie.x - s * 0.16, zy - s * 0.55 + b, s * 0.32, s * 0.32, 3); ctx.fill();
+   897→   897→    ctx.fillStyle = '#CFD8DC'; ctx.fillRect(zombie.x - s * 0.17, zy - s * 0.55 + b, s * 0.34, s * 0.05);
+   898→   898→    // Handle
+   899→   899→    ctx.strokeStyle = '#78909C'; ctx.lineWidth = 2.5;
+   900→   900→    ctx.beginPath(); ctx.arc(zombie.x, zy - s * 0.55 + b, s * 0.1, Math.PI, 0); ctx.stroke();
+   901→   901→    // Rivets (more)
+   902→   902→    ctx.fillStyle = '#B0BEC5';
+   903→   903→    ctx.beginPath(); ctx.arc(zombie.x - s * 0.1, zy - s * 0.38 + b, s * 0.02, 0, Math.PI * 2); ctx.fill();
+   904→   904→    ctx.beginPath(); ctx.arc(zombie.x + s * 0.1, zy - s * 0.38 + b, s * 0.02, 0, Math.PI * 2); ctx.fill();
+   905→   905→    ctx.beginPath(); ctx.arc(zombie.x - s * 0.1, zy - s * 0.32 + b, s * 0.015, 0, Math.PI * 2); ctx.fill();
+   906→   906→    ctx.beginPath(); ctx.arc(zombie.x + s * 0.1, zy - s * 0.32 + b, s * 0.015, 0, Math.PI * 2); ctx.fill();
+   907→   907→    // Rust spots
+   908→   908→    ctx.fillStyle = 'rgba(183,130,90,0.4)';
+   909→   909→    ctx.beginPath(); ctx.ellipse(zombie.x + s * 0.06, zy - s * 0.48 + b, s * 0.04, s * 0.03, 0.3, 0, Math.PI * 2); ctx.fill();
+   910→   910→    ctx.fillStyle = 'rgba(160,110,60,0.3)';
+   911→   911→    ctx.beginPath(); ctx.ellipse(zombie.x - s * 0.08, zy - s * 0.35 + b, s * 0.035, s * 0.025, -0.2, 0, Math.PI * 2); ctx.fill();
+   912→   912→    // Dents (more)
+   913→   913→    ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 1;
+   914→   914→    ctx.beginPath(); ctx.arc(zombie.x + s * 0.04, zy - s * 0.42 + b, s * 0.04, 0, 1.5); ctx.stroke();
+   915→   915→    ctx.beginPath(); ctx.arc(zombie.x - s * 0.06, zy - s * 0.45 + b, s * 0.03, 0.5, 1.2); ctx.stroke();
+   916→   916→    ctx.beginPath(); ctx.arc(zombie.x + s * 0.1, zy - s * 0.32 + b, s * 0.025, 2.0, 2.0); ctx.stroke();
+   917→   917→  } else if (zombie.type === 'flag') {
+   918→   918→    ctx.strokeStyle = '#5D4037'; ctx.lineWidth = 3;
+   919→   919→    ctx.beginPath(); ctx.moveTo(zombie.x + s * 0.14, zy - s * 0.18 + b);
+   920→   920→    ctx.lineTo(zombie.x + s * 0.14, zy - s * 0.68 + b); ctx.stroke();
+   921→   921→    const wave = Math.sin(zombie.animPhase * 2) * s * 0.04;
+   922→   922→    const wave2 = Math.sin(zombie.animPhase * 3) * s * 0.02;
+   923→   923→    // Flag with gradient and wave
+   924→   924→    const fg = ctx.createLinearGradient(zombie.x + s * 0.14, zy - s * 0.68 + b, zombie.x + s * 0.4, zy - s * 0.52 + b);
+   925→   925→    fg.addColorStop(0, '#EF5350'); fg.addColorStop(0.5, '#F44336'); fg.addColorStop(1, '#C62828');
+   926→   926→    ctx.fillStyle = fg;
+   927→   927→    ctx.beginPath();
+   928→   928→    ctx.moveTo(zombie.x + s * 0.14, zy - s * 0.68 + b);
+   929→   929→    ctx.quadraticCurveTo(zombie.x + s * 0.32 + wave, zy - s * 0.6 + b + wave2, zombie.x + s * 0.4, zy - s * 0.52 + b);
+   930→   930→    ctx.lineTo(zombie.x + s * 0.14, zy - s * 0.42 + b);
+   931→   931→    ctx.closePath(); ctx.fill();
+   932→   932→    // Flag edge highlight
+   933→   933→    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
+   934→   934→    ctx.beginPath();
+   935→   935→    ctx.moveTo(zombie.x + s * 0.14, zy - s * 0.68 + b);
+   936→   936→    ctx.quadraticCurveTo(zombie.x + s * 0.32 + wave, zy - s * 0.6 + b + wave2, zombie.x + s * 0.4, zy - s * 0.52 + b);
+   937→   937→    ctx.stroke();
+   938→   938→    // Flag text
+   939→   939→    ctx.fillStyle = '#fff'; ctx.font = `bold ${s * 0.09}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+   940→   940→    ctx.fillText('Z', zombie.x + s * 0.25 + wave * 0.5, zy - s * 0.55 + b);
+   941→   941→    // Skull on flag (small)
+   942→   942→    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+   943→   943→    ctx.beginPath(); ctx.arc(zombie.x + s * 0.25 + wave * 0.5, zy - s * 0.55 + b, s * 0.02, 0, Math.PI * 2); ctx.fill();
+   944→   944→  }
+   945→   945→
+   946→   946→  if (zombie.slowed && !zombie.dead) {
+   947→   947→    ctx.fillStyle = 'rgba(100,220,255,0.12)';
+   948→   948→    ctx.beginPath(); ctx.arc(zombie.x, zy + bob, s * 0.35, 0, Math.PI * 2); ctx.fill();
+   949→   949→  }
+   950→   950→  ctx.globalAlpha = 1;
+   951→   951→}
+   952→   952→
+   953→   953→// ============ Component ============
+   954→   954→export default function PvZGame() {
+   955→   955→  const canvasRef = useRef<HTMLCanvasElement>(null);
+   956→   956→  const containerRef = useRef<HTMLDivElement>(null);
+   957→   957→  const gs = useRef<GameState | null>(null);
+   958→   958→  const rafRef = useRef<number>(0);
+   959→   959→  const [phase, setPhase] = useState<GamePhase>('menu');
+   960→   960→  const [uiTick, setUiTick] = useState(0);
+   961→   961→  const forceUpdate = useCallback(() => setUiTick(t => t + 1), []);
+   962→   962→  const dims = useRef({ w: 900, h: 500, cellW: 80, cellH: 90, ox: 30, oy: 15 });
+   963→   963→
+   964→   964→  const recalcDims = useCallback(() => {
+   965→   965→    const canvas = canvasRef.current;
+   966→   966→    const container = containerRef.current;
+   967→   967→    if (!canvas || !container) return;
+   968→   968→    const rect = container.getBoundingClientRect();
+   969→   969→    const dpr = window.devicePixelRatio || 1;
+   970→   970→    const w = rect.width; const h = rect.height;
+   971→   971→    canvas.width = w * dpr; canvas.height = h * dpr;
+   972→   972→    canvas.style.width = `${w}px`; canvas.style.height = `${h}px`;
+   973→   973→    const ctx = canvas.getContext('2d');
+   974→   974→    if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+   975→   975→    const cellW = (w * 0.9) / GRID_COLS;
+   976→   976→    const cellH = (h * 0.95) / GRID_ROWS;
+   977→   977→    const ox = w * 0.07; const oy = h * 0.025;
+   978→   978→    dims.current = { w, h, cellW, cellH, ox, oy };
+   979→   979→  }, []);
+   980→   980→
+   981→   981→  const initGame = useCallback(() => {
+   982→   982→    _idCounter = 0;
+   983→   983→    const state: GameState = {
+   984→   984→      phase: 'playing', sun: STARTING_SUN, score: 0, wave: 0,
+   985→   985→      plants: [], zombies: [], projectiles: [],
+   986→   986→      explosions: [], floatingTexts: [],
+   987→   987→      selectedPlant: null, currentQuiz: null, quizCooldown: 0,
+   988→   988→      wordsAnswered: 0, wordsCorrect: 0,
+   989→   989→      waveStartTime: Date.now(), waveZombiesSpawned: 0,
+   990→   990→      totalKills: 0, lastTime: Date.now(),
+   991→   991→      zombieSpeedBoostEnd: 0, usedWordIndices: new Set(),
+   992→   992→      shakeTimer: 0, comboCount: 0,
+   993→   993→    };
+   994→   994→    gs.current = state;
+   995→   995→    setPhase('playing');
+   996→   996→    generateQuiz(state);
+   997→   997→    forceUpdate();
+   998→   998→  }, [forceUpdate]);
+   999→   999→
+  1000→  1000→  const generateQuiz = useCallback((state: GameState) => {
+  1001→  1001→    const difficultyFilter = state.wordsAnswered < 3 ? 1 : 0;
+  1002→  1002→    let available = WORD_BANK.map((_, i) => i).filter(
+  1003→  1003→      i => !state.usedWordIndices.has(i) && (!difficultyFilter || WORD_BANK[i].difficulty === 1)
+  1004→  1004→    );
+  1005→  1005→    if (available.length < 4) { state.usedWordIndices.clear(); }
+  1006→  1006→    available = WORD_BANK.map((_, i) => i).filter(
+  1007→  1007→      i => !state.usedWordIndices.has(i) && (!difficultyFilter || WORD_BANK[i].difficulty === 1)
+  1008→  1008→    );
+  1009→  1009→    if (available.length < 4) available = WORD_BANK.map((_, i) => i);
+  1010→  1010→    const shuffled = shuffle(available);
+  1011→  1011→    const correctIdx = shuffled[0];
+  1012→  1012→    const correctWord = WORD_BANK[correctIdx];
+  1013→  1013→    state.usedWordIndices.add(correctIdx);
+  1014→  1014→    const wrongPool = WORD_BANK.map((_, i) => i).filter(
+  1015→  1015→      i => i !== correctIdx && (!difficultyFilter || WORD_BANK[i].difficulty === 1)
+  1016→  1016→    );
+  1017→  1017→    const wrongShuffled = shuffle(wrongPool).slice(0, 3);
+  1018→  1018→    const options = shuffle([correctWord.zh, ...wrongShuffled.map(i => WORD_BANK[i].zh)]);
+  1019→  1019→    state.currentQuiz = {
+  1020→  1020→      word: correctWord, options,
+  1021→  1021→      correctIndex: options.indexOf(correctWord.zh),
+  1022→  1022→      timer: QUIZ_TIME_LIMIT, answered: false, wasCorrect: undefined,
+  1023→  1023→    };
+  1024→  1024→    forceUpdate();
+  1025→  1025→  }, [forceUpdate]);
+  1026→  1026→
+  1027→  1027→  const handleAnswer = useCallback((index: number) => {
+  1028→  1028→    const state = gs.current;
+  1029→  1029→    if (!state || !state.currentQuiz || state.currentQuiz.answered || state.phase !== 'playing') return;
+  1030→  1030→    const quiz = state.currentQuiz;
+  1031→  1031→    quiz.answered = true;
+  1032→  1032→    const isCorrect = index === quiz.correctIndex;
+  1033→  1033→    quiz.wasCorrect = isCorrect;
+  1034→  1034→    state.wordsAnswered++;
+  1035→  1035→    const now = Date.now();
+  1036→  1036→    const { w, h } = dims.current;
+  1037→  1037→    if (isCorrect) {
+  1038→  1038→      state.wordsCorrect++;
+  1039→  1039→      state.comboCount++;
+  1040→  1040→      const reward = QUIZ_SUN_REWARD[quiz.word.difficulty];
+  1041→  1041→      const comboBonus = state.comboCount >= 3 ? Math.floor(reward * 0.5) : 0;
+  1042→  1042→      state.sun += reward + comboBonus;
+  1043→  1043→      state.score += reward + comboBonus;
+  1044→  1044→      state.floatingTexts.push({
+  1045→  1045→        id: uid(), x: w / 2, y: h - 100,
+  1046→  1046→        text: `+${reward + comboBonus} ${comboBonus > 0 ? ' x' + state.comboCount + '连击!' : ''}`,
+  1047→  1047→        color: '#FF8F00', timer: 1500, maxTimer: 1500,
+  1048→  1048→      });
+  1049→  1049→    } else {
+  1050→  1050→      state.comboCount = 0;
+  1051→  1051→      state.zombieSpeedBoostEnd = now + ZOMBIE_SPEED_BOOST_DURATION;
+  1052→  1052→      state.shakeTimer = 300;
+  1053→  1053→      state.floatingTexts.push({
+  1054→  1054→        id: uid(), x: w / 2, y: h - 100,
+  1055→  1055→        text: '答错了! 僵尸加速!', color: '#E53935', timer: 1500, maxTimer: 1500,
+  1056→  1056→      });
+  1057→  1057→    }
+  1058→  1058→    state.quizCooldown = QUIZ_COOLDOWN;
+  1059→  1059→    forceUpdate();
+  1060→  1060→  }, [forceUpdate]);
+  1061→  1061→
+  1062→  1062→  const handleCanvasClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  1063→  1063→    const state = gs.current;
+  1064→  1064→    if (!state || state.phase !== 'playing' || !state.selectedPlant) return;
+  1065→  1065→    const canvas = canvasRef.current; if (!canvas) return;
+  1066→  1066→    const rect = canvas.getBoundingClientRect();
+  1067→  1067→    let cx: number, cy: number;
+  1068→  1068→    if ('touches' in e) { if (!e.touches.length) return; cx = e.touches[0].clientX; cy = e.touches[0].clientY; }
+  1069→  1069→    else { cx = e.clientX; cy = e.clientY; }
+  1070→  1070→    const x = cx - rect.left; const y = cy - rect.top;
+  1071→  1071→    const { cellW, cellH, ox, oy } = dims.current;
+  1072→  1072→    const col = Math.floor((x - ox) / cellW);
+  1073→  1073→    const row = Math.floor((y - oy) / cellH);
+  1074→  1074→    if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return;
+  1075→  1075→    if (state.plants.some(p => p.row === row && p.col === col)) return;
+  1076→  1076→    const def = PLANT_DEFS[state.selectedPlant];
+  1077→  1077→    if (state.sun < def.cost) {
+  1078→  1078→      state.floatingTexts.push({ id: uid(), x, y, text: '阳光不足!', color: '#E53935', timer: 1000, maxTimer: 1000 });
+  1079→  1079→      return;
+  1080→  1080→    }
+  1081→  1081→    state.sun -= def.cost;
+  1082→  1082→    const plant: Plant = { id: uid(), type: state.selectedPlant, row, col, hp: def.hp, maxHp: def.hp, lastAttack: Date.now(), animPhase: Math.random() * Math.PI * 2 };
+  1083→  1083→    state.plants.push(plant);
+  1084→  1084→    if (def.explosive) {
+  1085→  1085→      const cs = state; const cp = plant; const cc = col; const cr = row;
+  1086→  1086→      setTimeout(() => {
+  1087→  1087→        if (cs.phase !== 'playing') return;
+  1088→  1088→        const { ox: oX, oy: oY, cellW: cW, cellH: cH } = dims.current;
+  1089→  1089→        const ex = oX + cc * cW + cW / 2; const ey = oY + cr * cH + cH / 2;
+  1090→  1090→        cs.explosions.push({ id: uid(), x: ex, y: ey, radius: 0, maxRadius: cW * 2, timer: 0, maxTimer: 600 });
+  1091→  1091→        cs.zombies.forEach(z => {
+  1092→  1092→          if (!z.dead && Math.abs(z.row - cr) <= 1) {
+  1093→  1093→            const zzy = oY + z.row * cH + cH / 2;
+  1094→  1094→            if (Math.sqrt((z.x - ex) ** 2 + (zzy - ey) ** 2) < cW * 2.5) {
+  1095→  1095→              z.hp -= 1800;
+  1096→  1096→              if (z.hp <= 0) { z.dead = true; z.deathTimer = 500; cs.totalKills++; cs.score += 50; }
+  1097→  1097→            }
+  1098→  1098→          }
+  1099→  1099→        });
+  1100→  1100→        cs.plants = cs.plants.filter(p => p.id !== cp.id);
+  1101→  1101→        forceUpdate();
+  1102→  1102→      }, 500);
+  1103→  1103→    }
+  1104→  1104→    forceUpdate();
+  1105→  1105→  }, [forceUpdate]);
+  1106→  1106→
+  1107→  1107→  // ---- Game loop ----
+  1108→  1108→  const gameLoop = useCallback(() => {
+  1109→  1109→    const state = gs.current; const canvas = canvasRef.current;
+  1110→  1110→    if (!state || !canvas || state.phase !== 'playing') return;
+  1111→  1111→    const ctx = canvas.getContext('2d'); if (!ctx) return;
+  1112→  1112→    const now = Date.now();
+  1113→  1113→    const dt = Math.min(now - state.lastTime, 50);
+  1114→  1114→    state.lastTime = now;
+  1115→  1115→    const { w, h, cellW, cellH, ox, oy } = dims.current;
+  1116→  1116→    const isBoosted = now < state.zombieSpeedBoostEnd;
+  1117→  1117→    const speedMult = isBoosted ? ZOMBIE_SPEED_BOOST : 1;
+  1118→  1118→
+  1119→  1119→    // Spawn
+  1120→  1120→    const waveConfig = WAVE_CONFIGS[state.wave];
+  1121→  1121→    if (waveConfig) {
+  1122→  1122→      const elapsed = now - state.waveStartTime;
+  1123→  1123→      for (let i = state.waveZombiesSpawned; i < waveConfig.zombies.length; i++) {
+  1124→  1124→        if (elapsed >= waveConfig.zombies[i].delay) {
+  1125→  1125→          state.waveZombiesSpawned = i + 1;
+  1126→  1126→          const zc = waveConfig.zombies[i]; const def = ZOMBIE_DEFS[zc.type];
+  1127→  1127→          const row = zc.row ?? Math.floor(Math.random() * GRID_ROWS);
+  1128→  1128→          state.zombies.push({ id: uid(), type: zc.type, row, x: ox + (GRID_COLS + 0.8) * cellW, hp: def.hp, maxHp: def.hp, speed: def.speed, baseSpeed: def.speed, eating: false, slowed: false, slowTimer: 0, lastHit: now, animPhase: Math.random() * Math.PI * 2, dead: false, deathTimer: 0 });
+  1129→  1129→        } else break;
+  1130→  1130→      }
+  1131→  1131→    }
+  1132→  1132→
+  1133→  1133→    // Wave check
+  1134→  1134→    const allSpawned = waveConfig ? state.waveZombiesSpawned >= waveConfig.zombies.length : true;
+  1135→  1135→    const allDead = state.zombies.length === 0 || state.zombies.every(z => z.dead);
+  1136→  1136→    if (allSpawned && allDead && state.zombies.length > 0) {
+  1137→  1137→      if (state.wave < WAVE_CONFIGS.length - 1) {
+  1138→  1138→        state.wave++; state.waveStartTime = now; state.waveZombiesSpawned = 0;
+  1139→  1139→        state.floatingTexts.push({ id: uid(), x: w / 2, y: h / 2, text: `第 ${state.wave + 1} 波!`, color: '#E65100', timer: 2000, maxTimer: 2000 });
+  1140→  1140→        forceUpdate();
+  1141→  1141→      } else { state.phase = 'victory'; setPhase('victory'); return; }
+  1142→  1142→    }
+  1143→  1143→
+  1144→  1144→    // Zombies
+  1145→  1145→    let gameOver = false;
+  1146→  1146→    for (const z of state.zombies) {
+  1147→  1147→      if (z.dead) { z.deathTimer -= dt; continue; }
+  1148→  1148→      if (z.slowed) { z.slowTimer -= dt; if (z.slowTimer <= 0) z.slowed = false; }
+  1149→  1149→      z.animPhase += dt * 0.005 * (z.slowed ? 0.5 : 1);
+  1150→  1150→      const spd = z.baseSpeed * speedMult * (z.slowed ? 0.5 : 1);
+  1151→  1151→      const ep = state.plants.find(p => p.row === z.row && Math.abs(z.x - (ox + p.col * cellW + cellW / 2)) < cellW * 0.35);
+  1152→  1152→      if (ep) {
+  1153→  1153→        z.eating = true;
+  1154→  1154→        if (now - z.lastHit > 1000) { z.lastHit = now; ep.hp -= 100; if (ep.hp <= 0) state.plants = state.plants.filter(p => p.id !== ep.id); }
+  1155→  1155→      } else { z.eating = false; z.x -= spd * (dt / 1000); }
+  1156→  1156→      if (z.x < ox - cellW * 0.5) gameOver = true;
+  1157→  1157→    }
+  1158→  1158→    state.zombies = state.zombies.filter(z => !(z.dead && z.deathTimer <= 0));
+  1159→  1159→    if (gameOver) { state.phase = 'gameover'; setPhase('gameover'); return; }
+  1160→  1160→
+  1161→  1161→    // Plants
+  1162→  1162→    for (const p of state.plants) {
+  1163→  1163→      p.animPhase += dt * 0.003;
+  1164→  1164→      const d = PLANT_DEFS[p.type];
+  1165→  1165→      if (d.attack && d.attackSpeed) {
+  1166→  1166→        const hz = state.zombies.some(z => !z.dead && z.row === p.row && z.x > ox + p.col * cellW);
+  1167→  1167→        if (hz && now - p.lastAttack >= d.attackSpeed) {
+  1168→  1168→          p.lastAttack = now;
+  1169→  1169→          const px = ox + p.col * cellW + cellW * 0.7;
+  1170→  1170→          state.projectiles.push({ id: uid(), row: p.row, x: px, speed: 250, damage: d.attack, slow: !!d.slowEffect, active: true });
+  1171→  1171→          if (d.doubleShot) { setTimeout(() => { if (gs.current?.phase === 'playing') gs.current.projectiles.push({ id: uid(), row: p.row, x: px, speed: 250, damage: d.attack, slow: false, active: true }); }, 150); }
+  1172→  1172→        }
+  1173→  1173→      }
+  1174→  1174→    }
+  1175→  1175→
+  1176→  1176→    // Projectiles
+  1177→  1177→    for (const pr of state.projectiles) {
+  1178→  1178→      if (!pr.active) continue;
+  1179→  1179→      pr.x += pr.speed * (dt / 1000);
+  1180→  1180→      const hz = state.zombies.find(z => !z.dead && z.row === pr.row && Math.abs(z.x - pr.x) < cellW * 0.25);
+  1181→  1181→      if (hz) {
+  1182→  1182→        pr.active = false; hz.hp -= pr.damage;
+  1183→  1183→        if (pr.slow) { hz.slowed = true; hz.slowTimer = 3000; }
+  1184→  1184→        if (hz.hp <= 0) { hz.dead = true; hz.deathTimer = 500; state.totalKills++; state.score += 50; }
+  1185→  1185→        state.floatingTexts.push({ id: uid(), x: pr.x, y: oy + pr.row * cellH + cellH * 0.25, text: `-${pr.damage}`, color: pr.slow ? '#29B6F6' : '#FF6D00', timer: 600, maxTimer: 600 });
+  1186→  1186→      }
+  1187→  1187→      if (pr.x > ox + (GRID_COLS + 1) * cellW) pr.active = false;
+  1188→  1188→    }
+  1189→  1189→    state.projectiles = state.projectiles.filter(p => p.active);
+  1190→  1190→
+  1191→  1191→    // Effects
+  1192→  1192→    for (const e of state.explosions) { e.timer += dt; e.radius = (e.timer / e.maxTimer) * e.maxRadius; }
+  1193→  1193→    state.explosions = state.explosions.filter(e => e.timer < e.maxTimer);
+  1194→  1194→    for (const f of state.floatingTexts) { f.timer -= dt; f.y -= dt * 0.04; }
+  1195→  1195→    state.floatingTexts = state.floatingTexts.filter(f => f.timer > 0);
+  1196→  1196→
+  1197→  1197→    // Quiz
+  1198→  1198→    if (state.currentQuiz) {
+  1199→  1199→      if (state.currentQuiz.answered) { state.quizCooldown -= dt; if (state.quizCooldown <= 0) generateQuiz(state); }
+  1200→  1200→      else {
+  1201→  1201→        state.currentQuiz.timer -= dt;
+  1202→  1202→        if (state.currentQuiz.timer <= 0) {
+  1203→  1203→          state.currentQuiz.answered = true; state.currentQuiz.wasCorrect = false;
+  1204→  1204→          state.wordsAnswered++; state.comboCount = 0;
+  1205→  1205→          state.zombieSpeedBoostEnd = now + ZOMBIE_SPEED_BOOST_DURATION;
+  1206→  1206→          state.shakeTimer = 300; state.quizCooldown = QUIZ_COOLDOWN;
+  1207→  1207→          state.floatingTexts.push({ id: uid(), x: w / 2, y: h - 100, text: '超时! 僵尸加速!', color: '#E53935', timer: 1500, maxTimer: 1500 });
+  1208→  1208→          forceUpdate();
+  1209→  1209→        }
+  1210→  1210→      }
+  1211→  1211→    }
+  1212→  1212→    if (state.shakeTimer > 0) state.shakeTimer -= dt;
+  1213→  1213→
+  1214→  1214→    // ======== RENDER ========
+  1215→  1215→    const dpr = window.devicePixelRatio || 1;
+  1216→  1216→    ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  1217→  1217→    if (state.shakeTimer > 0) ctx.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
+  1218→  1218→
+  1219→  1219→    // Warm bright sky background (lighter, more golden)
+  1220→  1220→    const sky = ctx.createLinearGradient(0, 0, 0, h);
+  1221→  1221→    sky.addColorStop(0, '#FFF8E1'); sky.addColorStop(0.08, '#FFECB3');
+  1222→  1222→    sky.addColorStop(0.2, '#FFE082'); sky.addColorStop(0.4, '#C8E6C9');
+  1223→  1223→    sky.addColorStop(0.6, '#A5D6A7'); sky.addColorStop(1, '#81C784');
+  1224→  1224→    ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+  1225→  1225→
+  1226→  1226→    // Clouds (warm, brighter)
+  1227→  1227→    ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  1228→  1228→    ctx.beginPath(); ctx.ellipse(w * 0.12, h * 0.05, 42, 15, 0, 0, Math.PI * 2); ctx.fill();
+  1229→  1229→    ctx.beginPath(); ctx.ellipse(w * 0.16, h * 0.01, 28, 12, 0, 0, Math.PI * 2); ctx.fill();
+  1230→  1230→    ctx.beginPath(); ctx.ellipse(w * 0.14, h * 0.03, 22, 10, 0, 0, Math.PI * 2); ctx.fill();
+  1231→  1231→    ctx.beginPath(); ctx.ellipse(w * 0.52, h * 0.07, 38, 13, 0, 0, Math.PI * 2); ctx.fill();
+  1232→  1232→    ctx.beginPath(); ctx.ellipse(w * 0.56, h * 0.03, 25, 10, 0, 0, Math.PI * 2); ctx.fill();
+  1233→  1233→    ctx.beginPath(); ctx.ellipse(w * 0.85, h * 0.04, 32, 12, 0, 0, Math.PI * 2); ctx.fill();
+  1234→  1234→
+  1235→  1235→    // Grid (bright warm green)
+  1236→  1236→    for (let r = 0; r < GRID_ROWS; r++) {
+  1237→  1237→      for (let c = 0; c < GRID_COLS; c++) {
+  1238→  1238→        ctx.fillStyle = (r + c) % 2 === 0 ? 'rgba(165,214,167,0.35)' : 'rgba(200,230,201,0.3)';
+  1239→  1239→        ctx.fillRect(ox + c * cellW, oy + r * cellH, cellW, cellH);
+  1240→  1240→        ctx.strokeStyle = 'rgba(56,142,60,0.08)'; ctx.lineWidth = 0.5;
+  1241→  1241→        ctx.strokeRect(ox + c * cellW, oy + r * cellH, cellW, cellH);
+  1242→  1242→      }
+  1243→  1243→    }
+  1244→  1244→
+  1245→  1245→    // House
+  1246→  1246→    const hsg = ctx.createLinearGradient(0, oy, ox, oy);
+  1247→  1247→    hsg.addColorStop(0, '#A1887F'); hsg.addColorStop(0.6, '#BCAAA4'); hsg.addColorStop(1, '#D7CCC8');
+  1248→  1248→    ctx.fillStyle = hsg; ctx.fillRect(0, oy, ox - 2, GRID_ROWS * cellH);
+  1249→  1249→    const dW = ox * 0.42; const dH = cellH * 0.7;
+  1250→  1250→    const dX = (ox - dW) / 2; const dY = oy + (GRID_ROWS * cellH - dH) / 2;
+  1251→  1251→    ctx.fillStyle = '#5D4037'; ctx.beginPath(); ctx.roundRect(dX, dY, dW, dH, [5, 5, 0, 0]); ctx.fill();
+  1252→  1252→    ctx.fillStyle = '#FFD54F'; ctx.beginPath(); ctx.arc(dX + dW * 0.78, dY + dH * 0.55, 2.5, 0, Math.PI * 2); ctx.fill();
+  1253→  1253→    ctx.fillStyle = '#BBDEFB'; const wS = ox * 0.26;
+  1254→  1254→    ctx.fillRect(ox * 0.15, oy + cellH * 0.4, wS, wS);
+  1255→  1255→    ctx.fillRect(ox * 0.15, oy + cellH * 2.3, wS, wS);
+  1256→  1256→    ctx.strokeStyle = '#8D6E63'; ctx.lineWidth = 1.5;
+  1257→  1257→    ctx.strokeRect(ox * 0.15, oy + cellH * 0.4, wS, wS);
+  1258→  1258→    ctx.strokeRect(ox * 0.15, oy + cellH * 2.3, wS, wS);
+  1259→  1259→
+  1260→  1260→    // Grid hover
+  1261→  1261→    if (state.selectedPlant) {
+  1262→  1262→      ctx.fillStyle = 'rgba(255,235,59,0.08)';
+  1263→  1263→      for (let r = 0; r < GRID_ROWS; r++) for (let c = 0; c < GRID_COLS; c++)
+  1264→  1264→        if (!state.plants.some(p => p.row === r && p.col === c)) ctx.fillRect(ox + c * cellW, oy + r * cellH, cellW, cellH);
+  1265→  1265→    }
+  1266→  1266→
+  1267→  1267→    // Plants
+  1268→  1268→    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  1269→  1269→    for (const p of state.plants) {
+  1270→  1270→      const px = ox + p.col * cellW + cellW / 2;
+  1271→  1271→      const py = oy + p.row * cellH + cellH / 2;
+  1272→  1272→      ctx.fillStyle = 'rgba(0,0,0,0.1)';
+  1273→  1273→      ctx.beginPath(); ctx.ellipse(px, oy + p.row * cellH + cellH - 5, cellW * 0.22, 5, 0, 0, Math.PI * 2); ctx.fill();
+  1274→  1274→      drawPlant(ctx, p.type, px, py, cellW, cellH, p.animPhase, p.hp / p.maxHp);
+  1275→  1275→      if (p.hp < p.maxHp) {
+  1276→  1276→        const bW = cellW * 0.6; const bX = px - bW / 2; const bY = oy + p.row * cellH + 3;
+  1277→  1277→        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.roundRect(bX - 1, bY - 1, bW + 2, 6, 3); ctx.fill();
+  1278→  1278→        const rat = Math.max(0, p.hp / p.maxHp);
+  1279→  1279→        ctx.fillStyle = rat > 0.5 ? '#66BB6A' : rat > 0.25 ? '#FFA726' : '#EF5350';
+  1280→  1280→        ctx.beginPath(); ctx.roundRect(bX, bY, bW * rat, 4, 2); ctx.fill();
+  1281→  1281→      }
+  1282→  1282→    }
+  1283→  1283→
+  1284→  1284→    // Projectiles
+  1285→  1285→    for (const pr of state.projectiles) {
+  1286→  1286→      const py = oy + pr.row * cellH + cellH / 2;
+  1287→  1287→      const ps = Math.max(4, cellW * 0.09);
+  1288→  1288→      ctx.fillStyle = pr.slow ? 'rgba(100,200,255,0.25)' : 'rgba(139,195,74,0.25)';
+  1289→  1289→      ctx.beginPath(); ctx.ellipse(pr.x - ps * 1.5, py, ps * 2, ps * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+  1290→  1290→      ctx.shadowColor = pr.slow ? '#29B6F6' : '#8BC34A'; ctx.shadowBlur = 6;
+  1291→  1291→      const pg = ctx.createRadialGradient(pr.x - ps * 0.2, py - ps * 0.2, 0, pr.x, py, ps);
+  1292→  1292→      if (pr.slow) { pg.addColorStop(0, '#E1F5FE'); pg.addColorStop(0.5, '#4FC3F7'); pg.addColorStop(1, '#0277BD'); }
+  1293→  1293→      else { pg.addColorStop(0, '#DCEDC8'); pg.addColorStop(0.5, '#8BC34A'); pg.addColorStop(1, '#33691E'); }
+  1294→  1294→      ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(pr.x, py, ps, 0, Math.PI * 2); ctx.fill();
+  1295→  1295→      ctx.shadowBlur = 0;
+  1296→  1296→    }
+  1297→  1297→
+  1298→  1298→    // Zombies
+  1299→  1299→    for (const z of state.zombies) {
+  1300→  1300→      drawZombie(ctx, z, cellW, cellH, ox, oy);
+  1301→  1301→      if (!z.dead && z.hp < z.maxHp) {
+  1302→  1302→        const bW = cellW * 0.45; const bX = z.x - bW / 2; const bY = oy + z.row * cellH + 3;
+  1303→  1303→        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.roundRect(bX - 1, bY - 1, bW + 2, 6, 3); ctx.fill();
+  1304→  1304→        const rat = Math.max(0, z.hp / z.maxHp);
+  1305→  1305→        ctx.fillStyle = rat > 0.5 ? '#66BB6A' : rat > 0.25 ? '#FFA726' : '#EF5350';
+  1306→  1306→        ctx.beginPath(); ctx.roundRect(bX, bY, bW * rat, 4, 2); ctx.fill();
+  1307→  1307→      }
+  1308→  1308→    }
+  1309→  1309→
+  1310→  1310→    // Explosions
+  1311→  1311→    for (const e of state.explosions) {
+  1312→  1312→      const p = e.timer / e.maxTimer; const a = 1 - p;
+  1313→  1313→      ctx.strokeStyle = `rgba(255,183,77,${a * 0.8})`; ctx.lineWidth = 3;
+  1314→  1314→      ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.stroke();
+  1315→  1315→      ctx.fillStyle = `rgba(255,111,0,${a * 0.5})`; ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fill();
+  1316→  1316→      ctx.fillStyle = `rgba(255,224,130,${a * 0.4})`; ctx.beginPath(); ctx.arc(e.x, e.y, e.radius * 0.5, 0, Math.PI * 2); ctx.fill();
+  1317→  1317→    }
+  1318→  1318→
+  1319→  1319→    // Floating texts
+  1320→  1320→    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  1321→  1321→    for (const f of state.floatingTexts) {
+  1322→  1322→      const a = Math.min(1, f.timer / (f.maxTimer * 0.3)); ctx.globalAlpha = a;
+  1323→  1323→      ctx.font = 'bold 15px sans-serif';
+  1324→  1324→      ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 3; ctx.strokeText(f.text, f.x, f.y);
+  1325→  1325→      ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y);
+  1326→  1326→      ctx.globalAlpha = 1;
+  1327→  1327→    }
+  1328→  1328→
+  1329→  1329→    // Wave announce
+  1330→  1330→    if (state.waveZombiesSpawned <= 1 && waveConfig) {
+  1331→  1331→      const el = now - state.waveStartTime;
+  1332→  1332→      if (el < 2500) {
+  1333→  1333→        const a = el < 500 ? el / 500 : el > 2000 ? (2500 - el) / 500 : 1; ctx.globalAlpha = a;
+  1334→  1334→        ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'center';
+  1335→  1335→        ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 4;
+  1336→  1336→        ctx.strokeText(`第 ${state.wave + 1} 波`, w / 2, h / 2 - 8);
+  1337→  1337→        ctx.fillStyle = '#FFF'; ctx.fillText(`第 ${state.wave + 1} 波`, w / 2, h / 2 - 8);
+  1338→  1338→        ctx.font = '15px sans-serif';
+  1339→  1339→        ctx.strokeText(`${waveConfig.zombies.length} 个僵尸来袭!`, w / 2, h / 2 + 22);
+  1340→  1340→        ctx.fillStyle = '#FFE082'; ctx.fillText(`${waveConfig.zombies.length} 个僵尸来袭!`, w / 2, h / 2 + 22);
+  1341→  1341→        ctx.globalAlpha = 1;
+  1342→  1342→      }
+  1343→  1343→    }
+  1344→  1344→
+  1345→  1345→    // Speed boost border (warm glow)
+  1346→  1346→    if (isBoosted) {
+  1347→  1347→      const p = 0.25 + Math.sin(now * 0.008) * 0.1;
+  1348→  1348→      ctx.strokeStyle = `rgba(255,87,34,${p})`; ctx.lineWidth = 3; ctx.strokeRect(2, 2, w - 4, h - 4);
+  1349→  1349→    }
+  1350→  1350→    ctx.restore();
+  1351→  1351→    rafRef.current = requestAnimationFrame(gameLoop);
+  1352→  1352→  }, [generateQuiz, forceUpdate]);
+  1353→  1353→
+  1354→  1354→  useEffect(() => {
+  1355→  1355→    if (!containerRef.current) return;
+  1356→  1356→    recalcDims();
+  1357→  1357→    const obs = new ResizeObserver(() => recalcDims());
+  1358→  1358→    obs.observe(containerRef.current);
+  1359→  1359→    return () => obs.disconnect();
+  1360→  1360→  }, [phase, recalcDims]);
+  1361→  1361→
+  1362→  1362→  useEffect(() => {
+  1363→  1363→    if (phase === 'playing') { gs.current!.lastTime = Date.now(); rafRef.current = requestAnimationFrame(gameLoop); }
+  1364→  1364→    return () => cancelAnimationFrame(rafRef.current);
+  1365→  1365→  }, [phase, gameLoop]);
+  1366→  1366→
+  1367→  1367→  const state = gs.current;
+  1368→  1368→  const quiz = state?.currentQuiz;
+  1369→  1369→  const diff = quiz?.word.difficulty ?? 1;
+  1370→  1370→
+  1371→  1371→  return (
+  1372→  1372→    <div className="flex flex-col h-screen w-full overflow-hidden select-none" style={{ background: '#FFF8E1' }}>
+  1373→  1373→      {phase === 'menu' && (
+  1374→  1374→        <div className="flex-1 flex flex-col items-center justify-center gap-4 relative overflow-hidden"
+  1375→  1375→          style={{ background: 'linear-gradient(180deg, #FFF8E1 0%, #FFECB3 25%, #FFE082 50%, #C8E6C9 78%, #A5D6A7 100%)' }}>
+  1376→  1376→          <div className="text-8xl animate-bounce" style={{ filter: 'drop-shadow(0 8px 16px rgba(255,152,0,0.25))' }}>🧟</div>
+  1377→  1377→          <h1 className="text-4xl md:text-6xl font-extrabold z-10"
+  1378→  1378→            style={{ color: '#E65100', textShadow: '3px 3px 0 #FFE082, 0 0 40px rgba(255,183,77,0.3)' }}>
+  1379→  1379→            植物大战僵尸
+  1380→  1380→          </h1>
+  1381→  1381→          <p className="text-xl md:text-2xl font-semibold tracking-widest z-10" style={{ color: '#BF360C', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>
+  1382→  1382→            单词大作战
+  1383→  1383→          </p>
+  1384→  1384→          <div className="mt-2 text-sm md:text-base text-center space-y-2 z-10 rounded-2xl px-6 py-4"
+  1385→  1385→            style={{ background: 'rgba(255,255,255,0.65)', backdropFilter: 'blur(10px)', color: '#4E342E', boxShadow: '0 4px 20px rgba(255,152,0,0.15)' }}>
+  1386→  1386→            <p>📝 答对单词自动获得阳光</p>
+  1387→  1387→            <p>🌱 用阳光种植植物抵御僵尸</p>
+  1388→  1388→            <p>🧟 不要让僵尸到达你的房子!</p>
+  1389→  1389→            <p>🔥 连续答对获得连击加成</p>
+  1390→  1390→          </div>
+  1391→  1391→          <button onClick={initGame}
+  1392→  1392→            className="mt-4 px-12 py-3.5 font-bold text-xl rounded-2xl shadow-lg z-10 transition-all hover:scale-105 active:scale-95"
+  1393→  1393→            style={{ background: 'linear-gradient(180deg, #FFCC80, #FFB74D)', color: '#4E342E', boxShadow: '0 6px 24px rgba(255,152,0,0.45)', border: '2px solid rgba(255,255,255,0.4)' }}>
+  1394→  1394→            开始游戏
+  1395→  1395→          </button>
+  1396→  1396→        </div>
+  1397→  1397→      )}
+  1398→  1398→
+  1399→  1399→      {(phase === 'playing' || phase === 'gameover' || phase === 'victory') && state && (
+  1400→  1400→        <>
+  1401→  1401→          {/* HUD - bright warm amber/gold */}
+  1402→  1402→          <div className="flex items-center justify-between px-3 py-1.5 relative z-10 flex-shrink-0"
+  1403→  1403→            style={{ background: 'linear-gradient(180deg, #FFB74D, #FFA726)', borderBottom: '2px solid rgba(255,255,255,0.4)', boxShadow: '0 3px 12px rgba(255,152,0,0.2)' }}>
+  1404→  1404→            <div className="flex items-center gap-1.5 rounded-xl px-3 py-1" style={{ background: 'rgba(255,255,255,0.5)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)' }}>
+  1405→  1405→              <div className="w-7 h-7 rounded-full flex items-center justify-center text-lg"
+  1406→  1406→                style={{ background: 'radial-gradient(circle, #FFF9C4, #FFD54F)', boxShadow: '0 0 12px rgba(255,213,79,0.6)' }}>☀️</div>
+  1407→  1407→              <span className="font-extrabold text-xl tabular-nums min-w-[45px]" style={{ color: '#3E2723' }}>{state.sun}</span>
+  1408→  1408→            </div>
+  1409→  1409→            <div className="flex items-center gap-2.5 text-xs md:text-sm">
+  1410→  1410→              <div className="rounded-lg px-2.5 py-1 text-center" style={{ background: 'rgba(255,255,255,0.5)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)' }}>
+  1411→  1411→                <div className="text-amber-800/70 text-[10px] leading-tight">波次</div>
+  1412→  1412→                <div className="font-extrabold text-base leading-tight" style={{ color: '#3E2723' }}>{state.wave + 1}<span className="text-amber-800/50">/{WAVE_CONFIGS.length}</span></div>
+  1413→  1413→              </div>
+  1414→  1414→              <div className="rounded-lg px-2.5 py-1 text-center hidden sm:block" style={{ background: 'rgba(255,255,255,0.5)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)' }}>
+  1415→  1415→                <div className="text-amber-800/70 text-[10px] leading-tight">得分</div>
+  1416→  1416→                <div className="font-bold leading-tight" style={{ color: '#3E2723' }}>{state.score}</div>
+  1417→  1417→              </div>
+  1418→  1418→              <div className="rounded-lg px-2.5 py-1 text-center" style={{ background: 'rgba(255,255,255,0.5)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)' }}>
+  1419→  1419→                <div className="text-amber-800/70 text-[10px] leading-tight">答题</div>
+  1420→  1420→                <div className="font-bold leading-tight" style={{ color: '#3E2723' }}><span style={{ color: '#2E7D32' }}>{state.wordsCorrect}</span>/{state.wordsAnswered}</div>
+  1421→  1421→              </div>
+  1422→  1422→              {state.comboCount >= 3 && (
+  1423→  1423→                <div className="rounded-lg px-2.5 py-1 animate-pulse" style={{ background: 'linear-gradient(135deg, #FF6F00, #E65100)', boxShadow: '0 0 12px rgba(255,111,0,0.5)' }}>
+  1424→  1424→                  <div className="font-extrabold text-sm" style={{ color: '#FFF9C4' }}>🔥x{state.comboCount}</div>
+  1425→  1425→                </div>
+  1426→  1426→              )}
+  1427→  1427→            </div>
+  1428→  1428→          </div>
+  1429→  1429→
+  1430→  1430→          {/* Card bar - bright warm cream/sand */}
+  1431→  1431→          <div className="flex items-center gap-1.5 px-2 py-1.5 relative z-10 flex-shrink-0 overflow-x-auto"
+  1432→  1432→            style={{ background: 'linear-gradient(180deg, #FFECB3, #FFE082)', borderBottom: '1px solid rgba(255,224,130,0.6)', boxShadow: '0 2px 8px rgba(255,152,0,0.08)' }}>
+  1433→  1433→            <button onClick={() => { state.selectedPlant = null; forceUpdate(); }}
+  1434→  1434→              className={`flex-shrink-0 w-10 h-12 rounded-lg text-base font-bold transition-all flex items-center justify-center ${
+  1435→  1435→                !state.selectedPlant ? 'ring-2 ring-orange-400 shadow-lg' : ''}`}
+  1436→  1436→              style={{ background: !state.selectedPlant ? 'linear-gradient(180deg, #FFCC80, #FFB74D)' : 'rgba(139,119,101,0.12)',
+  1437→  1437→                color: !state.selectedPlant ? '#3E2723' : '#A1887F' }}>
+  1438→  1438→              ✋
+  1439→  1439→            </button>
+  1440→  1440→            {PLANT_ORDER.map(pt => {
+  1441→  1441→              const d = PLANT_DEFS[pt]; const ok = state.sun >= d.cost; const sel = state.selectedPlant === pt;
+  1442→  1442→              return (
+  1443→  1443→                <button key={pt} onClick={() => { state.selectedPlant = sel ? null : pt; forceUpdate(); }} disabled={!ok}
+  1444→  1444→                  className={`flex-shrink-0 flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl text-xs font-medium transition-all min-w-[52px] ${
+  1445→  1445→                    sel ? 'ring-2 ring-orange-400 shadow-lg scale-105' : ok ? 'hover:scale-105' : 'cursor-not-allowed'}`}
+  1446→  1446→                  style={{ background: sel ? 'linear-gradient(180deg, #FFCC80, #FFB74D)' : ok ? 'rgba(255,255,255,0.55)' : 'rgba(139,119,101,0.1)',
+  1447→  1447→                    color: sel ? '#3E2723' : ok ? '#3E2723' : '#BCAAA4',
+  1448→  1448→                    border: ok ? '1.5px solid rgba(255,183,77,0.35)' : '1.5px solid transparent',
+  1449→  1449→                    boxShadow: sel ? '0 2px 10px rgba(255,152,0,0.25)' : 'none' }}>
+  1450→  1450→                  <span className="text-xl leading-none">{d.emoji}</span>
+  1451→  1451→                  <span className="font-bold text-[10px] leading-tight">{d.name}</span>
+  1452→  1452→                  <span className="text-[10px] leading-tight font-bold" style={{ color: ok ? '#E65100' : '#BCAAA4' }}>☀️{d.cost}</span>
+  1453→  1453→                </button>
+  1454→  1454→              );
+  1455→  1455→            })}
+  1456→  1456→          </div>
+  1457→  1457→
+  1458→  1458→          {/* Canvas - STABLE SIZE, quiz overlays on top */}
+  1459→  1459→          <div ref={containerRef} className="flex-1 relative min-h-0">
+  1460→  1460→            <canvas ref={canvasRef} onClick={handleCanvasClick} onTouchStart={(e) => { e.preventDefault(); handleCanvasClick(e); }} className="w-full h-full" />
+  1461→  1461→            {Date.now() < state.zombieSpeedBoostEnd && (
+  1462→  1462→              <div className="absolute top-2 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold animate-pulse z-10"
+  1463→  1463→                style={{ background: 'linear-gradient(135deg, rgba(229,57,53,0.9), rgba(255,87,34,0.9))', color: '#FFF9C4', boxShadow: '0 0 16px rgba(229,57,53,0.5)' }}>
+  1464→  1464→                ⚡ 僵尸加速中!
+  1465→  1465→              </div>
+  1466→  1466→            )}
+  1467→  1467→
+  1468→  1468→            {/* Quiz panel - ALWAYS present as overlay, doesn't affect canvas size */}
+  1469→  1469→            {phase === 'playing' && quiz && (
+  1470→  1470→              <div className="absolute bottom-0 left-0 right-0 z-20 rounded-t-2xl"
+  1471→  1471→                style={{ height: '115px',
+  1472→  1472→                  background: quiz.answered
+  1473→  1473→                    ? (quiz.wasCorrect
+  1474→  1474→                      ? 'linear-gradient(180deg, rgba(255,248,225,0.97), rgba(255,243,224,0.97))'
+  1475→  1475→                      : 'linear-gradient(180deg, rgba(255,235,238,0.97), rgba(255,224,224,0.97))')
+  1476→  1476→                    : 'linear-gradient(180deg, rgba(255,253,245,0.98), rgba(255,248,225,0.98))',
+  1477→  1477→                  borderTop: quiz.answered
+  1478→  1478→                    ? (quiz.wasCorrect ? '2px solid #A5D6A7' : '2px solid #EF9A9A')
+  1479→  1479→                    : '2px solid #FFE082',
+  1480→  1480→                  backdropFilter: 'blur(12px)',
+  1481→  1481→                  boxShadow: '0 -4px 24px rgba(255,152,0,0.12)'
+  1482→  1482→                }}>
+  1483→  1483→                <div className="max-w-lg mx-auto h-full flex flex-col justify-center px-3 md:px-6">
+  1484→  1484→                  {quiz.answered ? (
+  1485→  1485→                    <div className="flex items-center justify-center gap-2">
+  1486→  1486→                      <span className="text-xl">{quiz.wasCorrect ? '✅' : '❌'}</span>
+  1487→  1487→                      <span className="font-bold text-base" style={{ color: quiz.wasCorrect ? '#2E7D32' : '#C62828' }}>
+  1488→  1488→                        {quiz.word.en} = {quiz.word.zh}
+  1489→  1489→                      </span>
+  1490→  1490→                      <span className="text-xs ml-2" style={{ color: '#A1887F' }}>
+  1491→  1491→                        下一题 {Math.max(0, Math.ceil(state.quizCooldown / 1000))}s
+  1492→  1492→                      </span>
+  1493→  1493→                    </div>
+  1494→  1494→                  ) : (
+  1495→  1495→                    <>
+  1496→  1496→                      <div className="flex items-center justify-between mb-1">
+  1497→  1497→                        <div className="flex items-center gap-2">
+  1498→  1498→                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+  1499→  1499→                            diff === 1 ? 'text-emerald-800' : diff === 2 ? 'text-amber-800' : 'text-red-800'
+  1500→  1500→                          }`} style={{
+  1501→  1501→                            background: diff === 1 ? 'linear-gradient(135deg, #C8E6C9, #A5D6A7)'
+  1502→  1502→                              : diff === 2 ? 'linear-gradient(135deg, #FFE082, #FFD54F)'
+  1503→  1503→                              : 'linear-gradient(135deg, #FFAB91, #FF8A65)'
+  1504→  1504→                          }}>
+  1505→  1505→                            {diff === 1 ? '简单' : diff === 2 ? '中等' : '困难'} +{QUIZ_SUN_REWARD[diff]}☀️
+  1506→  1506→                          </span>
+  1507→  1507→                          <span className="font-bold text-lg md:text-xl tracking-wide" style={{ color: '#3E2723', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>{quiz.word.en}</span>
+  1508→  1508→                        </div>
+  1509→  1509→                        <span className={`text-sm font-mono tabular-nums ${quiz.timer < 3000 ? 'font-bold animate-pulse' : ''}`}
+  1510→  1510→                          style={{ color: quiz.timer < 3000 ? '#D32F2F' : '#A1887F' }}>
+  1511→  1511→                          {Math.max(0, Math.ceil(quiz.timer / 1000))}s
+  1512→  1512→                        </span>
+  1513→  1513→                      </div>
+  1514→  1514→                      <div className="w-full h-2 rounded-full mb-1.5 overflow-hidden" style={{ background: 'rgba(255,152,0,0.12)' }}>
+  1515→  1515→                        <div className={`h-full rounded-full transition-all duration-150 ${
+  1516→  1516→                          quiz.timer < 3000 ? 'bg-red-400' : 'bg-amber-400'
+  1517→  1517→                        }`} style={{ width: `${(quiz.timer / QUIZ_TIME_LIMIT) * 100}%` }} />
+  1518→  1518→                      </div>
+  1519→  1519→                      <div className="grid grid-cols-2 gap-1.5">
+  1520→  1520→                        {quiz.options.map((opt, i) => (
+  1521→  1521→                          <button key={i} onClick={() => handleAnswer(i)}
+  1522→  1522→                            className="py-1.5 md:py-2 px-2 md:px-3 rounded-xl text-sm md:text-base font-medium transition-all hover:scale-[1.02] active:scale-[0.98] hover:shadow-md"
+  1523→  1523→                            style={{ color: '#3E2723', background: 'rgba(255,255,255,0.8)', border: '1.5px solid rgba(255,183,77,0.3)', boxShadow: '0 1px 4px rgba(255,152,0,0.08)' }}>
+  1524→  1524→                            <span className="font-bold mr-1" style={{ color: '#E65100' }}>{String.fromCharCode(65 + i)}</span>
+  1525→  1525→                            {opt}
+  1526→  1526→                          </button>
+  1527→  1527→                        ))}
+  1528→  1528→                      </div>
+  1529→  1529→                    </>
+  1530→  1530→                  )}
+  1531→  1531→                </div>
+  1532→  1532→              </div>
+  1533→  1533→            )}
+  1534→  1534→
+  1535→  1535→            {/* Game Over overlay */}
+  1536→  1536→            {phase === 'gameover' && (
+  1537→  1537→              <div className="absolute inset-0 flex items-center justify-center z-30" style={{ background: 'rgba(62,39,35,0.45)', backdropFilter: 'blur(5px)' }}>
+  1538→  1538→                <div className="rounded-3xl p-8 text-center max-w-sm mx-4 shadow-2xl"
+  1539→  1539→                  style={{ background: 'linear-gradient(180deg, #FFF8E1, #FFECB3)', border: '2px solid rgba(229,57,53,0.3)', boxShadow: '0 12px 40px rgba(0,0,0,0.2)' }}>
+  1540→  1540→                  <div className="text-6xl mb-3">💀</div>
+  1541→  1541→                  <h2 className="text-3xl font-extrabold mb-3" style={{ color: '#C62828', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>游戏结束</h2>
+  1542→  1542→                  <div className="space-y-2 text-sm mb-5">
+  1543→  1543→                    {[['存活波次', `${state.wave + 1}/${WAVE_CONFIGS.length}`], ['消灭僵尸', `${state.totalKills}`],
+  1544→  1544→                      ['答题正确率', `${state.wordsAnswered > 0 ? Math.round(state.wordsCorrect / state.wordsAnswered * 100) : 0}% (${state.wordsCorrect}/${state.wordsAnswered})`],
+  1545→  1545→                      ['最终得分', `${state.score}`]
+  1546→  1546→                    ].map(([l, v], i) => (
+  1547→  1547→                      <div key={i} className="flex justify-between rounded-lg px-3 py-1.5" style={{ background: 'rgba(255,255,255,0.55)' }}>
+  1548→  1548→                        <span style={{ color: '#6D4C41' }}>{l}</span>
+  1549→  1549→                        <span className="font-bold" style={{ color: i === 3 ? '#E65100' : '#3E2723' }}>{v}</span>
+  1550→  1550→                      </div>
+  1551→  1551→                    ))}
+  1552→  1552→                  </div>
+  1553→  1553→                  <button onClick={initGame} className="px-10 py-3 font-bold text-lg rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95"
+  1554→  1554→                    style={{ background: 'linear-gradient(180deg, #FF8A65, #EF5350)', color: '#fff', boxShadow: '0 4px 18px rgba(229,57,53,0.3)' }}>
+  1555→  1555→                    再来一局
+  1556→  1556→                  </button>
+  1557→  1557→                </div>
+  1558→  1558→              </div>
+  1559→  1559→            )}
+  1560→  1560→
+  1561→  1561→            {/* Victory overlay */}
+  1562→  1562→            {phase === 'victory' && (
+  1563→  1563→              <div className="absolute inset-0 flex items-center justify-center z-30" style={{ background: 'rgba(62,39,35,0.35)', backdropFilter: 'blur(5px)' }}>
+  1564→  1564→                <div className="rounded-3xl p-8 text-center max-w-sm mx-4 shadow-2xl"
+  1565→  1565→                  style={{ background: 'linear-gradient(180deg, #FFFDE7, #FFF8E1)', border: '2px solid rgba(255,183,77,0.5)', boxShadow: '0 12px 40px rgba(255,152,0,0.2)' }}>
+  1566→  1566→                  <div className="text-6xl mb-3">🏆</div>
+  1567→  1567→                  <h2 className="text-3xl font-extrabold mb-1" style={{ color: '#E65100', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>胜利!</h2>
+  1568→  1568→                  <p className="text-sm mb-4" style={{ color: '#558B2F' }}>成功抵御了所有僵尸!</p>
+  1569→  1569→                  <div className="space-y-2 text-sm mb-5">
+  1570→  1570→                    {[['消灭僵尸', `${state.totalKills}`],
+  1571→  1571→                      ['答题正确率', `${state.wordsAnswered > 0 ? Math.round(state.wordsCorrect / state.wordsAnswered * 100) : 0}% (${state.wordsCorrect}/${state.wordsAnswered})`],
+  1572→  1572→                      ['最终得分', `${state.score}`]
+  1573→  1573→                    ].map(([l, v], i) => (
+  1574→  1574→                      <div key={i} className="flex justify-between rounded-lg px-3 py-1.5" style={{ background: 'rgba(255,255,255,0.55)' }}>
+  1575→  1575→                        <span style={{ color: '#6D4C41' }}>{l}</span>
+  1576→  1576→                        <span className="font-bold" style={{ color: i === 2 ? '#E65100' : '#3E2723' }}>{v}</span>
+  1577→  1577→                      </div>
+  1578→  1578→                    ))}
+  1579→  1579→                  </div>
+  1580→  1580→                  <button onClick={initGame} className="px-10 py-3 font-bold text-lg rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95"
+  1581→  1581→                    style={{ background: 'linear-gradient(180deg, #FFD54F, #FFB74D)', color: '#3E2723', boxShadow: '0 6px 24px rgba(255,152,0,0.4)', border: '2px solid rgba(255,255,255,0.4)' }}>
+  1582→  1582→                    再玩一次
+  1583→  1583→                  </button>
+  1584→  1584→                </div>
+  1585→  1585→              </div>
+  1586→  1586→            )}
+  1587→  1587→          </div>
+  1588→  1588→        </>
+  1589→  1589→      )}
+  1590→  1590→    </div>
+  1591→  1591→  );
+  1592→  1592→}
