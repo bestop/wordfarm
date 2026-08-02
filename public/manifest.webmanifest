@@ -1,0 +1,13 @@
+{
+  "name": "WordFarm 🌸 单词庄园",
+  "short_name": "WordFarm",
+  "description": "马卡龙配色的萌系背单词塔防游戏，边守护庄园边学英语！",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFF8F1",
+  "theme_color": "#FFD1DC",
+  "orientation": "any",
+  "icons": [
+    { "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

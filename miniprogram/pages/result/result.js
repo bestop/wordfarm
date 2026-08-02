@@ -1,0 +1,120 @@
+// pages/result/result.js - 结算页
+
+const app = getApp();
+const storageManager = require('../../utils/storageManager.js');
+const audioManager = require('../../utils/audioManager.js');
+const { ASSET_KEYS } = require('../../utils/constants.js');
+const { applyLayout } = require('../../utils/layoutUtil.js');
+
+Page({
+  data: {
+    isRecord: false,
+    score: 0,
+    highestScore: 0,
+    maxCombo: 0,
+    killedZombies: 0,
+    correctCount: 0,
+    wrongCount: 0,
+    accuracy: 0,
+    stars: 0,
+    gameTime: 0,
+    difficulty: 'medium',
+    difficultyName: '中等',
+    safeTop: 0,
+    safeBottom: 0,
+    // 星星动画
+    starAnim: [false, false, false],
+    // 自适应布局
+    pageHeight: 1334,
+    safeTopRpx: 0,
+    safeBottomRpx: 0
+  },
+
+  onLoad(options) {
+    const result = storageManager.loadLastResult();
+    const isRecord = options.isRecord === '1';
+    if (!result) {
+      // 无结算数据，返回首页
+      wx.redirectTo({ url: '/pages/index/index' });
+      return;
+    }
+
+    const diffMap = { easy: '简单', medium: '中等', hard: '困难' };
+    this.setData({
+      isRecord,
+      score: result.score || 0,
+      highestScore: app.globalData.highestScore,
+      maxCombo: result.maxCombo || 0,
+      killedZombies: result.killedZombies || 0,
+      correctCount: result.correctCount || 0,
+      wrongCount: result.wrongCount || 0,
+      accuracy: Math.round((result.accuracy || 0) * 100),
+      stars: result.stars || 0,
+      gameTime: Math.round((result.gameTime || 0) / 1000),
+      difficulty: result.difficulty || 'medium',
+      difficultyName: diffMap[result.difficulty] || '中等',
+      safeTop: app.globalData.safeAreaInset.top,
+      safeBottom: app.globalData.safeAreaInset.bottom
+    });
+
+    // 应用自适应布局
+    applyLayout(this);
+
+    // 播放音效
+    setTimeout(() => audioManager.play(ASSET_KEYS.AUDIO.GAME_OVER), 300);
+
+    // 星星依次点亮动画
+    const stars = result.stars || 0;
+    for (let i = 0; i < stars; i++) {
+      setTimeout(() => {
+        this.setData({ ['starAnim[' + i + ']']: true });
+      }, 600 + i * 350);
+    }
+  },
+
+  /**
+   * 横竖屏切换 / 窗口尺寸变化时重新计算布局
+   */
+  onAdaptiveResize() {
+    applyLayout(this);
+  },
+
+  /**
+   * 再玩一次
+   */
+  onReplay() {
+    audioManager.play(ASSET_KEYS.AUDIO.START);
+    wx.redirectTo({
+      url: '/pages/game/game?difficulty=' + this.data.difficulty
+    });
+  },
+
+  /**
+   * 返回首页
+   */
+  onHome() {
+    wx.redirectTo({ url: '/pages/index/index' });
+  },
+
+  /**
+   * 分享
+   */
+  onShareAppMessage() {
+    return {
+      title: '我在单词农场' + this.data.difficultyName + '模式得了' + this.data.score + '分！连击x' + this.data.maxCombo + '，准确率' + this.data.accuracy + '%',
+      path: '/pages/index/index'
+    };
+  },
+
+  /**
+   * 保存到相册（截图分享，调用 canvas 截图能力可扩展）
+   */
+  onSaveImage() {
+    wx.showToast({
+      title: '可截图分享给好友～',
+      icon: 'none',
+      duration: 2000
+    });
+    this.onShareAppMessage();
+  }
+});

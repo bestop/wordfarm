@@ -1,13 +1,39 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* ===== 萌系马卡龙 (Kawaii Macaron) 设计系统 =====
+   设计原则：
+   1. 低饱和度 + 高明度的马卡龙粉/薄荷/柠檬/薰衣草调色板
+   2. 大圆角 (radius ≥ 16px) + 柔和双层阴影（无硬边）
+   3. 所有按钮带 1px 白内描边 + 底部深色"厚底"（玩具立体感）
+   4. 全局字体替换为圆润可爱的中文字体栈
+   5. 大量漂浮装饰、呼吸动画、微弹跳过渡
+================================================= */
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-kawaii);
+  --font-mono: var(--font-mono);
+  --font-display: var(--font-kawaii-display);
+
+  --color-macaron-pink: var(--macaron-pink);
+  --color-macaron-pink-deep: var(--macaron-pink-deep);
+  --color-macaron-mint: var(--macaron-mint);
+  --color-macaron-mint-deep: var(--macaron-mint-deep);
+  --color-macaron-lemon: var(--macaron-lemon);
+  --color-macaron-lemon-deep: var(--macaron-lemon-deep);
+  --color-macaron-lavender: var(--macaron-lavender);
+  --color-macaron-lavender-deep: var(--macaron-lavender-deep);
+  --color-macaron-peach: var(--macaron-peach);
+  --color-macaron-peach-deep: var(--macaron-peach-deep);
+  --color-macaron-sky: var(--macaron-sky);
+  --color-macaron-sky-deep: var(--macaron-sky-deep);
+  --color-macaron-choco: var(--macaron-choco);
+  --color-macaron-cream: var(--macaron-cream);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -37,86 +63,312 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 3px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 14px);
+  --radius-3xl: calc(var(--radius) + 24px);
 }
 
+/* ============  马卡龙调色板定义  ============ */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* 基础 */
+  --radius: 0.875rem;
+
+  /* 马卡龙七色（低饱和度 pastel） */
+  --macaron-pink:        #FFD1DC;   /* 樱花粉 */
+  --macaron-pink-deep:   #F38BA8;
+  --macaron-mint:        #B5EAD7;   /* 薄荷绿 */
+  --macaron-mint-deep:   #7BC9A6;
+  --macaron-lemon:       #FFF3B0;   /* 柠檬奶油 */
+  --macaron-lemon-deep:  #F5D76E;
+  --macaron-lavender:    #D4C5F9;   /* 薰衣草 */
+  --macaron-lavender-deep: #A78BFA;
+  --macaron-peach:       #FFDAC1;   /* 蜜桃 */
+  --macaron-peach-deep:  #F7A072;
+  --macaron-sky:         #C7E9FF;   /* 晴空蓝 */
+  --macaron-sky-deep:    #7AB8E0;
+  --macaron-choco:       #7A5C4E;   /* 可可棕（文字/阴影） */
+  --macaron-cream:       #FFF8EE;   /* 奶油底 */
+
+  /* Shadcn/ui Token 替换（基于马卡龙色重映射） */
+  --background: var(--macaron-cream);
+  --foreground: #5D4037;
+
+  --card: linear-gradient(160deg, #FFFFFF 0%, #FFF5EC 100%);
+  --card-solid: #FFFFFF;
+  --card-solid: #FFFFFF;
+  --card-foreground: var(--foreground);
+
+  --popover: #FFFFFF;
+  --popover-foreground: var(--foreground);
+
+  --primary: var(--macaron-pink-deep);
+  --primary-foreground: #FFFFFF;
+
+  --secondary: var(--macaron-mint);
+  --secondary-foreground: var(--foreground);
+
+  --muted: var(--macaron-cream);
+  --muted-foreground: #8D6E63;
+
+  --accent: var(--macaron-lemon);
+  --accent-foreground: var(--foreground);
+
+  --destructive: #E57373;
+  --border: #F5E6D3;
+  --input:  #FFFFFF;
+  --ring:   var(--macaron-pink-deep);
+
+  --chart-1: var(--macaron-pink-deep);
+  --chart-2: var(--macaron-mint-deep);
+  --chart-3: var(--macaron-lavender-deep);
+  --chart-4: var(--macaron-lemon-deep);
+  --chart-5: var(--macaron-peach-deep);
+
+  --sidebar: var(--macaron-cream);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--macaron-pink-deep);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: var(--macaron-lemon);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: #F5E6D3;
+  --sidebar-ring: var(--macaron-pink-deep);
 }
 
+/* 暗色调性柔和版（保留暖感） */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #3A2E39;
+  --foreground: #FFF1E0;
+  --card-solid: #48384A;
+  --popover: #48384A;
+  --popover-foreground: #FFF1E0;
+  --primary: #FF90B8;
+  --primary-foreground: #3A2E39;
+  --secondary: #7BC9A6;
+  --secondary-foreground: #FFF1E0;
+  --muted: #4A3B4B;
+  --muted-foreground: #D7BFAE;
+  --accent: #FFE08A;
+  --accent-foreground: #3A2E39;
+  --destructive: #EF8686;
+  --border: #5C4A5E;
+  --input: #48384A;
+  --ring: #FF90B8;
+  --chart-1: #FF90B8;
+  --chart-2: #7BC9A6;
+  --chart-3: #C4B5FD;
+  --chart-4: #FFD76E;
+  --chart-5: #F7A072;
+  --sidebar: #48384A;
+  --sidebar-foreground: #FFF1E0;
+  --sidebar-primary: #FF90B8;
+  --sidebar-primary-foreground: #3A2E39;
+  --sidebar-accent: #FFE08A;
+  --sidebar-accent-foreground: #3A2E39;
+  --sidebar-border: #5C4A5E;
+  --sidebar-ring: #FF90B8;
 }
 
+/* ============  全局字体替换（圆润萌系） ============ */
+:root {
+  --font-kawaii: "Nunito", "Comic Sans MS", "Quicksand", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Yuanti SC", "YouYuan", "STXihei", sans-serif;
+  --font-kawaii-display: "Baloo 2", "Nunito", "Quicksand", "PingFang SC",
+    "Yuanti SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", ui-monospace, monospace;
+}
+
+/* ============  Base 层重置  ============ */
 @layer base {
+  html {
+    font-family: var(--font-kawaii);
+    letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
   * {
     @apply border-border outline-ring/50;
+    border-color: var(--border);
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background:
+      radial-gradient(circle at 10% 10%, rgba(255,209,220,0.35) 0%, transparent 45%),
+      radial-gradient(circle at 90% 20%, rgba(196,229,255,0.4) 0%, transparent 50%),
+      radial-gradient(circle at 50% 100%, rgba(181,234,215,0.4) 0%, transparent 55%),
+      radial-gradient(circle at 80% 90%, rgba(212,197,249,0.35) 0%, transparent 45%),
+      var(--background);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  h1,h2,h3,h4 {
+    font-family: var(--font-kawaii-display);
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    color: var(--foreground);
+  }
+  ::selection {
+    background: var(--macaron-pink);
+    color: #FFFFFF;
+  }
+  /* 马卡龙漂浮背景装饰 */
+  body::before, body::after {
+    content: "";
+    position: fixed;
+    width: 320px; height: 320px;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: -1;
+    animation: floatBlob 14s ease-in-out infinite;
+  }
+  body::before {
+    background: var(--macaron-pink);
+    top: -100px; left: -120px;
+  }
+  body::after {
+    background: var(--macaron-mint);
+    bottom: -140px; right: -100px;
+    animation-delay: -6s;
   }
 }
+
+@keyframes floatBlob {
+  0%,100% { transform: translate3d(0,0,0) scale(1); }
+  50% { transform: translate3d(0,-30px,0) scale(1.08); }
+}
+
+/* ============  马卡龙按钮基础（玩具立体感） ============ */
+@layer components {
+  .kawaii-btn {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 font-black tracking-wide
+           transition-all duration-150 ease-out select-none;
+    border-radius: 9999px;
+    border: 2px solid rgba(255,255,255,0.8);
+    box-shadow:
+      inset 0 3px 0 rgba(255,255,255,0.7),
+      inset 0 -4px 0 rgba(0,0,0,0.10),
+      0 6px 0 rgba(122,92,78,0.15),
+      0 10px 24px -8px rgba(122,92,78,0.25);
+    transform: translateY(0);
+  }
+  .kawaii-btn:hover   { transform: translateY(-2px); filter: brightness(1.04); }
+  .kawaii-btn:active  { transform: translateY(3px);
+                        box-shadow:
+                          inset 0 2px 0 rgba(255,255,255,0.6),
+                          inset 0 -2px 0 rgba(0,0,0,0.10),
+                          0 2px 0 rgba(122,92,78,0.15),
+                          0 4px 12px -4px rgba(122,92,78,0.2);
+  }
+  .kawaii-btn-primary { background: linear-gradient(180deg, #FFB6CE 0%, var(--macaron-pink-deep) 100%); color: #FFFFFF; text-shadow: 0 1px 0 rgba(0,0,0,0.15); }
+  .kawaii-btn-mint    { background: linear-gradient(180deg, #D3F2E3 0%, var(--macaron-mint-deep) 100%); color: #1B3A2B; }
+  .kawaii-btn-lemon   { background: linear-gradient(180deg, #FFF6C2 0%, var(--macaron-lemon-deep) 100%); color: #5A4522; }
+  .kawaii-btn-lavender{ background: linear-gradient(180deg, #E6DCFB 0%, var(--macaron-lavender-deep) 100%); color: #FFFFFF; text-shadow: 0 1px 0 rgba(0,0,0,0.12); }
+  .kawaii-btn-peach   { background: linear-gradient(180deg, #FFE6D0 0%, var(--macaron-peach-deep) 100%); color: #5A3A22; }
+  .kawaii-btn-sky     { background: linear-gradient(180deg, #DEF1FF 0%, var(--macaron-sky-deep) 100%); color: #1D3F5A; }
+
+  /* 马卡龙卡片（奶油厚底） */
+  .kawaii-card {
+    background: linear-gradient(165deg, #FFFFFF 0%, #FFF7EE 100%);
+    border-radius: calc(var(--radius) + 10px);
+    border: 2.5px solid #FFFFFF;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.9) inset,
+      0 -3px 0 rgba(255,238,222,0.8) inset,
+      0 8px 0 rgba(255,224,192,0.5),
+      0 18px 40px -20px rgba(122,92,78,0.28);
+  }
+  .kawaii-card-soft {
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: calc(var(--radius) + 6px);
+    border: 1.5px solid rgba(255,255,255,0.9);
+    box-shadow: 0 10px 30px -12px rgba(122,92,78,0.18);
+  }
+
+  /* 马卡龙徽章/Tag */
+  .kawaii-badge {
+    @apply inline-flex items-center gap-1 px-3 py-1 text-xs font-black;
+    border-radius: 9999px;
+    border: 1.5px solid rgba(255,255,255,0.8);
+    box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.8), 0 2px 0 rgba(122,92,78,0.10);
+  }
+
+  /* 输入框 */
+  .kawaii-input {
+    @apply px-4 py-3 w-full font-semibold;
+    background: #FFFFFF;
+    border-radius: calc(var(--radius) + 6px);
+    border: 2.5px solid var(--macaron-cream);
+    box-shadow:
+      inset 0 2px 4px rgba(122,92,78,0.05),
+      0 2px 0 rgba(255,238,222,0.7);
+    transition: all .18s ease-out;
+  }
+  .kawaii-input:focus {
+    outline: none;
+    border-color: var(--macaron-pink);
+    box-shadow:
+      0 0 0 4px rgba(255,209,220,0.5),
+      inset 0 2px 4px rgba(122,92,78,0.05),
+      0 2px 0 rgba(255,238,222,0.7);
+  }
+}
+
+/* ============  萌系动画工具类  ============ */
+@keyframes bounce-in {
+  0% { transform: scale(0.5) rotate(-4deg); opacity: 0; }
+  60%{ transform: scale(1.08) rotate(1deg); opacity: 1; }
+  100%{ transform: scale(1) rotate(0); }
+}
+.animate-bounce-in { animation: bounce-in .5s cubic-bezier(0.34,1.56,0.64,1) both; }
+
+@keyframes wiggle {
+  0%,100% { transform: rotate(-2deg); }
+  50%     { transform: rotate(2deg); }
+}
+.animate-wiggle { animation: wiggle 2.2s ease-in-out infinite; transform-origin: 50% 90%; }
+
+@keyframes sparkle {
+  0%,100% { opacity: .3; transform: scale(0.8); }
+  50%     { opacity: 1;  transform: scale(1.2); }
+}
+.animate-sparkle { animation: sparkle 1.8s ease-in-out infinite; }
+
+@keyframes float-slow {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-12px); }
+}
+.animate-float-slow { animation: float-slow 4.5s ease-in-out infinite; }
+
+@keyframes rainbow-bg {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.kawaii-gradient-text {
+  background: linear-gradient(90deg,
+    var(--macaron-pink-deep), var(--macaron-peach-deep),
+    var(--macaron-lemon-deep), var(--macaron-mint-deep),
+    var(--macaron-sky-deep), var(--macaron-lavender-deep),
+    var(--macaron-pink-deep));
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: rainbow-bg 6s linear infinite;
+}
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--macaron-cream); border-radius: 10px; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--macaron-pink), var(--macaron-mint));
+  border-radius: 10px;
+  border: 2px solid var(--macaron-cream);
+}
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, var(--macaron-pink-deep), var(--macaron-mint-deep)); }

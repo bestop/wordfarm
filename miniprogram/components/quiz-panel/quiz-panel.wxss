@@ -1,0 +1,136 @@
+/* components/quiz-panel/quiz-panel.wxss - 答题面板样式 */
+
+.quiz-panel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,245,248,0.98) 100%);
+  border-radius: 48rpx 48rpx 0 0;
+  border-top: 6rpx solid #FFFFFF;
+  box-shadow: 0 -12rpx 32rpx rgba(243,139,168,0.18);
+  overflow: hidden;
+}
+
+/* ============ 题目区（高度50%） ============ */
+.question-area {
+  flex: 0 0 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx 32rpx;
+  position: relative;
+  transition: background 0.2s ease;
+}
+.question-area.fb-correct { background: rgba(181,234,215,0.35); }
+.question-area.fb-wrong { background: rgba(255,205,210,0.35); }
+
+.question-label {
+  font-size: 22rpx;
+  color: #8D6E63;
+  font-weight: 700;
+  margin-bottom: 8rpx;
+}
+.question-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rpx;
+}
+.word {
+  font-size: 64rpx;
+  font-weight: 900;
+  color: #5D4037;
+  letter-spacing: 2rpx;
+  text-shadow: 0 2rpx 0 rgba(255,255,255,0.8);
+}
+.phonetic {
+  font-size: 28rpx;
+  color: #F48FB1;
+  font-weight: 700;
+  font-family: "Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI", sans-serif;
+}
+.question-empty {
+  font-size: 28rpx;
+  color: #BCAAA4;
+}
+
+/* ============ 选项区（高度50%） ============ */
+.options-area {
+  flex: 0 0 50%;
+  display: flex;
+  flex-wrap: wrap;
+  padding: 12rpx 20rpx 24rpx;
+  gap: 12rpx;
+  align-content: stretch;
+}
+.option {
+  flex: 1 1 calc(50% - 6rpx);
+  min-height: 90rpx;
+  background: linear-gradient(145deg, #FFFFFF, #FFF5F8);
+  border: 4rpx solid #FFE5EC;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30rpx;
+  font-weight: 800;
+  color: #5D4037;
+  transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+  box-shadow: 0 4rpx 0 rgba(243,139,168,0.15), inset 0 1rpx 0 rgba(255,255,255,0.95);
+  padding: 6rpx 10rpx;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.option-text {
+  word-break: break-all;
+  text-align: center;
+  line-height: 1.15;
+}
+.option:active {
+  transform: scale(0.96);
+  background: linear-gradient(145deg, #FFD1DC, #FFEFF3);
+}
+.option.selected {
+  background: linear-gradient(145deg, #FFD1DC, #F48FB1);
+  border-color: #F48FB1;
+  color: #FFFFFF;
+  transform: scale(0.97);
+}
+.option.reveal {
+  background: linear-gradient(145deg, #B5EAD7, #7BC9A6);
+  border-color: #7BC9A6;
+  color: #FFFFFF;
+}
+
+/* ============ 反馈浮层 ============ */
+.feedback {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 24rpx 48rpx;
+  border-radius: 999rpx;
+  font-size: 36rpx;
+  font-weight: 900;
+  color: #FFFFFF;
+  pointer-events: none;
+  animation: pop-in 0.4s ease-out;
+  z-index: 10;
+}
+.feedback.correct {
+  background: linear-gradient(145deg, #66BB6A, #4CAF50);
+  box-shadow: 0 8rpx 24rpx rgba(102,187,106,0.4);
+}
+.feedback.wrong {
+  background: linear-gradient(145deg, #EF5350, #E53935);
+  box-shadow: 0 8rpx 24rpx rgba(239,83,80,0.4);
+}
+
+@keyframes pop-in {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  60% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}

@@ -1,29 +1,254 @@
-<?xml version="1.0" encoding="utf-8"?>
-<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 viewBox="0 0 30 30" style="enable-background:new 0 0 30 30;" xml:space="preserve">
-<defs>
-  <style type="text/css">
-    .st194{fill:#2D2D2D;stroke:#FFFFFF;stroke-width:0.6317;stroke-miterlimit:10;}
-    .st23{fill:#FFFFFF;}
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <!-- 马卡龙渐变 -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFF8F1"/>
+      <stop offset="50%" stop-color="#FFE6EE"/>
+      <stop offset="100%" stop-color="#F3E8FF"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#B5EAD7"/>
+      <stop offset="100%" stop-color="#7BC9A6"/>
+    </linearGradient>
+    <linearGradient id="wool" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F0EAD6"/>
+    </linearGradient>
+    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFF8DC"/>
+      <stop offset="100%" stop-color="#FFE066"/>
+    </linearGradient>
+    <linearGradient id="bee" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFE066"/>
+      <stop offset="100%" stop-color="#FFC733"/>
+    </linearGradient>
+    <linearGradient id="flower-pink" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFD1DC"/>
+      <stop offset="100%" stop-color="#FF8FA3"/>
+    </linearGradient>
+    <linearGradient id="flower-purple" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E0D1F5"/>
+      <stop offset="100%" stop-color="#B39DDB"/>
+    </linearGradient>
+    <linearGradient id="flower-yellow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFF3B0"/>
+      <stop offset="100%" stop-color="#FFD54F"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#C9A8A8" flood-opacity="0.3"/>
+    </filter>
+    <filter id="soft-glow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
 
-    .z-breathe {
-      animation: breathe 2.5s ease-in-out infinite;
-    }
+  <!-- 外框：圆角马卡龙卡片 -->
+  <rect x="6" y="6" width="116" height="116" rx="30" fill="url(#bg)" filter="url(#shadow)"/>
+  <rect x="9" y="9" width="110" height="110" rx="28" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+  <rect x="12" y="12" width="104" height="104" rx="26" fill="none" stroke="#FFE0E6" stroke-width="1.5"/>
 
-    @keyframes breathe {
-      0%, 100% { opacity: 0.7; }
-      50% { opacity: 1; }
-    }
-  </style>
-</defs>
-
-<g>
-  <path class="st194" d="M24.51,28.51H5.49c-2.21,0-4-1.79-4-4V5.49c0-2.21,1.79-4,4-4h19.03c2.21,0,4,1.79,4,4v19.03
-    C28.51,26.72,26.72,28.51,24.51,28.51z"/>
-  <g class="z-breathe">
-    <path class="st23" d="M15.47,7.1l-1.3,1.85c-0.2,0.29-0.54,0.47-0.9,0.47h-7.1V7.09C6.16,7.1,15.47,7.1,15.47,7.1z"/>
-    <polygon class="st23" points="24.3,7.1 13.14,22.91 5.7,22.91 16.86,7.1"/>
-    <path class="st23" d="M14.53,22.91l1.31-1.86c0.2-0.29,0.54-0.47,0.9-0.47h7.09v2.33H14.53z"/>
+  <!-- 小云朵背景 -->
+  <g opacity="0.6">
+    <ellipse cx="28" cy="22" rx="10" ry="6" fill="#FFFFFF"/>
+    <ellipse cx="35" cy="19" rx="7" ry="5" fill="#FFFFFF"/>
+    <ellipse cx="33" cy="24" rx="6" ry="4" fill="#FFFFFF"/>
   </g>
-</g>
+  <g opacity="0.5">
+    <ellipse cx="96" cy="28" rx="9" ry="5" fill="#FFFFFF"/>
+    <ellipse cx="102" cy="25" rx="6" ry="4" fill="#FFFFFF"/>
+  </g>
+
+  <!-- 太阳（右上） -->
+  <g transform="translate(98, 30)">
+    <circle r="10" fill="url(#sun)" filter="url(#soft-glow)"/>
+    <!-- 太阳射线 -->
+    <g stroke="#FFC733" stroke-width="2.5" stroke-linecap="round" opacity="0.7">
+      <line x1="0" y1="-15" x2="0" y2="-12"/>
+      <line x1="0" y1="12" x2="0" y2="15"/>
+      <line x1="-15" y1="0" x2="-12" y2="0"/>
+      <line x1="12" y1="0" x2="15" y2="0"/>
+      <line x1="-10" y1="-10" x2="-8" y2="-8"/>
+      <line x1="10" y1="-10" x2="8" y2="-8"/>
+      <line x1="-10" y1="10" x2="-8" y2="8"/>
+      <line x1="10" y1="10" x2="8" y2="8"/>
+    </g>
+    <!-- 太阳的脸 -->
+    <circle cx="-3" cy="-1" r="1.5" fill="#8B4513"/>
+    <circle cx="3" cy="-1" r="1.5" fill="#8B4513"/>
+    <path d="M -2 3 Q 0 5, 2 3" fill="none" stroke="#8B4513" stroke-width="1.2" stroke-linecap="round"/>
+    <ellipse cx="-5" cy="2" rx="2" ry="1.3" fill="#FFB6C1" opacity="0.7"/>
+    <ellipse cx="5" cy="2" rx="2" ry="1.3" fill="#FFB6C1" opacity="0.7"/>
+  </g>
+
+  <!-- 草地（下半） -->
+  <g>
+    <path d="M 6 98 Q 32 92, 64 96 Q 96 100, 122 94 L 122 122 L 6 122 Z" fill="url(#ground)"/>
+    <path d="M 6 98 Q 32 92, 64 96 Q 96 100, 122 94" fill="none" stroke="#FFFFFF" stroke-width="2" opacity="0.8"/>
+    <!-- 草地纹理 -->
+    <g opacity="0.4" fill="#5D9E7A">
+      <path d="M 16 100 L 16 104 M 14 103 L 16 100 L 18 103" stroke-width="1" fill="none" stroke="#5D9E7A"/>
+      <path d="M 24 98 L 24 102 M 22 101 L 24 98 L 26 101" stroke-width="1" fill="none" stroke="#5D9E7A"/>
+      <path d="M 104 100 L 104 104 M 102 103 L 104 100 L 106 103" stroke-width="1" fill="none" stroke="#5D9E7A"/>
+      <path d="M 112 96 L 112 100 M 110 99 L 112 96 L 114 99" stroke-width="1" fill="none" stroke="#5D9E7A"/>
+    </g>
+  </g>
+
+  <!-- 左侧小房子 -->
+  <g transform="translate(10, 55)" filter="url(#shadow)">
+    <!-- 屋顶 -->
+    <path d="M 8 20 L 28 6 L 48 20 Z" fill="#FF8FA3"/>
+    <path d="M 8 20 L 28 6 L 48 20 L 46 22 L 10 22 Z" fill="#E07889"/>
+    <!-- 房屋主体 -->
+    <rect x="12" y="20" width="32" height="28" rx="3" fill="#FFFFFF"/>
+    <!-- 门 -->
+    <rect x="22" y="30" width="12" height="18" rx="6" fill="#FFD5A0"/>
+    <rect x="24" y="32" width="8" height="14" rx="4" fill="#FFE8CC"/>
+    <circle cx="30.5" cy="38" r="1.2" fill="#D4A574"/>
+    <!-- 窗户 -->
+    <circle cx="18" cy="28" r="3.5" fill="#B3E5FC"/>
+    <line x1="14.5" y1="28" x2="21.5" y2="28" stroke="#FFFFFF" stroke-width="1"/>
+    <line x1="18" y1="24.5" x2="18" y2="31.5" stroke="#FFFFFF" stroke-width="1"/>
+    <!-- 烟囱 -->
+    <rect x="34" y="6" width="5" height="10" fill="#B39DDB"/>
+    <rect x="33.5" y="5" width="6" height="2" fill="#9575CD"/>
+  </g>
+
+  <!-- 小绵羊（中央主角）-->
+  <g transform="translate(64, 75)" filter="url(#shadow)">
+    <!-- 羊腿 -->
+    <rect x="-10" y="18" width="4" height="10" rx="2" fill="#D4C4A8"/>
+    <rect x="-2" y="20" width="4" height="10" rx="2" fill="#D4C4A8"/>
+    <rect x="6" y="18" width="4" height="10" rx="2" fill="#D4C4A8"/>
+    <!-- 羊脸 -->
+    <ellipse cx="0" cy="5" rx="16" ry="14" fill="#FFD8C4"/>
+    <ellipse cx="0" cy="8" rx="15" ry="11" fill="#FFC9A8" opacity="0.3"/>
+    <!-- 毛茸茸的身体 -->
+    <g fill="url(#wool)">
+      <circle cx="-14" cy="8" r="7"/>
+      <circle cx="-8" cy="2" r="8"/>
+      <circle cx="0" cy="-2" r="9"/>
+      <circle cx="8" cy="2" r="8"/>
+      <circle cx="14" cy="8" r="7"/>
+      <circle cx="-10" cy="14" r="7"/>
+      <circle cx="10" cy="14" r="7"/>
+      <circle cx="0" cy="16" r="8"/>
+    </g>
+    <!-- 耳朵 -->
+    <ellipse cx="-13" cy="-6" rx="4" ry="6" fill="#FFC9A8" transform="rotate(-20 -13 -6)"/>
+    <ellipse cx="13" cy="-6" rx="4" ry="6" fill="#FFC9A8" transform="rotate(20 13 -6)"/>
+    <!-- 大眼睛 -->
+    <circle cx="-6" cy="2" r="3.5" fill="#FFFFFF"/>
+    <circle cx="6" cy="2" r="3.5" fill="#FFFFFF"/>
+    <circle cx="-5.5" cy="2.5" r="2.2" fill="#3E2723"/>
+    <circle cx="6.5" cy="2.5" r="2.2" fill="#3E2723"/>
+    <circle cx="-4.8" cy="1.7" r="0.8" fill="#FFFFFF"/>
+    <circle cx="7.2" cy="1.7" r="0.8" fill="#FFFFFF"/>
+    <!-- 腮红 -->
+    <ellipse cx="-10" cy="7" rx="3" ry="1.8" fill="#FFB6C1" opacity="0.6"/>
+    <ellipse cx="10" cy="7" rx="3" ry="1.8" fill="#FFB6C1" opacity="0.6"/>
+    <!-- 嘴 -->
+    <path d="M -2 6 Q 0 8, 2 6" fill="none" stroke="#8B4513" stroke-width="1.3" stroke-linecap="round"/>
+    <ellipse cx="0" cy="7.5" rx="1" ry="0.6" fill="#FF9EB5"/>
+
+    <!-- 身上的字母W -->
+    <text x="-0.5" y="18" text-anchor="middle" font-size="9" font-weight="900" font-family="'Comic Sans MS', sans-serif" fill="#7BC9A6" stroke="#FFFFFF" stroke-width="1">W</text>
+  </g>
+
+  <!-- 右侧小蜜蜂 -->
+  <g transform="translate(100, 60)" filter="url(#soft-glow)">
+    <!-- 翅膀 -->
+    <ellipse cx="-6" cy="-4" rx="6" ry="4" fill="#FFFFFF" opacity="0.8" transform="rotate(-20 -6 -4)"/>
+    <ellipse cx="6" cy="-4" rx="6" ry="4" fill="#FFFFFF" opacity="0.8" transform="rotate(20 6 -4)"/>
+    <!-- 身体 -->
+    <ellipse cx="0" cy="2" rx="10" ry="8" fill="url(#bee)"/>
+    <!-- 条纹 -->
+    <rect x="-6" y="-2" width="3" height="8" rx="1.5" fill="#3E2723"/>
+    <rect x="2" y="-2" width="3" height="8" rx="1.5" fill="#3E2723"/>
+    <!-- 眼睛 -->
+    <circle cx="-2" cy="0" r="2.2" fill="#FFFFFF"/>
+    <circle cx="2.5" cy="0" r="2.2" fill="#FFFFFF"/>
+    <circle cx="-1.5" cy="0.5" r="1.3" fill="#3E2723"/>
+    <circle cx="3" cy="0.5" r="1.3" fill="#3E2723"/>
+    <!-- 触须 -->
+    <path d="M -3 -6 Q -5 -12, -8 -12" fill="none" stroke="#3E2723" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M 3 -6 Q 5 -12, 8 -12" fill="none" stroke="#3E2723" stroke-width="1.2" stroke-linecap="round"/>
+    <circle cx="-8" cy="-12" r="1.2" fill="#3E2723"/>
+    <circle cx="8" cy="-12" r="1.2" fill="#3E2723"/>
+    <!-- 微笑 -->
+    <path d="M -1 5 Q 0 6.5, 2 5" fill="none" stroke="#3E2723" stroke-width="1" stroke-linecap="round"/>
+  </g>
+
+  <!-- 花朵（左下） -->
+  <g transform="translate(22, 105)" filter="url(#shadow)">
+    <!-- 花瓣 -->
+    <circle cx="-4" cy="0" r="4" fill="url(#flower-pink)"/>
+    <circle cx="4" cy="0" r="4" fill="url(#flower-pink)"/>
+    <circle cx="0" cy="-4" r="4" fill="url(#flower-pink)"/>
+    <circle cx="0" cy="4" r="4" fill="url(#flower-pink)"/>
+    <circle cx="0" cy="0" r="3.5" fill="#FF8FA3"/>
+    <!-- 花心 -->
+    <circle cx="0" cy="0" r="2" fill="#FFF3B0"/>
+    <!-- 茎 -->
+    <rect x="-0.8" y="4" width="1.6" height="8" rx="0.8" fill="#7BC9A6"/>
+    <!-- 叶子 -->
+    <ellipse cx="-3" cy="9" rx="3" ry="1.5" fill="#9DD5B8" transform="rotate(-30 -3 9)"/>
+    <!-- 小眼睛 -->
+    <circle cx="-1" cy="-0.5" r="0.6" fill="#3E2723"/>
+    <circle cx="1" cy="-0.5" r="0.6" fill="#3E2723"/>
+    <circle cx="-0.7" cy="-0.7" r="0.2" fill="#FFFFFF"/>
+    <circle cx="1.3" cy="-0.7" r="0.2" fill="#FFFFFF"/>
+    <!-- 腮红 -->
+    <circle cx="-1.8" cy="0.8" r="0.8" fill="#FFB6C1" opacity="0.6"/>
+    <circle cx="1.8" cy="0.8" r="0.8" fill="#FFB6C1" opacity="0.6"/>
+  </g>
+
+  <!-- 花朵（右下）紫 -->
+  <g transform="translate(88, 108)" filter="url(#shadow)">
+    <circle cx="-3.5" cy="0" r="3.5" fill="url(#flower-purple)"/>
+    <circle cx="3.5" cy="0" r="3.5" fill="url(#flower-purple)"/>
+    <circle cx="0" cy="-3.5" r="3.5" fill="url(#flower-purple)"/>
+    <circle cx="0" cy="3.5" r="3.5" fill="url(#flower-purple)"/>
+    <circle cx="0" cy="0" r="3" fill="#9575CD"/>
+    <circle cx="0" cy="0" r="1.8" fill="#FFF3B0"/>
+    <rect x="-0.6" y="3.5" width="1.2" height="7" rx="0.6" fill="#7BC9A6"/>
+    <circle cx="-1" cy="-0.5" r="0.5" fill="#3E2723"/>
+    <circle cx="1" cy="-0.5" r="0.5" fill="#3E2723"/>
+    <ellipse cx="-1.8" cy="0.8" rx="0.6" ry="0.4" fill="#FFB6C1" opacity="0.5"/>
+    <ellipse cx="1.8" cy="0.8" rx="0.6" ry="0.4" fill="#FFB6C1" opacity="0.5"/>
+  </g>
+
+  <!-- 小蘑菇 -->
+  <g transform="translate(50, 110)" filter="url(#shadow)">
+    <!-- 蘑菇伞 -->
+    <ellipse cx="0" cy="-2" rx="7" ry="5" fill="#FF8FA3"/>
+    <ellipse cx="0" cy="-3" rx="6" ry="4" fill="#FFB6C1"/>
+    <!-- 白点 -->
+    <circle cx="-3" cy="-4" r="1.2" fill="#FFFFFF"/>
+    <circle cx="2" cy="-5" r="1" fill="#FFFFFF"/>
+    <circle cx="3" cy="-2" r="0.8" fill="#FFFFFF"/>
+    <!-- 伞柄 -->
+    <rect x="-2.5" y="-2" width="5" height="7" rx="2" fill="#FFE8CC"/>
+    <rect x="-1.8" y="-1.5" width="0.8" height="5" rx="0.4" fill="#FFFFFF" opacity="0.6"/>
+    <!-- 眼睛 -->
+    <circle cx="-1.2" cy="2" r="0.5" fill="#3E2723"/>
+    <circle cx="1.2" cy="2" r="0.5" fill="#3E2723"/>
+  </g>
+
+  <!-- 小栅栏装饰 -->
+  <g transform="translate(105, 88)" opacity="0.7">
+    <rect x="0" y="0" width="3" height="10" rx="1" fill="#D4A574"/>
+    <rect x="6" y="0" width="3" height="10" rx="1" fill="#D4A574"/>
+    <rect x="12" y="0" width="3" height="10" rx="1" fill="#D4A574"/>
+    <rect x="-1" y="3" width="17" height="2" rx="1" fill="#BF9C72"/>
+    <rect x="-1" y="7" width="17" height="2" rx="1" fill="#BF9C72"/>
+  </g>
+
+  <!-- 飘落的小花瓣 -->
+  <g opacity="0.6">
+    <circle cx="20" cy="40" r="2" fill="#FFD1DC"/>
+    <circle cx="105" cy="50" r="1.5" fill="#D4C4A8"/>
+    <circle cx="80" cy="35" r="1.8" fill="#FFE8A0"/>
+    <circle cx="35" cy="85" r="1.5" fill="#FFD1DC"/>
+  </g>
 </svg>

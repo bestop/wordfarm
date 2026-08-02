@@ -1,0 +1,230 @@
+/* pages/game/game.wxss - 游戏页样式 */
+
+/*
+ * 布局原理:
+ *   不使用 100vh（含导航栏），改用 100%（page 高度 = windowHeight）
+ *   flex column: hud(固定) + shop-bar(固定) + canvas-wrap(弹性flex:1) + quiz-wrap(固定)
+ *   canvas-wrap 自动吸收剩余空间，实际 canvas 像素尺寸由 JS 通过
+ *   SelectorQuery 实测 DOM 渲染尺寸后设置，避免手动计算累积误差导致底部裁切。
+ */
+.game-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #FFF5F8;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* ============ HUD ============ */
+.hud {
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #FFE5EC 0%, #FFD1DC 50%, #D4C5F9 100%);
+  border-bottom: 4rpx solid rgba(255,255,255,0.85);
+  box-shadow: 0 6rpx 16rpx rgba(243,139,168,0.18);
+  padding: 8rpx 24rpx 16rpx;
+}
+.hud-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.hud-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6rpx 16rpx;
+  border-radius: 18rpx;
+  background: rgba(255,255,255,0.65);
+  border: 3rpx solid rgba(255,255,255,0.9);
+  box-shadow: inset 0 1rpx 0 rgba(255,255,255,0.95);
+}
+.hud-label {
+  font-size: 18rpx;
+  color: #8D6E63;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4rpx;
+}
+.hud-value {
+  font-size: 32rpx;
+  font-weight: 900;
+  color: #5D4037;
+  line-height: 1.1;
+}
+.hud-score { flex: 1.2; }
+.hud-lives { flex: 1.4; }
+.hud-combo { flex: 1; }
+.hud-sunlight { flex: 1.1; }
+.hud-sunlight .hud-value {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  color: #F9A825;
+}
+.sun-icon { font-size: 28rpx; }
+.hud-combo.combo-active {
+  background: linear-gradient(145deg, #FFF3B0, #FFD1DC);
+  border-color: #F48FB1;
+}
+.combo-fire { font-size: 24rpx; }
+
+.lives-row { display: flex; gap: 6rpx; }
+.heart { font-size: 28rpx; line-height: 1; transition: transform 0.2s; }
+.heart.on { filter: none; }
+.heart.off { filter: grayscale(1) opacity(0.35); }
+
+.hud-pause {
+  padding: 6rpx;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+.pause-btn {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #FFFFFF, #FFE5EC);
+  border: 4rpx solid #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  color: #F48FB1;
+  font-weight: 900;
+  box-shadow: 0 4rpx 12rpx rgba(243,139,168,0.25);
+}
+
+/* ============ Canvas 区 ============ */
+/* flex:1 让 canvas-wrap 自动吸收 hud/shop-bar/quiz-wrap 之外的剩余空间，
+   避免手动计算 canvasH 因 HUD 实际高度与常量不符而溢出裁切底部答题面板 */
+.canvas-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background: linear-gradient(180deg, #FFF0F5, #E7DCFF);
+  width: 100%;
+}
+.game-canvas {
+  display: block;
+}
+
+/* ============ 暂停遮罩 ============ */
+.pause-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+.pause-card {
+  width: 70%;
+  text-align: center;
+  padding: 48rpx 32rpx;
+}
+.pause-title {
+  font-size: 48rpx;
+  font-weight: 900;
+  color: #5D4037;
+  margin-bottom: 12rpx;
+}
+.pause-tip {
+  font-size: 24rpx;
+  color: #8D6E63;
+  margin-bottom: 32rpx;
+}
+.pause-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+.pause-actions .kawaii-btn {
+  width: 100%;
+  font-size: 30rpx;
+  padding: 20rpx 0;
+}
+
+/* ============ 答题面板 ============ */
+.quiz-wrap {
+  flex-shrink: 0;
+  width: 100%;
+  /* border-box 保证 padding-bottom(safeBottom) 计入设定高度内，
+     不额外增加 quiz-wrap 总高度，避免溢出 */
+  box-sizing: border-box;
+}
+
+/* ============ 植物商店栏 ============ */
+.shop-bar {
+  flex-shrink: 0;
+  height: 110rpx;
+  background: linear-gradient(180deg, rgba(255,243,224,0.95) 0%, rgba(255,224,178,0.95) 100%);
+  border-top: 3rpx solid rgba(255,255,255,0.85);
+  border-bottom: 3rpx solid rgba(243,139,168,0.25);
+  padding: 8rpx 12rpx 4rpx;
+  box-sizing: border-box;
+  position: relative;
+}
+.shop-scroll {
+  white-space: nowrap;
+  height: 84rpx;
+}
+.shop-item {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 140rpx;
+  height: 84rpx;
+  margin-right: 10rpx;
+  border-radius: 18rpx;
+  background: linear-gradient(145deg, #FFFFFF, #FFF8E1);
+  border: 3rpx solid #FFE0B2;
+  box-shadow: 0 3rpx 0 rgba(243,139,168,0.15);
+  vertical-align: top;
+  transition: transform 0.12s ease, border-color 0.15s ease;
+}
+.shop-item.selected {
+  border-color: #F48FB1;
+  background: linear-gradient(145deg, #FFD1DC, #FFE5EC);
+  transform: translateY(-2rpx);
+  box-shadow: 0 5rpx 10rpx rgba(244,143,177,0.35);
+}
+.shop-item.disabled {
+  opacity: 0.45;
+  filter: grayscale(0.4);
+}
+.shop-emoji {
+  font-size: 34rpx;
+  line-height: 1;
+}
+.shop-name {
+  font-size: 18rpx;
+  color: #6D4C41;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-top: 2rpx;
+}
+.shop-cost {
+  display: flex;
+  align-items: center;
+  gap: 2rpx;
+  font-size: 18rpx;
+  color: #F9A825;
+  font-weight: 800;
+  line-height: 1;
+  margin-top: 2rpx;
+}
+.shop-cost-icon { font-size: 18rpx; }
+.shop-tip {
+  position: absolute;
+  bottom: 2rpx;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 18rpx;
+  color: #F48FB1;
+  font-weight: 700;
+}

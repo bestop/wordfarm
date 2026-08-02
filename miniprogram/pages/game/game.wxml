@@ -1,0 +1,95 @@
+<!-- pages/game/game.wxml - 游戏页（自适应布局） -->
+<view class="game-page" style="height: {{pageHeight}}rpx;">
+
+  <!-- ============ HUD 顶部栏 ============ -->
+  <view class="hud">
+    <view class="hud-row">
+      <!-- 阳光 -->
+      <view class="hud-item hud-sunlight">
+        <view class="hud-label">阳光</view>
+        <view class="hud-value">
+          <text class="sun-icon">☀️</text>
+          <text>{{sunlight}}</text>
+        </view>
+      </view>
+      <!-- 分数 -->
+      <view class="hud-item hud-score">
+        <view class="hud-label">分数</view>
+        <view class="hud-value">{{score}}</view>
+      </view>
+      <!-- 生命值 -->
+      <view class="hud-item hud-lives">
+        <view class="hud-label">生命</view>
+        <view class="lives-row">
+          <text wx:for="{{[1,2,3]}}" wx:key="*this" class="heart {{lives >= item ? 'on' : 'off'}}">❤️</text>
+        </view>
+      </view>
+      <!-- 连击 -->
+      <view class="hud-item hud-combo {{combo >= 2 ? 'combo-active anim-pulse' : ''}}">
+        <view class="hud-label">连击</view>
+        <view class="hud-value">
+          <text>x{{combo}}</text>
+          <text wx:if="{{combo >= 5}}" class="combo-fire">🔥</text>
+        </view>
+      </view>
+      <!-- 暂停按钮 -->
+      <view class="hud-item hud-pause" bindtap="onTogglePause">
+        <view class="pause-btn">{{paused ? '▶' : '⏸'}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ============ 植物商店栏 ============ -->
+  <view class="shop-bar">
+    <scroll-view scroll-x class="shop-scroll" enhanced show-scrollbar="{{false}}">
+      <view
+        wx:for="{{shopItems}}"
+        wx:key="type"
+        class="shop-item {{selectedPlant === item.type ? 'selected' : ''}} {{!item.affordable ? 'disabled' : ''}}"
+        data-type="{{item.type}}"
+        bindtap="onShopSelect"
+      >
+        <view class="shop-emoji">{{item.emoji}}</view>
+        <view class="shop-name">{{item.name}}</view>
+        <view class="shop-cost">
+          <text class="shop-cost-icon">☀️</text>
+          <text>{{item.cost}}</text>
+        </view>
+      </view>
+    </scroll-view>
+    <view wx:if="{{selectedPlant}}" class="shop-tip">已选 {{selectedPlant}} · 点击网格放置</view>
+  </view>
+
+  <!-- ============ Canvas 游戏区（flex:1 自适应剩余空间） ============ -->
+  <view class="canvas-wrap" bindtouchend="onCanvasTap">
+    <canvas
+      type="2d"
+      id="gameCanvas"
+      class="game-canvas"
+      style="width: 100%; height: 100%;"
+    ></canvas>
+
+    <!-- 暂停遮罩 -->
+    <view wx:if="{{paused}}" class="pause-mask" bindtap="onTogglePause">
+      <view class="pause-card kawaii-card">
+        <view class="pause-title">⏸ 已暂停</view>
+        <view class="pause-tip">点击屏幕继续</view>
+        <view class="pause-actions">
+          <button class="kawaii-btn kawaii-btn-mint" bindtap="onTogglePause">继续游戏</button>
+          <button class="kawaii-btn kawaii-btn-ghost" bindtap="onQuit">退出本局</button>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ============ 底部答题面板（占屏高30%，box-sizing:border-box 含 safeBottom） ============ -->
+  <view class="quiz-wrap" style="height: {{quizPanelH}}rpx; padding-bottom: {{safeBottomRpx}}rpx;">
+    <quiz-panel
+      question="{{currentQuestion}}"
+      feedback="{{feedback}}"
+      disabled="{{quizDisabled}}"
+      bind:answer="onAnswer"
+    ></quiz-panel>
+  </view>
+
+</view>

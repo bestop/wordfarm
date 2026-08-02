@@ -1,0 +1,114 @@
+<!-- pages/index/index.wxml - 欢迎页：萌系农场主题（自适应单屏 + 滚动） -->
+<!--
+  自适应布局结构:
+    .page (height: {{pageHeight}}rpx, flex column, overflow hidden)
+      ├── .hero            (flex-shrink: 0, 固定头部)
+      ├── scroll-view      (flex: 1, 可滚动内容区)
+      └── .start-wrap      (flex-shrink: 0, 固定底部按钮)
+  pageHeight 由 layoutUtil 根据 windowHeight 计算，避免 100vh 包含导航栏导致截断
+-->
+<view class="page adaptive-page" style="height: {{pageHeight}}rpx;">
+
+  <!-- 背景装饰（绝对定位，不影响布局） -->
+  <view class="bg-cloud cloud-1 anim-float"></view>
+  <view class="bg-cloud cloud-2 anim-float" style="animation-delay:-1.5s"></view>
+  <view class="bg-blob blob-pink"></view>
+  <view class="bg-blob blob-mint"></view>
+
+  <!-- ============ 头部品牌区（固定，不滚动） ============ -->
+  <view class="hero adaptive-fixed">
+    <view class="hero-icons">
+      <view class="hero-icon icon-sun anim-float">☀️</view>
+      <text class="title-main kawaii-gradient-text">单词农场</text>
+      <view class="hero-icon icon-plant anim-wiggle">🌱</view>
+    </view>
+    <view class="hero-tags">
+      <view class="tag tag-pink">🪴 萌系塔防</view>
+      <view class="tag tag-sky">📖 背单词</view>
+    </view>
+  </view>
+
+  <!-- ============ 可滚动内容区 ============ -->
+  <scroll-view scroll-y class="content-scroll adaptive-scroll" show-scrollbar="{{false}}">
+
+    <!-- 数据卡 -->
+    <view class="stats-card">
+      <view class="stat-item">
+        <view class="stat-num">{{highestScore}}</view>
+        <view class="stat-label">最高分</view>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <view class="stat-num">{{totalGames}}</view>
+        <view class="stat-label">游戏次数</view>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item" bindtap="onToggleSound">
+        <view class="stat-num">{{soundEnabled ? '🔊' : '🔇'}}</view>
+        <view class="stat-label">音效{{soundEnabled ? '开' : '关'}}</view>
+      </view>
+    </view>
+
+    <!-- 难度选择 -->
+    <view class="section">
+      <view class="section-title">
+        <text class="section-emoji">🎯</text>
+        <text>选择难度</text>
+      </view>
+      <view class="difficulty-list">
+        <view
+          wx:for="{{difficulties}}"
+          wx:key="key"
+          class="difficulty-card {{difficulty === item.key ? 'active' : ''}}"
+          data-key="{{item.key}}"
+          bindtap="onSelectDifficulty"
+          style="background: linear-gradient(145deg, {{item.color}}, #FFFFFF 130%);"
+        >
+          <view class="diff-emoji">{{item.emoji}}</view>
+          <view class="diff-info">
+            <view class="diff-name">{{item.name}}</view>
+            <view class="diff-desc">{{item.desc}}</view>
+          </view>
+          <view wx:if="{{difficulty === item.key}}" class="diff-check">✓</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 玩法说明（2×2 网格） -->
+    <view class="section">
+      <view class="section-title">
+        <text class="section-emoji">🎮</text>
+        <text>玩法</text>
+      </view>
+      <view class="howto-grid">
+        <view class="howto-item">
+          <text class="howto-emoji">✅</text>
+          <text class="howto-text">答对消除僵尸</text>
+        </view>
+        <view class="howto-item">
+          <text class="howto-emoji">⚡</text>
+          <text class="howto-text">答错僵尸加速</text>
+        </view>
+        <view class="howto-item">
+          <text class="howto-emoji">🔥</text>
+          <text class="howto-text">连击得分翻倍</text>
+        </view>
+        <view class="howto-item">
+          <text class="howto-emoji">❤️</text>
+          <text class="howto-text">3命守卫小屋</text>
+        </view>
+      </view>
+    </view>
+
+  </scroll-view>
+
+  <!-- ============ 开始按钮（固定底部，不滚动） ============ -->
+  <view class="start-wrap adaptive-fixed" style="padding-bottom: calc(16rpx + {{safeBottomRpx}}rpx);">
+    <button class="kawaii-btn kawaii-btn-primary start-btn" bindtap="onStart">
+      <text class="btn-icon">▶</text>
+      <text>开始游戏</text>
+    </button>
+    <view class="tip-text">💡 看清僵尸头顶单词，选对正确中文</view>
+  </view>
+
+</view>
