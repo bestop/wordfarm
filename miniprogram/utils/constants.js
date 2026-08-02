@@ -158,21 +158,14 @@ const GRID = {
 
 // ============ 植物类型 ============
 // cost=阳光消耗; health=血量; damage=每次投射物伤害;
-// attackInterval=攻击间隔(ms); sunProduce/sunInterval=向日葵产阳光
+// attackInterval=攻击间隔(ms); range=攻击范围
 const PLANT_TYPES = {
   shooter: {
     type: 'shooter', name: '豌豆射手', emoji: '🌱',
-    cost: 50, health: 3, damage: 1,
-    attackInterval: 1400, range: Infinity,
+    cost: 50, health: 3, damage: 2,
+    attackInterval: 1100, range: Infinity,
     color: '#7CB342',
     projectile: { type: 'normal', speed: 320, color: '#9CCC65', radius: 8 }
-  },
-  sunflower: {
-    type: 'sunflower', name: '向日葵', emoji: '🌻',
-    cost: 50, health: 2, damage: 0,
-    attackInterval: 0, range: 0,
-    sunProduce: 25, sunInterval: 8000,
-    color: '#FFB300'
   },
   wall: {
     type: 'wall', name: '坚果墙', emoji: '🥜',
@@ -182,22 +175,21 @@ const PLANT_TYPES = {
   },
   freezer: {
     type: 'freezer', name: '寒冰射手', emoji: '❄️',
-    cost: 75, health: 3, damage: 1,
-    attackInterval: 1600, range: Infinity,
+    cost: 75, health: 3, damage: 2,
+    attackInterval: 1300, range: Infinity,
     color: '#4FC3F7',
     projectile: { type: 'ice', speed: 300, color: '#81D4FA', radius: 8,
                   slow: { factor: 0.5, duration: 2000 } }
   }
 };
 // 商店栏展示顺序
-const PLANT_ORDER = ['shooter', 'sunflower', 'wall', 'freezer'];
+const PLANT_ORDER = ['shooter', 'wall', 'freezer'];
 
 // ============ 阳光经济 ============
 const SUNLIGHT = {
   INITIAL: 100,                       // 初始阳光
   MAX: 999,                           // 上限
   REWARD_CORRECT: 25,                 // 答对奖励
-  REWARD_SUNFLOWER: 25,               // 向日葵产阳光
   PENALTY_WRONG_SPEED_MULT: 1.3,      // 答错全场僵尸加速倍率
   PENALTY_WRONG_SPEED_TIME: 3000      // 答错加速持续时长(ms)
 };
@@ -206,7 +198,7 @@ const SUNLIGHT = {
 const PROJECTILE = {
   POOL_PREALLOC: 8,
   POOL_MAX: 30,
-  HIT_RADIUS: 16                      // 命中判定半径(px)
+  HIT_RADIUS: 16                      // (已废弃)命中判定改用 僵尸半径+炮弹半径 的圆形判定，见 plantManager
 };
 
 // ============ 题目类型 ============

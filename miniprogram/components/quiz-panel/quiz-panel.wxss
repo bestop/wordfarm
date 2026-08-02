@@ -13,14 +13,14 @@
   overflow: hidden;
 }
 
-/* ============ 题目区（高度50%） ============ */
+/* ============ 题目区（按内容自适应高度，把剩余空间让给选项区） ============ */
 .question-area {
-  flex: 0 0 50%;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 20rpx 32rpx;
+  padding: 14rpx 32rpx;
   position: relative;
   transition: background 0.2s ease;
 }
@@ -40,7 +40,7 @@
   gap: 6rpx;
 }
 .word {
-  font-size: 64rpx;
+  font-size: 54rpx;
   font-weight: 900;
   color: #5D4037;
   letter-spacing: 2rpx;
@@ -57,25 +57,26 @@
   color: #BCAAA4;
 }
 
-/* ============ 选项区（高度50%） ============ */
+/* ============ 选项区（flex:1 占据题目区之外剩余空间，保证 4 选项完整可见） ============ */
 .options-area {
-  flex: 0 0 50%;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-wrap: wrap;
-  padding: 12rpx 20rpx 24rpx;
+  padding: 12rpx 20rpx 20rpx;
   gap: 12rpx;
   align-content: stretch;
 }
 .option {
   flex: 1 1 calc(50% - 6rpx);
-  min-height: 90rpx;
+  min-height: 72rpx;
   background: linear-gradient(145deg, #FFFFFF, #FFF5F8);
   border: 4rpx solid #FFE5EC;
   border-radius: 24rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 30rpx;
+  font-size: 28rpx;
   font-weight: 800;
   color: #5D4037;
   transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;

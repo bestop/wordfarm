@@ -481,13 +481,15 @@ class Renderer {
   }
 
   /**
-   * 绘制植物（emoji + 血条 + 摇摆 + 受击闪烁）
+   * 绘制植物（矢量萌系造型 + 血条 + 摇摆 + 受击闪烁）
+   * 三种植物：豌豆射手 / 坚果墙 / 寒冰射手，统一萌系白描边风格，无背景圆盘
    */
   _drawPlant(ctx, plant) {
     const def = plant.def;
     if (!def) return;
     const cs = pathManager.getCellSize();
     const size = Math.min(cs.w, cs.h) * 0.78;
+    const r = size * 0.42;            // 头部基准半径
     const wobbleX = Math.sin(plant.wobble) * 2;
 
     ctx.save();
@@ -497,20 +499,29 @@ class Renderer {
       ctx.globalAlpha = 0.5 + 0.5 * Math.sin(plant.hitFlash / 20);
     }
     // 阴影
-    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.fillStyle = 'rgba(0,0,0,0.14)';
     ctx.beginPath();
-    ctx.ellipse(0, size * 0.45, size * 0.4, size * 0.12, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, r * 1.05, r * 0.9, r * 0.22, 0, 0, Math.PI * 2);
     ctx.fill();
-    // emoji 绘制
-    ctx.font = size + 'px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(def.emoji || '🌿', 0, 0);
+
+    // 公共描边样式（与僵尸统一的萌系白边）
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 3;
+    ctx.lineJoin = 'round';
+
+    // 按类型绘制植物造型
+    switch (def.type) {
+      case 'shooter': this._drawShooter(ctx, r, def); break;
+      case 'wall':    this._drawWall(ctx, r, def); break;
+      case 'freezer': this._drawFreezer(ctx, r, def); break;
+      default:        this._drawWall(ctx, r, def); break;  // 兜底
+    }
+
     // 血条（受伤时显示）
     if (plant.maxHealth > 1 && plant.health < plant.maxHealth) {
       const barW = size * 0.9;
       const barH = 5;
-      const barY = -size * 0.55;
+      const barY = -size * 0.62;
       ctx.globalAlpha = 1;
       ctx.fillStyle = 'rgba(0,0,0,0.3)';
       ctx.fillRect(-barW / 2, barY, barW, barH);
@@ -519,7 +530,145 @@ class Renderer {
     }
     ctx.restore();
     ctx.globalAlpha = 1;
-    ctx.textBaseline = 'alphabetic';
+  }
+
+  /**
+   * 萌系表情：眼白 + 瞳孔 + 高光 + 腮红 + 微笑嘴
+   * @param {number} r - 表情尺寸基准半径（通常等于头部半径）
+   * @param {number} cy - 表情中心 y 坐标
+   */
+  _drawCuteFace(ctx, r, cy) {
+    // 眼白
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.arc(-r * 0.3, cy, r * 0.2, 0, Math.PI * 2);
+    ctx.arc(r * 0.3, cy, r * 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    // 瞳孔（略偏内侧，显得聚精会神）
+    ctx.fillStyle = '#3E2723';
+    ctx.beginPath();
+    ctx.arc(-r * 0.26, cy + r * 0.03, r * 0.11, 0, Math.PI * 2);
+    ctx.arc(r * 0.34, cy + r * 0.03, r * 0.11, 0, Math.PI * 2);
+    ctx.fill();
+    // 眼神高光
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.arc(-r * 0.22, cy - r * 0.02, r * 0.04, 0, Math.PI * 2);
+    ctx.arc(r * 0.38, cy - r * 0.02, r * 0.04, 0, Math.PI * 2);
+    ctx.fill();
+    // 腮红
+    ctx.fillStyle = 'rgba(255, 150, 170, 0.65)';
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.52, cy + r * 0.28, r * 0.14, r * 0.08, 0, 0, Math.PI * 2);
+    ctx.ellipse(r * 0.52, cy + r * 0.28, r * 0.14, r * 0.08, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // 微笑嘴
+    ctx.strokeStyle = '#3E2723';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.arc(0, cy + r * 0.32, r * 0.16, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.stroke();
+  }
+
+  /**
+   * 豌豆射手：底部绿叶 + 茎 + 绿色圆头 + 头顶发射口
+   */
+  _drawShooter(ctx, r, def) {
+    // 底部两片叶子
+    ctx.fillStyle = '#9CCC65';
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.55, r * 0.7, r * 0.42, r * 0.2, -0.5, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(r * 0.55, r * 0.7, r * 0.42, r * 0.2, 0.5, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 茎
+    ctx.fillStyle = '#7CB342';
+    ctx.beginPath();
+    safeRoundRect(ctx, -r * 0.13, r * 0.15, r * 0.26, r * 0.55, r * 0.1);
+    ctx.fill(); ctx.stroke();
+    // 头部
+    ctx.fillStyle = def.color;
+    ctx.beginPath();
+    ctx.arc(0, -r * 0.1, r * 0.85, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 头顶发射口
+    ctx.fillStyle = '#558B2F';
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.88, r * 0.32, r * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 发射口内孔
+    ctx.fillStyle = '#33691E';
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.88, r * 0.18, r * 0.1, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // 表情
+    this._drawCuteFace(ctx, r * 0.85, -r * 0.12);
+  }
+
+  /**
+   * 坚果墙：顶部绿叶 + 棕色坚果身 + 高光 + 坚毅表情
+   */
+  _drawWall(ctx, r, def) {
+    // 顶部两片小叶子
+    ctx.fillStyle = '#7CB342';
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.22, -r * 0.95, r * 0.26, r * 0.15, -0.6, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(r * 0.26, -r * 0.9, r * 0.24, r * 0.14, 0.6, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 坚果身体（略扁圆）
+    ctx.fillStyle = def.color;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.05, r * 0.85, r * 0.95, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 左上高光
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.3, -r * 0.35, r * 0.22, r * 0.3, -0.5, 0, Math.PI * 2);
+    ctx.fill();
+    // 表情
+    this._drawCuteFace(ctx, r * 0.85, 0);
+  }
+
+  /**
+   * 寒冰射手：冰蓝叶 + 茎 + 蓝色圆头 + 头顶冰晶 + 发射口
+   */
+  _drawFreezer(ctx, r, def) {
+    // 底部两片叶子（冰蓝）
+    ctx.fillStyle = '#80DEEA';
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.55, r * 0.7, r * 0.42, r * 0.2, -0.5, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(r * 0.55, r * 0.7, r * 0.42, r * 0.2, 0.5, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 茎
+    ctx.fillStyle = '#4DD0E1';
+    ctx.beginPath();
+    safeRoundRect(ctx, -r * 0.13, r * 0.15, r * 0.26, r * 0.55, r * 0.1);
+    ctx.fill(); ctx.stroke();
+    // 头部
+    ctx.fillStyle = def.color;
+    ctx.beginPath();
+    ctx.arc(0, -r * 0.1, r * 0.85, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 头顶发射口
+    ctx.fillStyle = '#0277BD';
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.88, r * 0.3, r * 0.18, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 冰晶装饰（发射口上方）
+    ctx.fillStyle = '#E1F5FE';
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 1.25);
+    ctx.lineTo(-r * 0.16, -r * 0.95);
+    ctx.lineTo(r * 0.16, -r * 0.95);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // 表情
+    this._drawCuteFace(ctx, r * 0.85, -r * 0.12);
   }
 
   /**

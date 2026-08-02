@@ -18,7 +18,6 @@
   <!-- ============ 头部品牌区（固定，不滚动） ============ -->
   <view class="hero adaptive-fixed">
     <view class="hero-icons">
-      <view class="hero-icon icon-sun anim-float">☀️</view>
       <text class="title-main kawaii-gradient-text">单词农场</text>
       <view class="hero-icon icon-plant anim-wiggle">🌱</view>
     </view>

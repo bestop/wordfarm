@@ -34,6 +34,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-width: 0;              /* 允许 flex 子项收缩，防止大数字撑破 HUD 导致底部被裁 */
+  overflow: hidden;
   padding: 6rpx 16rpx;
   border-radius: 18rpx;
   background: rgba(255,255,255,0.65);
@@ -52,6 +54,10 @@
   font-weight: 900;
   color: #5D4037;
   line-height: 1.1;
+  white-space: nowrap;       /* 数字/阳光值不换行，避免 HUD 撑高挤占底部答题区 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 .hud-score { flex: 1.2; }
 .hud-lives { flex: 1.4; }

@@ -64,7 +64,6 @@
   box-shadow: 0 6rpx 16rpx rgba(243,139,168,0.28);
   flex-shrink: 0;
 }
-.icon-sun { background: linear-gradient(145deg, #FFF6C2, #FFD1DC 60%, #D4C5F9); }
 .icon-plant { background: linear-gradient(145deg, #B5EAD7, #C7E9FF 50%, #D4C5F9); }
 
 .title-main {

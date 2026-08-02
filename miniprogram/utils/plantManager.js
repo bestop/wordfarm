@@ -1,6 +1,6 @@
 // utils/plantManager.js - 植物武器系统管理器
 // 负责: 植物对象池、投射物对象池、网格放置、攻击/产阳光/投射物飞行与碰撞
-// 植物4种: shooter(豌豆射手) / sunflower(向日葵) / wall(坚果墙) / freezer(寒冰射手)
+// 植物3种: shooter(豌豆射手) / wall(坚果墙) / freezer(寒冰射手)
 
 const { PLANT_TYPES, GRID, PROJECTILE, SUNLIGHT } = require('./constants.js');
 const { pathManager } = require('./pathManager.js');
@@ -111,7 +111,7 @@ class PlantManager {
    * 每帧更新植物与投射物
    * @param {number} dt - 帧间隔(ms)
    * @param {Object} ctx - { getZombiesInLane: (lane)=>[], onHitZombie: (zombie, projectile)=>void }
-   * @returns {number} 本帧向日葵产出的阳光总量
+   * @returns {number} 本帧植物产出的阳光总量
    */
   update(dt, ctx) {
     let sunlightProduced = 0;
@@ -143,7 +143,7 @@ class PlantManager {
           }
         }
       }
-      // 向日葵：产阳光
+      // 产阳光植物（保留通用逻辑，当前无此类植物时不执行）
       if (def.sunInterval > 0) {
         p.sunCooldown -= dt;
         if (p.sunCooldown <= 0) {
@@ -168,13 +168,17 @@ class PlantManager {
         this.projectiles.splice(i, 1);
         continue;
       }
-      // 碰撞检测：同车道内 y 接近的僵尸
+      // 碰撞检测：基于僵尸半径 + 炮弹半径的圆形判定
+      // 旧逻辑用固定 16px 方形判定，远小于僵尸视觉半径(30~44)，导致炮弹
+      // "看起来打中身体却无伤害"。改为圆形判定让命中与视觉一致，告别穿模。
       const laneZombies = ctx.getZombiesInLane(pr.lane);
       let hit = false;
       for (const z of laneZombies) {
         const zpos = pathManager.getPosition(z.pathIndex, z.progress);
-        if (Math.abs(pr.y - zpos.y) < PROJECTILE.HIT_RADIUS &&
-            Math.abs(pr.x - zpos.x) < PROJECTILE.HIT_RADIUS) {
+        const dx = pr.x - zpos.x;
+        const dy = pr.y - zpos.y;
+        const hitR = z.radius + pr.radius;
+        if (dx * dx + dy * dy < hitR * hitR) {
           if (ctx.onHitZombie) ctx.onHitZombie(z, pr);
           hit = true;
           break;
