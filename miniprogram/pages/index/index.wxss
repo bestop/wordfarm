@@ -1,178 +1,344 @@
-/* pages/index/index.wxss - 欢迎页样式（自适应布局 + 滚动） */
+/* ===========================================================
+   pages/index/index.wxss — 欢迎页极简高级感视觉系统
+   设计原则：莫兰迪豆沙克制配色 · 8rpx 栅格 · 大留白 · 结构化 accent
+   - 不改 WXML 功能结构（bindtap / wx:for / 文案 / 数据字段全部保留）
+   - 所有装饰由 CSS 层提供，不新增图片不依赖第三方库
+   =========================================================== */
 
-/*
- * 布局原理:
- *   .page 高度由 JS 内联 style 设置为 windowHeightRpx（排除导航栏）
- *   使用 flex column: hero(固定) + scroll-view(弹性) + start-wrap(固定)
- *   小屏内容溢出时 scroll-view 自动滚动，大屏内容自然填充
- */
+/* ---------- 1. Design Tokens（可复用设计变量） ---------- */
+.page {
+  /* 主色：莫兰迪豆沙粉（原马卡龙粉降饱和 +3 明度，不漂色相） */
+  --brand-500: #C97B97;   /* 主色：按钮/选中描边/强调 */
+  --brand-400: #D996AC;   /* 浅一档：hover / 渐变尾 / 标签文字 */
+  --brand-300: #EDC3CF;   /* 更浅：accent 条 / 分隔线 */
+  --brand-100: #F6E3EA;   /* 极浅：选中态底色 / icon 底 */
+  --brand-50 : #FBF1F4;   /* 淡奶油粉：卡片高光 / 标签底 */
+
+  /* 难度 accent：同构结构承载差异色（经验：同类卡片结构化差异化） */
+  --accent-easy: #8FB7A7; /* 莫兰迪苔藓绿 —— 简单 */
+  --accent-med : #C97B97; /* 豆沙主色 —— 中等 */
+  --accent-hard: #B57E56; /* 莫兰迪陶土橙 —— 困难 */
+
+  /* 文字层级（WCAG AA 对比度 ≥ 4.5:1 对 body） */
+  --text-900: #2A1F24;  /* H1/数字：主标题 高对比 */
+  --text-700: #5A4B52;  /* 正文/卡片标题 */
+  --text-500: #8F828A;  /* 辅助/说明/标签 */
+  --text-300: #C3B8BE;  /* 弱分隔/禁用态 */
+
+  /* 表面/背景 */
+  --bg:       #FDF8FA;  /* 页面背景：暖白粉，比纯白更柔和不刺眼 */
+  --surface:  #FFFFFF;  /* 卡片表面：纯白 + 阴影层次 */
+
+  /* 间距（8rpx 栅格） */
+  --sp-1: 8rpx;  --sp-2: 16rpx; --sp-3: 24rpx; --sp-4: 32rpx;
+  --sp-5: 40rpx; --sp-6: 48rpx; --sp-8: 64rpx;
+
+  /* 圆角档位（视觉统一，圆角 ≈ 10% 宽度） */
+  --radius-sm: 12rpx;
+  --radius-md: 20rpx;
+  --radius-lg: 28rpx;
+  --radius-pill: 999rpx;
+
+  /* 阴影：克制 ambient 阴影（只有一层） */
+  --shadow-card:  0 8rpx 24rpx rgba(42,31,36, .05);
+  --shadow-soft:  0 4rpx 14rpx rgba(42,31,36, .04);
+  --shadow-btn:   0 10rpx 28rpx rgba(201,123,151, .28);
+
+  /* 动效：统一 220ms · ease-out · 移动端按压曲线 */
+  --dur: 220ms;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+}
+
+/* ---------- 2. 页面与背景（去 blob/云，换柔光 + 极简） ---------- */
 .page {
   box-sizing: border-box;
-  padding: 16rpx 28rpx 0;
+  padding: 0;
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12rpx;
+  gap: var(--sp-3);
+  background: var(--bg);    /* 暖白粉基底 */
+  overflow: hidden;         /* 背景光晕裁剪 */
 }
-
-/* ============ 背景装饰 ============ */
-.bg-cloud {
-  position: absolute;
-  background: #FFFFFF;
-  border-radius: 999rpx;
-  opacity: 0.7;
-  pointer-events: none;
-  filter: blur(0.5px);
-  z-index: 0;
-}
-.cloud-1 { width: 140rpx; height: 48rpx; top: 90rpx; right: -30rpx;
-  box-shadow: -36rpx 14rpx 0 8rpx #FFFFFF, 36rpx 20rpx 0 0 #FFFFFF; }
-.cloud-2 { width: 110rpx; height: 38rpx; top: 200rpx; left: -20rpx;
-  box-shadow: 28rpx -10rpx 0 4rpx #FFFFFF, 56rpx 4rpx 0 0 #FFFFFF; }
-
-.bg-blob {
+/* 两处极柔径向光晕：用绝对定位伪元素实现（替代 background-attachment:fixed，iOS 小程序兼容） */
+.page::before,
+.page::after {
+  content: "";
   position: absolute;
   border-radius: 50%;
-  filter: blur(80rpx);
   pointer-events: none;
   z-index: 0;
+  filter: blur(40rpx);
 }
-.blob-pink { width: 340rpx; height: 340rpx; background: #FFD1DC; top: -80rpx; left: -90rpx; opacity: 0.5; }
-.blob-mint { width: 380rpx; height: 380rpx; background: #B5EAD7; bottom: -120rpx; right: -100rpx; opacity: 0.45; }
+.page::before {
+  width: 620rpx; height: 620rpx;
+  left: -220rpx;  top: -260rpx;
+  background: rgba(237,195,207,.38);   /* 左上暖粉 */
+}
+.page::after {
+  width: 720rpx; height: 720rpx;
+  right: -280rpx; bottom: -320rpx;
+  background: rgba(241,224,211,.22);   /* 右下米黄 */
+}
 
-/* ============ 头部品牌区（固定） ============ */
+/* 所有前景内容层 z-index 高于光晕 */
+.page > .hero,
+.page > .content-scroll,
+.page > .start-wrap { position: relative; z-index: 1; }
+
+/* 最外层 padding：左右 40 · 顶部 48（hero 占位）；避免滚动条顶边贴边 */
+.page > .hero           { padding: var(--sp-6) var(--sp-5) var(--sp-4); }
+.page > .content-scroll { padding: 0 var(--sp-5); }
+.page > .start-wrap     { padding: var(--sp-2) var(--sp-5) 0; }
+
+/* ---------- 3. Hero 品牌区（大留白 · 极简排版） ---------- */
 .hero {
   position: relative;
   z-index: 1;
-  text-align: center;
+  text-align: left;   /* 从居中改左对齐，更"高级"克制 */
+  padding: var(--sp-6) var(--sp-5) var(--sp-4);
 }
+
 .hero-icons {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 18rpx;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: var(--sp-3);
 }
+
 .hero-icon {
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 22rpx;
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 40rpx;
-  border: 3rpx solid rgba(255,255,255,0.95);
-  box-shadow: 0 6rpx 16rpx rgba(243,139,168,0.28);
+  font-size: 34rpx;
+  background: var(--brand-100);      /* 莫兰迪粉淡底，不彩虹渐变 */
+  color: var(--brand-500);
   flex-shrink: 0;
 }
-.icon-plant { background: linear-gradient(145deg, #B5EAD7, #C7E9FF 50%, #D4C5F9); }
 
 .title-main {
-  font-size: 64rpx;
+  font-size: 76rpx;
   font-weight: 900;
-  letter-spacing: 2rpx;
-  filter: drop-shadow(0 4rpx 10rpx rgba(243,139,168,0.28));
-  line-height: 1;
+  letter-spacing: 3rpx;
+  line-height: 1.05;
+  color: var(--text-900);
+  /* 仅保留极淡的"主色→深紫"纵向渐变，克制而非花哨 */
+  background: linear-gradient(180deg, var(--text-900) 0%, #46323B 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: none;   /* 去掉旧 drop-shadow，干净 */
+}
+/* 覆盖 kawaii.scss 的 kawaii-gradient-text：在 index 页要求极简，禁止多色渐变字 */
+.title-main.kawaii-gradient-text {
+  -webkit-background-clip: text !important;
+          background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  background-image: linear-gradient(180deg, #2A1F24 0%, #46323B 100%) !important;
+  filter: none !important;
+  -webkit-mask-image: none !important;
+          mask-image: none !important;
 }
 
+/* 标签 pill：去掉彩色边框，改成极淡 brand-50 胶囊 + 主色文字，更现代 */
 .hero-tags {
   display: flex;
-  justify-content: center;
-  gap: 12rpx;
-  margin-top: 10rpx;
+  justify-content: flex-start;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
 }
 .tag {
-  padding: 6rpx 18rpx;
-  border-radius: 999rpx;
+  padding: 8rpx 20rpx;
+  border-radius: var(--radius-pill);
   font-size: 20rpx;
-  font-weight: 800;
-  background: rgba(255,255,255,0.92);
-  box-shadow: inset 0 1rpx 0 rgba(255,255,255,0.95);
+  font-weight: 600;
+  line-height: 1.4;
+  background: var(--surface);
+  color: var(--text-500);
+  border: none;
+  box-shadow: var(--shadow-soft);
+  letter-spacing: .5rpx;
 }
-.tag-pink { color: #C2185B; border: 2rpx solid #FFD1DC; }
-.tag-sky { color: #1A5A8A; border: 2rpx solid #C7E9FF; }
+/* 标签内部 emoji 缩小并与文字拉开，减少"儿童感" */
+.tag text:first-child,
+.tag .emoji { font-size: 18rpx; margin-right: 4rpx; opacity: .9; }
+.tag.tag-pink { color: var(--brand-500); }
+.tag.tag-sky  { color: #6D8FA6; }
 
-/* ============ 可滚动内容区 ============ */
+/* ---------- 4. 滚动内容区 ---------- */
 .content-scroll {
   position: relative;
   z-index: 1;
-  /* min-height: 0 由 .adaptive-scroll 提供，确保 flex 收缩 + scroll-view 滚动 */
+  padding: 0 var(--sp-5);
+  -webkit-overflow-scrolling: touch;
 }
 
-/* ============ 数据卡 ============ */
+/* ---------- 5. 数据卡（去彩色数字，用深色 fw900 更沉稳） ---------- */
 .stats-card {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 16rpx 16rpx;
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 24rpx;
-  border: 3rpx solid rgba(255,255,255,0.95);
-  box-shadow: 0 8rpx 22rpx rgba(122,92,78,0.10), inset 0 2rpx 0 rgba(255,255,255,0.95);
+  padding: var(--sp-4) var(--sp-3);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: none;
+  box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: hidden;
 }
-.stat-item { flex: 1; text-align: center; }
-.stat-num {
-  font-size: 36rpx;
-  font-weight: 900;
-  color: #F48FB1;
-  line-height: 1.1;
-}
-.stat-label {
-  font-size: 20rpx;
-  color: #8D6E63;
-  margin-top: 4rpx;
-}
-.stat-divider {
-  width: 2rpx;
-  height: 48rpx;
-  background: rgba(243,139,168,0.2);
+.stats-card::after {
+  /* 左上细 accent 线：品牌感，不抢眼 */
+  content: "";
+  position: absolute; left: 0; top: 0;
+  width: 56rpx; height: 4rpx;
+  background: var(--brand-400);
+  border-radius: 0 var(--radius-sm) 0 0;
 }
 
-/* ============ 区块通用 ============ */
-.section {
-  margin-top: 16rpx;
+.stat-item { flex: 1; text-align: center; min-width: 0; }
+
+.stat-num {
+  font-size: 38rpx;
+  font-weight: 900;
+  color: var(--text-900);      /* 深色而非彩色，克制 */
+  line-height: 1.1;
+  letter-spacing: .5rpx;
+  font-variant-numeric: tabular-nums;  /* 数字等宽，切换音效不跳动 */
 }
+
+.stat-label {
+  font-size: 20rpx;
+  color: var(--text-500);
+  margin-top: var(--sp-1);
+  letter-spacing: 1rpx;
+  font-weight: 500;
+}
+
+.stat-divider {
+  width: 1rpx;
+  height: 56rpx;
+  background: var(--brand-300);
+  opacity: .55;
+}
+
+/* ---------- 6. 区块标题（去 emoji，加结构化 accent 竖线） ---------- */
+.section { margin-top: var(--sp-5); }
+
 .section-title {
   display: flex;
   align-items: center;
   gap: 10rpx;
-  font-size: 26rpx;
-  font-weight: 900;
-  color: #5D4037;
-  margin-bottom: 10rpx;
-  padding-left: 4rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--text-900);
+  margin-bottom: var(--sp-3);
+  padding: 0 2rpx;
+  letter-spacing: -.3rpx;
 }
-.section-emoji { font-size: 28rpx; }
+/* 主竖线：品牌色，与文字同高，视觉锚点 */
+.section-title::before {
+  content: "";
+  display: inline-block;
+  width: 6rpx;
+  height: 28rpx;
+  background: var(--brand-500);
+  border-radius: 3rpx;
+  flex-shrink: 0;
+}
+.section-emoji { display: none; }   /* 精简：去掉 emoji，让文字本身成为焦点 */
 
-/* ============ 难度选择 ============ */
+/* ---------- 7. 难度选择（同构 · 结构化 accent 条承载差异化） ---------- */
 .difficulty-list {
   display: flex;
   flex-direction: column;
-  gap: 10rpx;
+  gap: var(--sp-2);
 }
-.difficulty-card {
+
+/* 高权重覆盖 WXML 里的 inline 渐变背景（要求"克制统一"） */
+.difficulty-card,
+.page .difficulty-card[style] {
   display: flex;
   align-items: center;
-  gap: 14rpx;
-  padding: 14rpx 22rpx;
-  border-radius: 22rpx;
-  border: 3rpx solid rgba(255,255,255,0.95);
-  box-shadow: 0 6rpx 18rpx rgba(122,92,78,0.08), inset 0 2rpx 0 rgba(255,255,255,0.95);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border-radius: var(--radius-lg);
+  background: var(--surface) !important;
+  border: 2rpx solid transparent;
+  box-shadow: var(--shadow-card);
+  transition:
+    transform var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    background var(--dur) var(--ease);
+  position: relative;
+  overflow: hidden;
 }
-.difficulty-card:active { transform: scale(0.98); }
+.difficulty-card:active { transform: scale(.98); box-shadow: var(--shadow-soft); }
+
+/* 每张卡的 accent 色条（左侧竖条，结构化差异化，符合经验） */
+.difficulty-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 6rpx;
+  background: var(--card-accent, var(--brand-300));
+  opacity: .9;
+}
+.difficulty-card-easy   { --card-accent: var(--accent-easy); }
+.difficulty-card-medium { --card-accent: var(--accent-med);  }
+.difficulty-card-hard   { --card-accent: var(--accent-hard); }
+
+/* 选中态：外描边品牌色 + 淡粉底 + 阴影加强 · 保持极简不花哨 */
 .difficulty-card.active {
-  border: 4rpx solid #F48FB1;
-  box-shadow: 0 8rpx 22rpx rgba(243,139,168,0.30), inset 0 2rpx 0 rgba(255,255,255,0.95);
+  background: var(--brand-50) !important;
+  border-color: var(--brand-400);
+  box-shadow:
+    0 10rpx 28rpx rgba(201,123,151, .16),
+    inset 0 0 0 1rpx rgba(255,255,255,.85);
 }
-.diff-emoji { font-size: 44rpx; flex-shrink: 0; }
-.diff-info { flex: 1; min-width: 0; }
-.diff-name { font-size: 28rpx; font-weight: 900; color: #5D4037; line-height: 1.2; }
-.diff-desc { font-size: 20rpx; color: #8D6E63; margin-top: 2rpx; }
+
+/* 难度 emoji 外包裹：统一 72rpx 圆角方 + 用 accent 色做淡背景（不是彩色块） */
+.diff-emoji {
+  font-size: 36rpx;
+  flex-shrink: 0;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-50);   /* 默认淡粉，再按难度类型单独覆盖（兼容旧基础库，不用 color-mix） */
+  position: relative;
+  z-index: 1;
+}
+.difficulty-card-easy   .diff-emoji { background: rgba(143,183,167, .18); }  /* 莫兰迪绿 18% */
+.difficulty-card-medium .diff-emoji { background: rgba(201,123,151, .16); }  /* 豆沙粉 16% */
+.difficulty-card-hard   .diff-emoji { background: rgba(181,126,86,  .16); }  /* 陶土橙 16% */
+
+.diff-info { flex: 1; min-width: 0; position: relative; z-index: 1; }
+.diff-name {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: var(--text-900);
+  line-height: 1.3;
+  letter-spacing: .2rpx;
+}
+.diff-desc {
+  font-size: 20rpx;
+  color: var(--text-500);
+  margin-top: 6rpx;
+  letter-spacing: .2rpx;
+}
+
 .diff-check {
   width: 40rpx;
   height: 40rpx;
-  border-radius: 50%;
-  background: #F48FB1;
+  border-radius: 12rpx;            /* 圆角方替代圆，更现代 */
+  background: var(--brand-500);
   color: #FFFFFF;
   display: flex;
   align-items: center;
@@ -180,49 +346,127 @@
   font-weight: 900;
   font-size: 24rpx;
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 6rpx 16rpx rgba(201,123,151, .32);
 }
 
-/* ============ 玩法说明（2×2 网格） ============ */
+/* ---------- 8. 玩法说明（2×2 卡片变极简 pill item） ---------- */
 .howto-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 10rpx;
+  gap: var(--sp-2);
 }
+
 .howto-item {
-  flex: 1 1 calc(50% - 5rpx);
-  min-width: calc(50% - 5rpx);
+  flex: 1 1 calc(50% - 8rpx);
+  min-width: calc(50% - 8rpx);
   display: flex;
   align-items: center;
-  gap: 10rpx;
-  padding: 14rpx 18rpx;
-  background: rgba(255, 255, 255, 0.88);
-  border-radius: 18rpx;
-  border: 2rpx solid rgba(255,255,255,0.95);
-  box-shadow: inset 0 1rpx 0 rgba(255,255,255,0.95);
+  gap: 14rpx;
+  padding: var(--sp-3) var(--sp-3);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: none;
+  box-shadow: var(--shadow-card);
+  transition: transform var(--dur) var(--ease);
 }
-.howto-emoji { font-size: 28rpx; flex-shrink: 0; }
-.howto-text { font-size: 24rpx; color: #6D4C41; font-weight: 700; }
+.howto-item:active { transform: scale(.985); }
 
-/* ============ 开始按钮（固定底部） ============ */
+.howto-emoji {
+  font-size: 26rpx;
+  flex-shrink: 0;
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-50);
+  color: var(--brand-500);
+}
+
+.howto-text {
+  font-size: 24rpx;
+  color: var(--text-700);
+  font-weight: 600;
+  letter-spacing: .2rpx;
+  line-height: 1.35;
+  min-width: 0;
+}
+
+/* ---------- 9. 开始按钮（覆盖 kawaii-btn 视觉，改极简主色胶囊） ---------- */
 .start-wrap {
   position: relative;
   z-index: 1;
   text-align: center;
-  margin-top: 4rpx;
-  /* padding-bottom 由内联 style 动态设置安全区高度 */
+  margin-top: var(--sp-2);
+  padding: var(--sp-2) var(--sp-5) 0;
 }
-.start-btn {
-  width: 78%;
-  font-size: 36rpx;
-  padding: 22rpx 0;
+
+/* 高权重覆盖 global.kawaii.scss 的 kawaii-btn / kawaii-btn-primary */
+.start-btn.kawaii-btn.kawaii-btn-primary,
+.page .start-btn.kawaii-btn.kawaii-btn-primary {
+  width: 100%;
+  max-width: 600rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  font-size: 32rpx;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+  padding: 26rpx 0;
+  color: #FFFFFF;
+  /* 克制渐变：主色 → 浅主色，同色相，不跨色 */
+  background: linear-gradient(135deg, var(--brand-500) 0%, var(--brand-400) 100%);
+  border-radius: var(--radius-pill);
+  border: none;
+  box-shadow: var(--shadow-btn);
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 140ms var(--ease),
+    box-shadow var(--dur) var(--ease),
+    filter var(--dur) var(--ease);
+}
+.start-btn.kawaii-btn.kawaii-btn-primary::after {
+  /* 顶部一条极细高光，比 kawaii 的彩虹描边更克制 */
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 40%;
+  background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0));
+  pointer-events: none;
+  border-radius: var(--radius-pill) var(--radius-pill) 0 0;
+}
+.start-btn.kawaii-btn.kawaii-btn-primary::before { display: none !important; }
+.start-btn.kawaii-btn.kawaii-btn-primary:active {
+  transform: scale(.98);
+  filter: brightness(.97);
+  box-shadow: 0 6rpx 18rpx rgba(201,123,151, .3);
 }
 .btn-icon {
-  margin-right: 10rpx;
-  font-size: 28rpx;
+  margin-right: 6rpx;
+  font-size: 26rpx;
+  font-weight: 900;
+  opacity: .95;
 }
+
 .tip-text {
-  margin-top: 12rpx;
+  margin-top: var(--sp-3);
   font-size: 20rpx;
-  color: #8D6E63;
-  font-weight: 600;
+  color: var(--text-500);
+  font-weight: 500;
+  letter-spacing: .3rpx;
+  opacity: .9;
+}
+.tip-text text:first-child { opacity: .85; margin-right: 4rpx; }
+
+/* ---------- 10. 动画：保持 anim-wiggle 但更柔和，anim-float 已无节点所以不生效 ---------- */
+.hero .anim-wiggle { animation: heroSway 3.2s ease-in-out infinite; transform-origin: 50% 90%; }
+@keyframes heroSway {
+  0%,100% { transform: rotate(-4deg) translateY(0); }
+   50%     { transform: rotate( 4deg) translateY(-3rpx); }
 }

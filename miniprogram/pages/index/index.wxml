@@ -9,12 +9,6 @@
 -->
 <view class="page adaptive-page" style="height: {{pageHeight}}rpx;">
 
-  <!-- 背景装饰（绝对定位，不影响布局） -->
-  <view class="bg-cloud cloud-1 anim-float"></view>
-  <view class="bg-cloud cloud-2 anim-float" style="animation-delay:-1.5s"></view>
-  <view class="bg-blob blob-pink"></view>
-  <view class="bg-blob blob-mint"></view>
-
   <!-- ============ 头部品牌区（固定，不滚动） ============ -->
   <view class="hero adaptive-fixed">
     <view class="hero-icons">
@@ -58,7 +52,7 @@
         <view
           wx:for="{{difficulties}}"
           wx:key="key"
-          class="difficulty-card {{difficulty === item.key ? 'active' : ''}}"
+          class="difficulty-card difficulty-card-{{item.key}} {{difficulty === item.key ? 'active' : ''}}"
           data-key="{{item.key}}"
           bindtap="onSelectDifficulty"
           style="background: linear-gradient(145deg, {{item.color}}, #FFFFFF 130%);"
