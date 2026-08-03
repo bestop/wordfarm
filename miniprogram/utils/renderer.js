@@ -235,13 +235,14 @@ class Renderer {
   }
 
   /**
-   * 离屏渲染：单只僵尸（萌系绘制）
-   * 离屏图尺寸按最大半径2倍，缩放复用
+   * 离屏渲染：单只僵尸（Q版萌系大头小身）
+   * 比例：头部占整体 60%+，圆润线条 + 夸张大眼 + 可爱装饰
+   * 离屏图按 120px 高绘制，主循环按 zombie.radius 缩放复用
    */
   _renderZombieToOffscreen(type) {
     const def = ZOMBIE_TYPES[type];
-    const r = 50;
-    const size = r * 2 + 20;
+    const UNIT = 50;              // 基准单位：全部比例基于此
+    const size = UNIT * 2.6;      // 画布尺寸（留出阴影与头部装饰）
     const canvas = wx.createOffscreenCanvas ? wx.createOffscreenCanvas({
       type: '2d',
       width: size * this.dpr,
@@ -252,78 +253,211 @@ class Renderer {
     ctx.scale(this.dpr, this.dpr);
     ctx.translate(size / 2, size / 2);
 
-    // 阴影
-    ctx.fillStyle = 'rgba(0,0,0,0.12)';
-    ctx.beginPath();
-    ctx.ellipse(0, r - 4, r * 0.7, r * 0.22, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 身体
-    ctx.fillStyle = def.color;
     ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    safeRoundRect(ctx, -r * 0.5, -r * 0.1, r, r * 0.7, r * 0.3);
-    ctx.fill();
-    ctx.stroke();
+    ctx.lineWidth = 3.2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
 
-    // 头
+    // 阴影（在底部）
+    ctx.fillStyle = 'rgba(0,0,0,0.14)';
     ctx.beginPath();
-    ctx.arc(0, -r * 0.3, r * 0.55, 0, Math.PI * 2);
+    ctx.ellipse(0, UNIT * 1.12, UNIT * 0.72, UNIT * 0.22, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.stroke();
 
-    // 路障帽（普通）/ 头带（快速）/ 头盔（强壮）
+    // 小手臂（两只肉肉的短手，身体两侧）
+    ctx.fillStyle = def.color;
+    ctx.beginPath();
+    ctx.ellipse(-UNIT * 0.62, UNIT * 0.35, UNIT * 0.18, UNIT * 0.25, -0.35, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(UNIT * 0.62, UNIT * 0.35, UNIT * 0.18, UNIT * 0.25, 0.35, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+
+    // 身体（极短的圆胖身躯，Q版夸张比例）
+    ctx.fillStyle = def.color;
+    ctx.beginPath();
+    safeRoundRect(ctx, -UNIT * 0.4, UNIT * 0.12, UNIT * 0.8, UNIT * 0.55, UNIT * 0.28);
+    ctx.fill(); ctx.stroke();
+    // 肚皮高光（浅色调斑点）
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(0, UNIT * 0.4, UNIT * 0.22, UNIT * 0.16, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 腿（两只短短的圆腿）
+    ctx.fillStyle = def.color;
+    ctx.beginPath();
+    ctx.ellipse(-UNIT * 0.2, UNIT * 0.8, UNIT * 0.16, UNIT * 0.14, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(UNIT * 0.2, UNIT * 0.8, UNIT * 0.16, UNIT * 0.14, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+
+    // 大头（Q版核心：占身体 60% 以上，上移以便装饰头顶）
+    const headCY = -UNIT * 0.18;
+    const headR  =  UNIT * 0.68;
+    ctx.fillStyle = def.color;
+    ctx.beginPath();
+    ctx.arc(0, headCY, headR, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+
+    // 头顶装饰（按类型差异化：交通锥/蝴蝶结/头盔+角）
     if (type === 'normal') {
-      ctx.fillStyle = '#FFC733';
+      // 交通锥（小黄锥 + 白纹）
+      ctx.fillStyle = '#FFCA28';
       ctx.beginPath();
-      ctx.moveTo(-r * 0.45, -r * 0.55);
-      ctx.lineTo(r * 0.45, -r * 0.55);
-      ctx.lineTo(r * 0.32, -r * 0.95);
-      ctx.lineTo(-r * 0.32, -r * 0.95);
+      ctx.moveTo(-headR * 0.55, headCY - headR * 0.2);
+      ctx.lineTo(headR * 0.55, headCY - headR * 0.2);
+      ctx.lineTo(headR * 0.28, headCY - headR * 1.35);
+      ctx.lineTo(-headR * 0.28, headCY - headR * 1.35);
       ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+      ctx.fill(); ctx.stroke();
+      // 白条纹
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      safeRoundRect(ctx, -headR * 0.4, headCY - headR * 0.48, headR * 0.8, headR * 0.12, headR * 0.05);
+      ctx.fill(); ctx.stroke();
     } else if (type === 'fast') {
-      ctx.fillStyle = '#FF8A65';
+      // 蝴蝶结头带（飘带 + 中央爱心）
+      ctx.fillStyle = '#FF6E40';
       ctx.beginPath();
-      safeRoundRect(ctx, -r * 0.5, -r * 0.75, r, r * 0.18, 4);
-      ctx.fill();
-      ctx.stroke();
+      safeRoundRect(ctx, -headR * 0.95, headCY - headR * 0.55, headR * 1.9, headR * 0.18, headR * 0.08);
+      ctx.fill(); ctx.stroke();
+      // 蝴蝶结左侧
+      ctx.beginPath();
+      ctx.moveTo(-headR * 0.3, headCY - headR * 0.46);
+      ctx.lineTo(-headR * 0.85, headCY - headR * 0.95);
+      ctx.lineTo(-headR * 0.85, headCY - headR * 0.02);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      // 蝴蝶结右侧
+      ctx.beginPath();
+      ctx.moveTo(headR * 0.3, headCY - headR * 0.46);
+      ctx.lineTo(headR * 0.85, headCY - headR * 0.95);
+      ctx.lineTo(headR * 0.85, headCY - headR * 0.02);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      // 中央爱心
+      ctx.fillStyle = '#FFFFFF';
+      this._drawHeartShape(ctx, 0, headCY - headR * 0.48, headR * 0.16);
+      ctx.fill(); ctx.stroke();
     } else {
-      // 强壮: 头盔半圆
-      ctx.fillStyle = '#90A4AE';
+      // 强壮头盔：银灰色 + 两个小熊耳朵 + 星章
+      ctx.fillStyle = '#B0BEC5';
       ctx.beginPath();
-      ctx.arc(0, -r * 0.3, r * 0.55, Math.PI, 0);
-      ctx.fill();
-      ctx.stroke();
+      ctx.arc(0, headCY, headR * 0.95, Math.PI * 1.02, Math.PI * 1.98);
+      ctx.lineTo(headR * 0.92, headCY);
+      ctx.lineTo(-headR * 0.92, headCY);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      // 两个耳朵（圆）
+      ctx.fillStyle = '#78909C';
+      ctx.beginPath();
+      ctx.arc(-headR * 0.78, headCY - headR * 0.98, headR * 0.22, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(headR * 0.78, headCY - headR * 0.98, headR * 0.22, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      // 中央星章
+      ctx.fillStyle = '#FFD54F';
+      this._drawStarShape(ctx, 0, headCY - headR * 0.48, headR * 0.16, 5, 0.45);
+      ctx.fill(); ctx.stroke();
     }
 
-    // 眼睛
+    // 超大大眼（Q版核心）
+    const eyeY  = headCY + headR * 0.02;
+    const eyeR  = headR * 0.27;
+    const eyeDX = headR * 0.33;
+    // 眼白（略带淡粉，萌）
     ctx.fillStyle = '#FFFFFF';
     ctx.beginPath();
-    ctx.arc(-r * 0.18, -r * 0.32, r * 0.12, 0, Math.PI * 2);
-    ctx.arc(r * 0.18, -r * 0.32, r * 0.12, 0, Math.PI * 2);
+    ctx.arc(-eyeDX, eyeY, eyeR, 0, Math.PI * 2);
+    ctx.arc( eyeDX, eyeY, eyeR, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#3E2723';
+    // 瞳孔（夸张大，看向右下方显得无辜呆萌）
+    ctx.fillStyle = '#4E342E';
     ctx.beginPath();
-    ctx.arc(-r * 0.15, -r * 0.30, r * 0.06, 0, Math.PI * 2);
-    ctx.arc(r * 0.21, -r * 0.30, r * 0.06, 0, Math.PI * 2);
+    ctx.arc(-eyeDX + eyeR * 0.18, eyeY + eyeR * 0.18, eyeR * 0.62, 0, Math.PI * 2);
+    ctx.arc( eyeDX + eyeR * 0.18, eyeY + eyeR * 0.18, eyeR * 0.62, 0, Math.PI * 2);
     ctx.fill();
-    // 腮红
-    ctx.fillStyle = 'rgba(255, 182, 193, 0.7)';
+    // 瞳仁高光（两点，灵动）
+    ctx.fillStyle = '#FFFFFF';
     ctx.beginPath();
-    ctx.ellipse(-r * 0.32, -r * 0.18, r * 0.08, r * 0.05, 0, 0, Math.PI * 2);
-    ctx.ellipse(r * 0.32, -r * 0.18, r * 0.08, r * 0.05, 0, 0, Math.PI * 2);
+    ctx.arc(-eyeDX + eyeR * 0.08, eyeY + eyeR * 0.02, eyeR * 0.18, 0, Math.PI * 2);
+    ctx.arc( eyeDX + eyeR * 0.08, eyeY + eyeR * 0.02, eyeR * 0.18, 0, Math.PI * 2);
     ctx.fill();
-    // 嘴
-    ctx.strokeStyle = '#3E2723';
+    ctx.beginPath();
+    ctx.arc(-eyeDX + eyeR * 0.34, eyeY + eyeR * 0.34, eyeR * 0.08, 0, Math.PI * 2);
+    ctx.arc( eyeDX + eyeR * 0.34, eyeY + eyeR * 0.34, eyeR * 0.08, 0, Math.PI * 2);
+    ctx.fill();
+    // 眼角下垂线（丧萌感）
+    ctx.strokeStyle = '#4E342E';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(0, -r * 0.15, r * 0.1, 0, Math.PI);
+    ctx.moveTo(-eyeDX - eyeR * 0.95, eyeY + eyeR * 0.2);
+    ctx.quadraticCurveTo(-eyeDX - eyeR * 0.5, eyeY + eyeR * 0.55, -eyeDX + eyeR * 0.1, eyeY + eyeR * 0.7);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(eyeDX + eyeR * 0.95, eyeY + eyeR * 0.2);
+    ctx.quadraticCurveTo(eyeDX + eyeR * 0.5, eyeY + eyeR * 0.55, eyeDX - eyeR * 0.1, eyeY + eyeR * 0.7);
     ctx.stroke();
 
+    // 腮红（爱心形，更萌）
+    ctx.fillStyle = 'rgba(255, 120, 150, 0.65)';
+    this._drawHeartShape(ctx, -eyeDX * 1.55, eyeY + eyeR * 0.82, eyeR * 0.22);
+    ctx.fill();
+    this._drawHeartShape(ctx,  eyeDX * 1.55, eyeY + eyeR * 0.82, eyeR * 0.22);
+    ctx.fill();
+
+    // 小嘴巴（O型张嘴惊讶笑，更萌）
+    ctx.fillStyle = '#E91E63';
+    ctx.beginPath();
+    ctx.ellipse(0, eyeY + headR * 0.62, headR * 0.12, headR * 0.17, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 小嘴内部高光（下嘴唇）
+    ctx.fillStyle = '#F48FB1';
+    ctx.beginPath();
+    ctx.ellipse(0, eyeY + headR * 0.68, headR * 0.06, headR * 0.07, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     return canvas;
+  }
+
+  /**
+   * 画一个爱心形状（已 beginPath，调用完再 fill/stroke）
+   * @param {number} cx
+   * @param {number} cy
+   * @param {number} size  - 整体大小（外接圆半径）
+   */
+  _drawHeartShape(ctx, cx, cy, size) {
+    const s = size;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + s * 0.65);
+    ctx.bezierCurveTo(cx - s * 1.4, cy - s * 0.1,   cx - s * 0.75, cy - s * 1.05, cx,           cy - s * 0.35);
+    ctx.bezierCurveTo(cx + s * 0.75, cy - s * 1.05,  cx + s * 1.4,  cy - s * 0.1,   cx,           cy + s * 0.65);
+    ctx.closePath();
+  }
+
+  /**
+   * 画一个五角星（已 beginPath）
+   * @param {number} cx
+   * @param {number} cy
+   * @param {number} outerR  - 外接圆半径
+   * @param {number} points  - 角数（默认5）
+   * @param {number} innerRatio - 内凹半径 / outerR
+   */
+  _drawStarShape(ctx, cx, cy, outerR, points = 5, innerRatio = 0.45) {
+    const n = points;
+    const innerR = outerR * innerRatio;
+    ctx.beginPath();
+    for (let i = 0; i < n * 2; i++) {
+      const r = (i % 2 === 0) ? outerR : innerR;
+      const a = -Math.PI / 2 + (i * Math.PI) / n;
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
   }
 
   /**
@@ -509,12 +643,12 @@ class Renderer {
     ctx.lineWidth = 3;
     ctx.lineJoin = 'round';
 
-    // 按类型绘制植物造型
+    // 按类型绘制植物造型（wobble 作为眨眼动画相位传递下去）
     switch (def.type) {
-      case 'shooter': this._drawShooter(ctx, r, def); break;
-      case 'wall':    this._drawWall(ctx, r, def); break;
-      case 'freezer': this._drawFreezer(ctx, r, def); break;
-      default:        this._drawWall(ctx, r, def); break;  // 兜底
+      case 'shooter': this._drawShooter(ctx, r, def, plant.wobble); break;
+      case 'wall':    this._drawWall(ctx, r, def, plant.wobble); break;
+      case 'freezer': this._drawFreezer(ctx, r, def, plant.wobble); break;
+      default:        this._drawWall(ctx, r, def, plant.wobble); break;
     }
 
     // 血条（受伤时显示）
@@ -533,142 +667,299 @@ class Renderer {
   }
 
   /**
-   * 萌系表情：眼白 + 瞳孔 + 高光 + 腮红 + 微笑嘴
-   * @param {number} r - 表情尺寸基准半径（通常等于头部半径）
-   * @param {number} cy - 表情中心 y 坐标
+   * 萌系表情（Q版升级）：支持眨眼动画、爱心腮红、多种嘴型
+   * @param {number} r     - 头部基准半径
+   * @param {number} cy    - 表情中心 y 坐标
+   * @param {Object} [opts]
+   * @param {'smile'|'o'|'grin'} [opts.mouth='smile'] - 嘴型
+   * @param {number} [opts.wobblePhase=0] - 摇摆相位（用于眨眼动画）
+   * @param {string} [opts.blushColor='rgba(255,150,170,0.65)'] - 腮红色
    */
-  _drawCuteFace(ctx, r, cy) {
-    // 眼白
+  _drawCuteFace(ctx, r, cy, opts = {}) {
+    const mouth       = opts.mouth       || 'smile';
+    const wobblePhase = opts.wobblePhase || 0;
+    const blushColor  = opts.blushColor  || 'rgba(255, 150, 170, 0.65)';
+    // 眼睛参数：Q版大比例
+    const eyeDX = r * 0.36;
+    const eyeR  = r * 0.24;
+    const eyeY  = cy;
+    // 眨眼：每 2.5s 眨一次（wobblePhase 驱动的 sin 周期），持续约 120ms
+    const blinkT = (Math.sin(wobblePhase) + 1) / 2;   // 0~1
+    const blink  = blinkT > 0.94 ? (1 - (blinkT - 0.94) / 0.06) : 1;  // 1 睁眼 → 0 闭眼
+    const eyeH   = Math.max(0.05, eyeR * blink);
+
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap  = 'round';
+
+    // 眼白（睁眼时椭圆，闭眼时窄缝）
     ctx.fillStyle = '#FFFFFF';
     ctx.beginPath();
-    ctx.arc(-r * 0.3, cy, r * 0.2, 0, Math.PI * 2);
-    ctx.arc(r * 0.3, cy, r * 0.2, 0, Math.PI * 2);
+    ctx.ellipse(-eyeDX, eyeY, eyeR * 0.96, eyeH, 0, 0, Math.PI * 2);
+    ctx.ellipse( eyeDX, eyeY, eyeR * 0.96, eyeH, 0, 0, Math.PI * 2);
     ctx.fill();
-    // 瞳孔（略偏内侧，显得聚精会神）
-    ctx.fillStyle = '#3E2723';
-    ctx.beginPath();
-    ctx.arc(-r * 0.26, cy + r * 0.03, r * 0.11, 0, Math.PI * 2);
-    ctx.arc(r * 0.34, cy + r * 0.03, r * 0.11, 0, Math.PI * 2);
-    ctx.fill();
-    // 眼神高光
-    ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath();
-    ctx.arc(-r * 0.22, cy - r * 0.02, r * 0.04, 0, Math.PI * 2);
-    ctx.arc(r * 0.38, cy - r * 0.02, r * 0.04, 0, Math.PI * 2);
-    ctx.fill();
-    // 腮红
-    ctx.fillStyle = 'rgba(255, 150, 170, 0.65)';
-    ctx.beginPath();
-    ctx.ellipse(-r * 0.52, cy + r * 0.28, r * 0.14, r * 0.08, 0, 0, Math.PI * 2);
-    ctx.ellipse(r * 0.52, cy + r * 0.28, r * 0.14, r * 0.08, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // 微笑嘴
-    ctx.strokeStyle = '#3E2723';
-    ctx.lineWidth = 2.4;
-    ctx.beginPath();
-    ctx.arc(0, cy + r * 0.32, r * 0.16, 0.15 * Math.PI, 0.85 * Math.PI);
+    // 眼睛白描边
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 1.2;
     ctx.stroke();
+
+    if (blink > 0.4) {
+      // 瞳孔（仅睁眼状态）
+      ctx.fillStyle = '#4E342E';
+      const pupilR = eyeR * 0.56 * blink;
+      // 瞳孔偏右下，显得无辜呆萌
+      const pOffsetX = eyeR * 0.16;
+      const pOffsetY = eyeR * 0.14;
+      ctx.beginPath();
+      ctx.arc(-eyeDX + pOffsetX, eyeY + pOffsetY, pupilR, 0, Math.PI * 2);
+      ctx.arc( eyeDX + pOffsetX, eyeY + pOffsetY, pupilR, 0, Math.PI * 2);
+      ctx.fill();
+      // 双高光（灵动）
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.arc(-eyeDX + eyeR * 0.05, eyeY - eyeR * 0.08, pupilR * 0.42, 0, Math.PI * 2);
+      ctx.arc( eyeDX + eyeR * 0.05, eyeY - eyeR * 0.08, pupilR * 0.42, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(-eyeDX + eyeR * 0.38, eyeY + eyeR * 0.26, pupilR * 0.18, 0, Math.PI * 2);
+      ctx.arc( eyeDX + eyeR * 0.38, eyeY + eyeR * 0.26, pupilR * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // 闭眼：用两条弧线代替（眯眯笑眼）
+      ctx.strokeStyle = '#4E342E';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(-eyeDX, eyeY + eyeR * 0.2, eyeR * 0.5, Math.PI * 1.12, Math.PI * 1.88);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc( eyeDX, eyeY + eyeR * 0.2, eyeR * 0.5, Math.PI * 1.12, Math.PI * 1.88);
+      ctx.stroke();
+    }
+
+    // 腮红（爱心形，视觉更萌）
+    ctx.fillStyle = blushColor;
+    const blushCX = r * 0.62;
+    const blushCY = cy + r * 0.38;
+    this._drawHeartShape(ctx, -blushCX, blushCY, r * 0.15);
+    ctx.fill();
+    this._drawHeartShape(ctx,  blushCX, blushCY, r * 0.15);
+    ctx.fill();
+
+    // 嘴型（三种）
+    const mouthY = cy + r * 0.5;
+    if (mouth === 'o') {
+      // O型张嘴惊讶笑
+      ctx.fillStyle = '#E91E63';
+      ctx.beginPath();
+      ctx.ellipse(0, mouthY, r * 0.13, r * 0.18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+      // 下嘴唇内高光
+      ctx.fillStyle = '#F48FB1';
+      ctx.beginPath();
+      ctx.ellipse(0, mouthY + r * 0.06, r * 0.06, r * 0.07, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (mouth === 'grin') {
+      // 露齿笑（宽嘴）
+      ctx.fillStyle = '#E91E63';
+      ctx.beginPath();
+      ctx.arc(0, mouthY - r * 0.02, r * 0.28, 0.1 * Math.PI, 0.9 * Math.PI);
+      ctx.lineTo(r * 0.22, mouthY - r * 0.02);
+      ctx.closePath();
+      ctx.fill();
+      // 牙齿
+      ctx.fillStyle = '#FFFFFF';
+      safeRoundRect(ctx, -r * 0.15, mouthY - r * 0.02, r * 0.3, r * 0.1, r * 0.03);
+      ctx.fill();
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+    } else {
+      // 微笑（默认）：上扬弧线
+      ctx.strokeStyle = '#4E342E';
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.arc(0, mouthY - r * 0.15, r * 0.22, 0.15 * Math.PI, 0.85 * Math.PI);
+      ctx.stroke();
+    }
+
+    ctx.restore();
   }
 
   /**
-   * 豌豆射手：底部绿叶 + 茎 + 绿色圆头 + 头顶发射口
+   * 豌豆射手（Q版升级）：大头 + 头顶豌豆 + 圆润茎叶 + 大大发射口
    */
-  _drawShooter(ctx, r, def) {
-    // 底部两片叶子
+  _drawShooter(ctx, r, def, wobblePhase) {
+    const headR = r * 1.0;            // 头部更大
+    const headY = -r * 0.25;          // 头部略偏上
+    // 底部三片叶子（更饱满扇形）
+    ctx.fillStyle = '#AED581';
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.7, r * 0.55, r * 0.46, r * 0.22, -0.55, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#9CCC65';
     ctx.beginPath();
-    ctx.ellipse(-r * 0.55, r * 0.7, r * 0.42, r * 0.2, -0.5, 0, Math.PI * 2);
+    ctx.ellipse( r * 0.7, r * 0.55, r * 0.46, r * 0.22,  0.55, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#C5E1A5';
     ctx.beginPath();
-    ctx.ellipse(r * 0.55, r * 0.7, r * 0.42, r * 0.2, 0.5, 0, Math.PI * 2);
+    ctx.ellipse(0, r * 0.72, r * 0.32, r * 0.18, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    // 茎
+    // 茎（粗短，圆润）
     ctx.fillStyle = '#7CB342';
     ctx.beginPath();
-    safeRoundRect(ctx, -r * 0.13, r * 0.15, r * 0.26, r * 0.55, r * 0.1);
+    safeRoundRect(ctx, -r * 0.16, r * 0.1, r * 0.32, r * 0.52, r * 0.13);
     ctx.fill(); ctx.stroke();
-    // 头部
+    // 头部（略椭圆、圆头圆脑）
     ctx.fillStyle = def.color;
     ctx.beginPath();
-    ctx.arc(0, -r * 0.1, r * 0.85, 0, Math.PI * 2);
+    ctx.ellipse(0, headY, headR * 1.0, headR * 0.95, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    // 头顶发射口
+    // 头顶"待发射"豌豆（小绿珠在口前上方，暗示攻击）
+    ctx.fillStyle = '#C5E1A5';
+    ctx.beginPath();
+    ctx.arc(0, headY - headR * 0.72, headR * 0.22, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#F1F8E9';
+    ctx.beginPath();
+    ctx.arc(-headR * 0.07, headY - headR * 0.78, headR * 0.07, 0, Math.PI * 2);
+    ctx.fill();
+    // 发射口（在豌豆下方）
     ctx.fillStyle = '#558B2F';
     ctx.beginPath();
-    ctx.ellipse(0, -r * 0.88, r * 0.32, r * 0.2, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, headY - headR * 0.5, headR * 0.38, headR * 0.18, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    // 发射口内孔
     ctx.fillStyle = '#33691E';
     ctx.beginPath();
-    ctx.ellipse(0, -r * 0.88, r * 0.18, r * 0.1, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, headY - headR * 0.5, headR * 0.22, headR * 0.09, 0, 0, Math.PI * 2);
     ctx.fill();
-    // 表情
-    this._drawCuteFace(ctx, r * 0.85, -r * 0.12);
+    // 头部高光
+    ctx.fillStyle = 'rgba(255,255,255,0.32)';
+    ctx.beginPath();
+    ctx.ellipse(-headR * 0.38, headY - headR * 0.3, headR * 0.2, headR * 0.36, -0.5, 0, Math.PI * 2);
+    ctx.fill();
+    // 表情（露齿笑）
+    this._drawCuteFace(ctx, headR, headY + headR * 0.08, { mouth: 'grin', wobblePhase: wobblePhase });
   }
 
   /**
-   * 坚果墙：顶部绿叶 + 棕色坚果身 + 高光 + 坚毅表情
+   * 坚果墙（Q版升级）：大头 + 头顶小芽 + 坚毅纹 + 腮红
    */
-  _drawWall(ctx, r, def) {
-    // 顶部两片小叶子
-    ctx.fillStyle = '#7CB342';
+  _drawWall(ctx, r, def, wobblePhase) {
+    const headR = r * 1.02;
+    const headY = r * 0.02;
+    // 头顶三片嫩芽（代替小叶，更可爱）
+    ctx.fillStyle = '#66BB6A';
     ctx.beginPath();
-    ctx.ellipse(-r * 0.22, -r * 0.95, r * 0.26, r * 0.15, -0.6, 0, Math.PI * 2);
+    ctx.ellipse(-r * 0.28, -r * 0.92, r * 0.18, r * 0.3, -0.35, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#81C784';
     ctx.beginPath();
-    ctx.ellipse(r * 0.26, -r * 0.9, r * 0.24, r * 0.14, 0.6, 0, Math.PI * 2);
+    ctx.ellipse(0, -r * 1.02, r * 0.15, r * 0.36, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    // 坚果身体（略扁圆）
+    ctx.fillStyle = '#66BB6A';
+    ctx.beginPath();
+    ctx.ellipse(r * 0.28, -r * 0.92, r * 0.18, r * 0.3, 0.35, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 身体（圆胖坚果）
     ctx.fillStyle = def.color;
     ctx.beginPath();
-    ctx.ellipse(0, r * 0.05, r * 0.85, r * 0.95, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, headY, headR * 1.0, headR * 1.05, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    // 左上高光
-    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    // 坚果树纹（三条弧形横纹，坚果质感）
+    ctx.strokeStyle = 'rgba(109, 76, 65, 0.35)';
+    ctx.lineWidth = 2;
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.ellipse(0, headY + i * headR * 0.28, headR * 0.78, headR * 0.06, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // 高光（大块）
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
     ctx.beginPath();
-    ctx.ellipse(-r * 0.3, -r * 0.35, r * 0.22, r * 0.3, -0.5, 0, Math.PI * 2);
+    ctx.ellipse(-headR * 0.4, headY - headR * 0.38, headR * 0.26, headR * 0.44, -0.5, 0, Math.PI * 2);
     ctx.fill();
-    // 表情
-    this._drawCuteFace(ctx, r * 0.85, 0);
+    // 表情（坚毅微笑 + 深红腮红）
+    this._drawCuteFace(ctx, headR, headY + headR * 0.1, {
+      mouth: 'smile',
+      wobblePhase: wobblePhase,
+      blushColor: 'rgba(244, 143, 177, 0.75)'
+    });
   }
 
   /**
-   * 寒冰射手：冰蓝叶 + 茎 + 蓝色圆头 + 头顶冰晶 + 发射口
+   * 寒冰射手（Q版升级）：大头 + 头顶雪花冰晶 + 晶莹冰感 + 雪花散落装饰
    */
-  _drawFreezer(ctx, r, def) {
-    // 底部两片叶子（冰蓝）
+  _drawFreezer(ctx, r, def, wobblePhase) {
+    const headR = r * 1.0;
+    const headY = -r * 0.25;
+    // 底部三片冰蓝叶
+    ctx.fillStyle = '#B2EBF2';
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.7, r * 0.55, r * 0.46, r * 0.22, -0.55, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#80DEEA';
     ctx.beginPath();
-    ctx.ellipse(-r * 0.55, r * 0.7, r * 0.42, r * 0.2, -0.5, 0, Math.PI * 2);
+    ctx.ellipse( r * 0.7, r * 0.55, r * 0.46, r * 0.22,  0.55, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#D1F4F8';
     ctx.beginPath();
-    ctx.ellipse(r * 0.55, r * 0.7, r * 0.42, r * 0.2, 0.5, 0, Math.PI * 2);
+    ctx.ellipse(0, r * 0.72, r * 0.32, r * 0.18, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
     // 茎
     ctx.fillStyle = '#4DD0E1';
     ctx.beginPath();
-    safeRoundRect(ctx, -r * 0.13, r * 0.15, r * 0.26, r * 0.55, r * 0.1);
+    safeRoundRect(ctx, -r * 0.16, r * 0.1, r * 0.32, r * 0.52, r * 0.13);
     ctx.fill(); ctx.stroke();
-    // 头部
+    // 头部（冰蓝）
     ctx.fillStyle = def.color;
     ctx.beginPath();
-    ctx.arc(0, -r * 0.1, r * 0.85, 0, Math.PI * 2);
+    ctx.ellipse(0, headY, headR * 1.0, headR * 0.95, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    // 头顶发射口
+    // 头部大块高光（冰感）
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.beginPath();
+    ctx.ellipse(-headR * 0.42, headY - headR * 0.3, headR * 0.22, headR * 0.42, -0.5, 0, Math.PI * 2);
+    ctx.fill();
+    // 发射口
     ctx.fillStyle = '#0277BD';
     ctx.beginPath();
-    ctx.ellipse(0, -r * 0.88, r * 0.3, r * 0.18, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, headY - headR * 0.5, headR * 0.36, headR * 0.18, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    // 冰晶装饰（发射口上方）
+    ctx.fillStyle = '#01579B';
+    ctx.beginPath();
+    ctx.ellipse(0, headY - headR * 0.5, headR * 0.2, headR * 0.09, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // 发射口上方大冰晶（菱形雪花）
     ctx.fillStyle = '#E1F5FE';
     ctx.beginPath();
-    ctx.moveTo(0, -r * 1.25);
-    ctx.lineTo(-r * 0.16, -r * 0.95);
-    ctx.lineTo(r * 0.16, -r * 0.95);
+    ctx.moveTo(0, headY - headR * 1.05);
+    ctx.lineTo(headR * 0.2, headY - headR * 0.7);
+    ctx.lineTo(0, headY - headR * 0.36);
+    ctx.lineTo(-headR * 0.2, headY - headR * 0.7);
     ctx.closePath();
     ctx.fill(); ctx.stroke();
-    // 表情
-    this._drawCuteFace(ctx, r * 0.85, -r * 0.12);
+    // 冰晶十字纹
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(0, headY - headR * 1.0); ctx.lineTo(0, headY - headR * 0.42);
+    ctx.moveTo(-headR * 0.15, headY - headR * 0.7); ctx.lineTo(headR * 0.15, headY - headR * 0.7);
+    ctx.stroke();
+    // 头部周围两颗小雪花点缀
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    this._drawStarShape(ctx, headR * 0.55, headY - headR * 0.05, headR * 0.1, 6, 0.5);
+    ctx.fill();
+    this._drawStarShape(ctx, -headR * 0.6, headY + headR * 0.2, headR * 0.08, 6, 0.5);
+    ctx.fill();
+    // 表情（O型惊讶 + 冷调腮蓝）
+    this._drawCuteFace(ctx, headR, headY + headR * 0.08, {
+      mouth: 'o',
+      wobblePhase: wobblePhase,
+      blushColor: 'rgba(120, 200, 255, 0.55)'
+    });
   }
 
   /**

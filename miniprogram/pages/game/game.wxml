@@ -49,7 +49,24 @@
         data-type="{{item.type}}"
         bindtap="onShopSelect"
       >
-        <view class="shop-emoji">{{item.emoji}}</view>
+        <!-- 纯 CSS 萌系植物图标（与 Canvas 植物风格一致，无图片） -->
+        <view class="shop-avatar shop-avatar-{{item.type}}">
+          <view class="sa-head"></view>
+          <view class="sa-deco-top"></view>
+          <view class="sa-deco-left"></view>
+          <view class="sa-deco-right"></view>
+          <view class="sa-eye sa-eye-l">
+            <view class="sa-pupil"></view>
+            <view class="sa-shine"></view>
+          </view>
+          <view class="sa-eye sa-eye-r">
+            <view class="sa-pupil"></view>
+            <view class="sa-shine"></view>
+          </view>
+          <view class="sa-blush sa-blush-l"></view>
+          <view class="sa-blush sa-blush-r"></view>
+          <view class="sa-mouth"></view>
+        </view>
         <view class="shop-name">{{item.name}}</view>
         <view class="shop-cost">
           <text class="shop-cost-icon">☀️</text>

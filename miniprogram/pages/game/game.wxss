@@ -202,6 +202,304 @@
   opacity: 0.45;
   filter: grayscale(0.4);
 }
+/* ===== 商店栏：纯 CSS 萌系植物头像（与 Canvas 角色风格一致，无图片） ===== */
+.shop-avatar {
+  position: relative;
+  width: 56rpx;
+  height: 56rpx;
+  margin: 0 auto;
+  /* 微微浮动 + 点击缩放（与 shop-item 过渡协调） */
+}
+
+/* 头部圆（所有植物共用，主色在各自 type 类覆盖） */
+.shop-avatar .sa-head {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #7CB342;
+  border: 2.5rpx solid #FFFFFF;
+  box-shadow: inset -8rpx -8rpx 0 rgba(0,0,0,0.08),
+              0 2rpx 6rpx rgba(124,179,66,0.35);
+}
+/* 头部高光（模拟 Canvas 左上高光，统一立体感） */
+.shop-avatar .sa-head::after {
+  content: '';
+  position: absolute;
+  top: 14%;
+  left: 18%;
+  width: 28%;
+  height: 42%;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.38);
+  transform: rotate(-40deg);
+}
+
+/* 顶部装饰（shooter:豌豆+发射口 / wall:嫩芽 / freezer:冰晶） */
+.shop-avatar .sa-deco-top {
+  position: absolute;
+  left: 50%;
+  top: -14%;
+  transform: translateX(-50%);
+  width: 58%;
+  height: 26%;
+  border-radius: 50%;
+  background: #33691E;
+  border: 2rpx solid #FFFFFF;
+}
+.shop-avatar .sa-deco-top::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -55%;
+  transform: translateX(-50%);
+  width: 56%;
+  height: 90%;
+  border-radius: 50%;
+  background: #C5E1A5;
+  border: 2rpx solid #FFFFFF;
+  box-shadow: inset -3rpx -3rpx 0 rgba(255,255,255,0.35);
+}
+/* 左右叶片（shooter/freezer 共用，wall 不用） */
+.shop-avatar .sa-deco-left,
+.shop-avatar .sa-deco-right {
+  position: absolute;
+  bottom: -8%;
+  width: 46%;
+  height: 30%;
+  border-radius: 50%;
+  background: #9CCC65;
+  border: 2rpx solid #FFFFFF;
+}
+.shop-avatar .sa-deco-left  { left: -18%; transform: rotate(-28deg); }
+.shop-avatar .sa-deco-right { right: -18%; transform: rotate(28deg); }
+
+/* 超级大大眼（Q版核心，两侧各一只 + 瞳孔偏右下 + 双高光） */
+.shop-avatar .sa-eye {
+  position: absolute;
+  top: 30%;
+  width: 24%;
+  height: 26%;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 1.5rpx solid rgba(255,255,255,0.85);
+}
+.shop-avatar .sa-eye-l { left: 20%; }
+.shop-avatar .sa-eye-r { right: 20%; }
+.shop-avatar .sa-pupil {
+  position: absolute;
+  right: 16%;
+  bottom: 12%;
+  width: 56%;
+  height: 56%;
+  border-radius: 50%;
+  background: #4E342E;
+}
+.shop-avatar .sa-shine {
+  position: absolute;
+  left: 22%;
+  top: 16%;
+  width: 26%;
+  height: 26%;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 14rpx 22rpx 0 -2rpx #FFFFFF; /* 第二颗小高光 */
+}
+
+/* 爱心形腮红（纯 CSS：两个圆 + 方形旋转） */
+.shop-avatar .sa-blush {
+  position: absolute;
+  bottom: 22%;
+  width: 16%;
+  height: 10%;
+  background: rgba(255,130,160,0.6);
+}
+.shop-avatar .sa-blush::before,
+.shop-avatar .sa-blush::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 68%;
+  height: 160%;
+  border-radius: 50%;
+  background: inherit;
+}
+.shop-avatar .sa-blush::before { left: 0; }
+.shop-avatar .sa-blush::after  { right: 0; }
+.shop-avatar .sa-blush-l { left: 6%;  transform: rotate(-10deg); }
+.shop-avatar .sa-blush-r { right: 6%; transform: rotate(10deg); }
+
+/* 微笑嘴（弧线：上边框半圆） */
+.shop-avatar .sa-mouth {
+  position: absolute;
+  left: 50%;
+  bottom: 18%;
+  transform: translateX(-50%);
+  width: 24%;
+  height: 12%;
+  border: 2.2rpx solid #4E342E;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-radius: 0 0 60% 60% / 0 0 100% 100%;
+}
+
+/* ============ 3 种植物差异化 ============ */
+/* 豌豆 shooter */
+.shop-avatar.shop-avatar-shooter .sa-head { background: #7CB342; box-shadow: inset -8rpx -8rpx 0 rgba(0,0,0,0.08),0 2rpx 6rpx rgba(124,179,66,0.35); }
+.shop-avatar.shop-avatar-shooter .sa-deco-top { background: #558B2F; }
+.shop-avatar.shop-avatar-shooter .sa-deco-top::after { background: #C5E1A5; }
+.shop-avatar.shop-avatar-shooter .sa-deco-left,
+.shop-avatar.shop-avatar-shooter .sa-deco-right { background: #AED581; }
+.shop-avatar.shop-avatar-shooter .sa-mouth { /* 露齿笑：填充 + 牙齿 */
+  background: #E91E63;
+  border-top: none;
+  border-left: 2.2rpx solid #FFFFFF;
+  border-right: 2.2rpx solid #FFFFFF;
+  border-bottom: 2.2rpx solid #FFFFFF;
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  width: 32%;
+  height: 16%;
+  bottom: 16%;
+}
+.shop-avatar.shop-avatar-shooter .sa-mouth::after {
+  content: '';
+  position: absolute;
+  left: 20%;
+  top: -2rpx;
+  width: 60%;
+  height: 38%;
+  background: #FFFFFF;
+  border-radius: 0 0 50% 50%;
+}
+
+/* 坚果 wall */
+.shop-avatar.shop-avatar-wall .sa-head {
+  background: #A1887F;
+  border-radius: 46%;
+  box-shadow: inset -8rpx -8rpx 0 rgba(0,0,0,0.12),0 2rpx 6rpx rgba(161,136,127,0.35);
+}
+/* 坚果三条横纹 */
+.shop-avatar.shop-avatar-wall .sa-head::before {
+  content: '';
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  top: 32%;
+  height: 36%;
+  border-top: 2rpx solid rgba(109,76,65,0.35);
+  border-bottom: 2rpx solid rgba(109,76,65,0.35);
+  z-index: 0;
+  box-sizing: border-box;
+  padding-top: 17%;
+}
+.shop-avatar.shop-avatar-wall .sa-deco-left,
+.shop-avatar.shop-avatar-wall .sa-deco-right {
+  display: none; /* 坚果无侧叶 */
+}
+/* 顶部三嫩芽（一个 deco-top 负责中间，用伪元素做两侧） */
+.shop-avatar.shop-avatar-wall .sa-deco-top {
+  background: #81C784;
+  width: 24%;
+  height: 36%;
+  border-radius: 48%;
+  top: -22%;
+  transform: translateX(-50%) rotate(0deg);
+}
+.shop-avatar.shop-avatar-wall .sa-deco-top::before {
+  content: '';
+  position: absolute;
+  left: -130%;
+  top: 36%;
+  width: 90%;
+  height: 72%;
+  background: #66BB6A;
+  border: 2rpx solid #FFFFFF;
+  border-radius: 48%;
+  transform: rotate(-32deg);
+}
+.shop-avatar.shop-avatar-wall .sa-deco-top::after {
+  content: '';
+  position: absolute;
+  right: -130%;
+  top: 36%;
+  width: 90%;
+  height: 72%;
+  background: #66BB6A;
+  border: 2rpx solid #FFFFFF;
+  border-radius: 48%;
+  transform: rotate(32deg);
+  box-shadow: none;
+}
+.shop-avatar.shop-avatar-wall .sa-blush-l,
+.shop-avatar.shop-avatar-wall .sa-blush-r {
+  background: rgba(244,143,177,0.78);
+}
+
+/* 寒冰 freezer */
+.shop-avatar.shop-avatar-freezer .sa-head { background: #4FC3F7; box-shadow: inset -8rpx -8rpx 0 rgba(0,0,0,0.06),0 2rpx 6rpx rgba(79,195,247,0.35); }
+.shop-avatar.shop-avatar-freezer .sa-deco-left,
+.shop-avatar.shop-avatar-freezer .sa-deco-right { background: #80DEEA; }
+.shop-avatar.shop-avatar-freezer .sa-deco-top {
+  background: #0277BD;
+  width: 54%;
+  height: 22%;
+  top: -10%;
+}
+/* 顶部菱形冰晶 */
+.shop-avatar.shop-avatar-freezer .sa-deco-top::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -160%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 46%;
+  height: 260%;
+  background: #E1F5FE;
+  border-radius: 14%;
+  border: 2rpx solid #FFFFFF;
+  box-shadow: none;
+}
+/* 冰晶十字纹（边框十字） */
+.shop-avatar.shop-avatar-freezer .sa-deco-top::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -145%;
+  transform: translateX(-50%);
+  width: 22%;
+  height: 230%;
+  z-index: 1;
+  pointer-events: none;
+  box-shadow: inset 1.5rpx 0 0 #FFFFFF, inset -1.5rpx 0 0 #FFFFFF;
+}
+.shop-avatar.shop-avatar-freezer .sa-blush-l,
+.shop-avatar.shop-avatar-freezer .sa-blush-r {
+  background: rgba(120,200,255,0.58);
+}
+.shop-avatar.shop-avatar-freezer .sa-mouth {
+  /* O型张嘴 */
+  width: 20%;
+  height: 20%;
+  background: #E91E63;
+  border: 2.2rpx solid #FFFFFF;
+  border-radius: 50%;
+  bottom: 18%;
+  box-shadow: inset 0 -4rpx 0 #F48FB1;
+}
+.shop-avatar.shop-avatar-freezer .sa-mouth::before,
+.shop-avatar.shop-avatar-freezer .sa-mouth::after {
+  display: none;
+}
+
+/* 选中态：头像微微放大弹跳 */
+.shop-item.selected .shop-avatar {
+  transform: scale(1.12) rotate(-3deg);
+}
+/* 禁用态（阳光不足）：头像去色半透明 */
+.shop-item.disabled .shop-avatar {
+  filter: grayscale(0.5) opacity(0.6);
+}
+
 .shop-emoji {
   font-size: 34rpx;
   line-height: 1;
