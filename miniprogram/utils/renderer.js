@@ -47,6 +47,155 @@ function safeRoundRect(ctx, x, y, w, h, r) {
 /**
  * 渲染器类
  */
+
+/* ========================================================
+   RENDER_TOKENS 设计系统中心（系统性视觉优化 v2）
+   · 所有色彩 / 描边 / 比例 / 高光 / 阴影参数统一从此取
+   · 与 shop-avatar (game.wxss) 的数值保持 1:1 映射，
+     保证 Canvas 角色 ↔ CSS 物品栏风格完全一致
+   ====================================================== */
+const RENDER_TOKENS = {
+  // ---------- 色彩 Palette ----------
+  COLORS: {
+    INK:       '#4E342E',  // 瞳孔/嘴线：统一深咖（替换散落 #4E342E）
+    STROKE:    '#FFFFFF',  // 萌系白描边：角色造型/装饰
+    MOUTH_PINK:'#E91E63',  // O嘴/露齿嘴 深粉
+    MOUTH_LIP: '#F48FB1',  // 下唇高光粉
+    BLUSH_PINK:'rgba(255,150,170,0.65)',  // 植物通用粉腮
+    BLUSH_RICH:'rgba(244,143,177,0.75)',  // 坚果浓腮红
+    BLUSH_COOL:'rgba(120,200,255,0.55)',  // 寒冰腮蓝
+    BLUSH_ZOMBIE:'rgba(255,120,150,0.65)',// 僵尸爱心腮红
+    // 豌豆 Shooter
+    S_LEAF_DARK:  '#AED581',
+    S_LEAF_MID:   '#9CCC65',
+    S_LEAF_LIGHT: '#C5E1A5',
+    S_STEM:       '#7CB342',
+    S_PEA_LIGHT:  '#C5E1A5',
+    S_MOUTH_OUT:  '#558B2F',
+    S_MOUTH_IN:   '#33691E',
+    S_PEA_SHINE:  '#F1F8E9',
+    // 坚果 Wall
+    W_SPROUT_DARK:'#66BB6A',
+    W_SPROUT_LIGHT:'#81C784',
+    W_RIND:       'rgba(109,76,65,0.35)',  // 坚果壳纹
+    // 寒冰 Freezer
+    F_LEAF_DARK:  '#B2EBF2',
+    F_LEAF_MID:   '#80DEEA',
+    F_LEAF_LIGHT: '#D1F4F8',
+    F_STEM:       '#4DD0E1',
+    F_MOUTH_OUT:  '#0277BD',
+    F_MOUTH_IN:   '#01579B',
+    F_CRYSTAL:    '#E1F5FE',
+    // 僵尸头饰
+    Z_CONE:       '#FFCA28',
+    Z_RIBBON:     '#FF6E40',
+    Z_HELMET:     '#B0BEC5',
+    Z_HELMET_EAR: '#78909C',
+    Z_STAR:       '#FFD54F',
+    // 护甲僵尸 Armored（金属全盔 + 胸甲 + 铆钉）
+    Z_ARMOR:        '#90A4AE',  // 主甲色（与 def.color 一致）
+    Z_ARMOR_DARK:   '#546E7A',  // 甲片阴影
+    Z_ARMOR_LIGHT:  '#CFD8DC',  // 金属反光高光
+    Z_VISOR:        '#263238',  // 护面缝隙暗色
+    Z_BOLT:         '#ECEFF1',  // 铆钉
+    // 樱桃炸弹 Cherry
+    C_BODY:       '#E53935',
+    C_BODY_DARK:  '#C62828',
+    C_LEAF:       '#66BB6A',
+    C_FUSE:       '#7CB342',
+    C_SPARK:      '#FFEB3B',
+    C_SHINE:      '#FFCDD2',
+    // 火焰射手 Fire
+    FIRE_BODY:       '#FF7043',
+    FIRE_BODY_DARK:  '#E64A19',
+    FIRE_FLAME:      '#FFB300',
+    FIRE_FLAME_LIGHT:'#FFE082',
+    FIRE_MUZZLE:     '#BF360C',
+    FIRE_CORE:       '#FFEB3B',
+    FIRE_BLUSH:      'rgba(255,167,38,0.65)',
+    // 心形花（基地植物 / 防线核心）
+    HB_BODY:      '#F48FB1',
+    HB_BODY_DARK: '#EC407A',
+    HB_GLOW:      'rgba(248,187,208,0.55)',
+    HB_LEAF:      '#81C784',
+    // 通用
+    SHADOW:       'rgba(0,0,0,0.14)',   // 阴影地面椭圆
+    HIGHLIGHT_BASE: 'rgba(255,255,255,',  // 高光拼接用：+ "0.35)"
+  },
+
+  // ---------- 描边粗细（基于基准半径 r 的动态系数）----------
+  // 公式：_strokeW(coeff) = max(1, coeff * (r/42))
+  // v3 简化版：整体加粗，让小尺寸下轮廓更具辨识度（低对比度细节一律删除）
+  STROKE: {
+    MAIN:  4.0,   // 主体/装饰描边（3.2 → 4.0 +25%）
+    THIN:  2.6,   // 纹线/十字纹（1.8 → 2.6 +44%）—— 坚果壳纹/冰晶十字必须一眼看见
+    INK:   2.8,   // 眼线/嘴线（2.3 → 2.8 +22%）
+    EYE:   1.8,   // 眼白描边（1.2 → 1.8 +50%）
+    LIP:   2.2,   // 唇描边（1.6 → 2.2 +37%）
+  },
+
+  // ---------- v3 视觉简化规则（核心特征清单 · 删了就认不出的不能碰；冗余全部砍掉）----------
+  // 植物保留：豌豆射手=圆头+发射口+顶豌豆+2侧叶；坚果=圆头+壳横纹+顶嫩芽；寒冰=圆头+发射口+顶菱形冰晶
+  // 僵尸保留：normal=锥+白条；fast=蝴蝶结；strong=半圆头盔；全部删除次要装饰
+  // 表情统一：大眼睛 + 右下大瞳孔 + 双高光 + 圆形腮红（v3 爱心→实心圆，小尺寸不再糊）
+  SIMPLIFY: {
+    LEAF_TIERS: 2,           // 叶色3档→2档（省渐变层级，平涂更干净）
+    NUT_RIND_COUNT: 2,       // 坚果壳纹3条→2条（粗横纹更易识别）
+    NUT_SPROUT_COUNT: 1,     // 坚果嫩芽3个→1个（只留中间最高的）
+    FROST_EXTRA_SNOW: false, // 寒冰 2 颗六角雪花：直接删除（与核心冰晶重复信息）
+    FAST_BOW_HEART: false,   // fast 僵尸 蝴蝶结中央爱心：删除（小尺寸糊成一团）
+    STRONG_HELMET_EAR: false,// strong 头盔耳朵：删除
+    STRONG_STAR_BADGE: false,// strong 星章：删除
+    BLUSH_SHAPE: 'circle',   // 腮红形状：heart→circle（小尺寸下爱心边缘糊，平涂圆一眼识别）
+  },
+
+  // ---------- 表情比例（与 _drawCuteFace + shop-avatar 严格 1:1） ----------
+  FACE: {
+    EYE_DX_RATIO:  0.36,   // 眼距 = 头半径 × 0.36（僵尸原 0.33 → 统一到 0.36）
+    EYE_R_RATIO:   0.24,   // 眼半径 × 0.24（僵尸原 0.27 → 统一）
+    EYE_Y_OFFSET:  0.08,   // 眼 Y 相对头中心：+ 0.08 × headR
+    PUPIL_R_RATIO: 0.56,   // 瞳孔 = 眼半径 × 0.56
+    PUPIL_OFF_X:   0.16,   // 瞳孔右下偏位：× eyeR
+    PUPIL_OFF_Y:   0.14,
+    PUPIL_SHINE1:  0.42,   // 大高光 = 瞳孔 × 0.42
+    PUPIL_SHINE2:  0.18,   // 小高光 = 瞳孔 × 0.18
+    BLUSH_CX:      0.62,   // 腮红中心 X = × headR
+    BLUSH_CY:      0.38,   // 腮红中心 Y 相对 eyeY：+ 0.38 × headR
+    BLUSH_SIZE:    0.15,   // 爱心大小 × headR
+    BLUSH_ZOMBIE:  0.22,   // 僵尸爱心更大 × eyeR
+    // 嘴
+    MOUTH_Y_OFFSET: 0.50,  // 嘴 Y 相对 eyeY：+ 0.50 × headR
+  },
+
+  // ---------- 头部结构比例（植物 vs 僵尸 统一 Q 版头感） ----------
+  HEAD: {
+    SHOOTER_EYE_Y:  0.08,   // 射手表情中心在 headY + 0.08 headR
+    WALL_EYE_Y:     0.10,   // 坚果表情中心 headY + 0.10
+    FREEZER_EYE_Y:  0.08,   // 寒冰表情中心 headY + 0.08
+    ZOMBIE_HEAD_CY: -0.18,  // 僵尸头中心相对原点：UNIT × -0.18（保持）
+    ZOMBIE_HEAD_R:   0.68,  // 僵尸头半径 × UNIT
+    // 高光统一位置（左上 45°）
+    HLIGHT_X:       -0.38,  // × headR
+    HLIGHT_Y:       -0.30,  // × headR
+    HLIGHT_W:        0.22,  // × headR
+    HLIGHT_H:        0.40,  // × headR
+    HLIGHT_ROT:     -0.50,  // 旋转 rad
+    HLIGHT_ALPHA:    0.35,  // 高光不透明度
+  },
+
+  // ---------- 阴影椭圆 ----------
+  SHADOW: {
+    RX:  0.90,   // 阴影宽 × r
+    RY:  0.22,   // 阴影高 × r
+    Y:   1.05,   // 阴影 Y × r
+  },
+
+  // ---------- 离屏高清化 ----------
+  OFFSCREEN: {
+    SUPERSAMPLE: 2,    // 离屏再放大 2 倍超采样，drawImage 缩时锐而不糊
+  },
+};
+
 class Renderer {
   constructor() {
     this.ctx = null;          // 主 canvas 上下文
@@ -56,6 +205,10 @@ class Renderer {
     this.offscreenCache = {}; // 离屏缓存 {key: canvas}
     this.particles = [];      // 粒子系统
     this.renderErrorCount = 0; // 渲染错误计数（连续错误则降级）
+    // 挂设计 tokens
+    this.T = RENDER_TOKENS;
+    // 当前绘制基准半径（植物 r / 僵尸 UNIT），_strokeW 依赖
+    this._curBaseR = 36;
   }
 
   /**
@@ -78,6 +231,29 @@ class Renderer {
       console.error('[Renderer] 离屏缓存构建失败，降级为实时渲染:', err);
       this.offscreenCache = {};
     }
+  }
+
+  /**
+   * 动态描边宽度（按当前基准半径缩放）：
+   *   - 小植物/小僵尸描边变细但不低于 1px
+   *   - 大角色描边等比变粗，保证视觉一致
+   * @param {number} coeff   设计 token（STROKE.MAIN / THIN / …）
+   * @param {number} [baseR] 当前基准半径（植物 r 或 UNIT），默认取上次设置
+   */
+  _strokeW(coeff, baseR) {
+    if (baseR != null) this._curBaseR = +baseR;
+    const b = this._curBaseR > 0 ? this._curBaseR : 36;
+    return Math.max(1, coeff * (b / 42));
+  }
+
+  /**
+   * 统一描边设定：strokeStyle + lineWidth + lineJoin/lineCap
+   */
+  _setStroke(ctx, color, lineW, opts = {}) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = lineW;
+    ctx.lineJoin    = opts.join || 'round';
+    ctx.lineCap     = opts.cap  || 'round';
   }
 
   /**
@@ -235,31 +411,35 @@ class Renderer {
   }
 
   /**
-   * 离屏渲染：单只僵尸（Q版萌系大头小身）
-   * 比例：头部占整体 60%+，圆润线条 + 夸张大眼 + 可爱装饰
-   * 离屏图按 120px 高绘制，主循环按 zombie.radius 缩放复用
+   * 离屏渲染：单只僵尸（Q版萌系大头小身 / 设计系统 Tokens v2）
+   * - 表情严格对齐 _drawCuteFace 比例，确保僵尸与植物表情一致
+   * - 高清化：按 dpr × SUPERSAMPLE=2 超采样，drawImage 时自动 downscale，各机型清晰锐利
    */
   _renderZombieToOffscreen(type) {
     const def = ZOMBIE_TYPES[type];
-    const UNIT = 50;              // 基准单位：全部比例基于此
-    const size = UNIT * 2.6;      // 画布尺寸（留出阴影与头部装饰）
+    const T   = this.T;
+    const UNIT = 50;               // 基准单位（全部比例基于此）
+    this._strokeW(1, UNIT);        // 把 UNIT 作为描边基准
+
+    // 超采样高清化
+    const SS = this.dpr * T.OFFSCREEN.SUPERSAMPLE;
+    const size = UNIT * 2.8;       // 画布尺寸（比旧 2.6 增 8%，保证头饰不裁切）
     const canvas = wx.createOffscreenCanvas ? wx.createOffscreenCanvas({
       type: '2d',
-      width: size * this.dpr,
-      height: size * this.dpr
+      width:  Math.round(size * SS),
+      height: Math.round(size * SS)
     }) : null;
     if (!canvas) return null;
     const ctx = canvas.getContext('2d');
-    ctx.scale(this.dpr, this.dpr);
+    ctx.scale(SS, SS);
     ctx.translate(size / 2, size / 2);
 
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 3.2;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
+    // 通用描边
+    const swMain = this._strokeW(T.STROKE.MAIN);
+    this._setStroke(ctx, T.COLORS.STROKE, swMain);
 
-    // 阴影（在底部）
-    ctx.fillStyle = 'rgba(0,0,0,0.14)';
+    // 阴影（底部 · 与植物统一 Tokens 色）
+    ctx.fillStyle = T.COLORS.SHADOW;
     ctx.beginPath();
     ctx.ellipse(0, UNIT * 1.12, UNIT * 0.72, UNIT * 0.22, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -270,7 +450,7 @@ class Renderer {
     ctx.ellipse(-UNIT * 0.62, UNIT * 0.35, UNIT * 0.18, UNIT * 0.25, -0.35, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
     ctx.beginPath();
-    ctx.ellipse(UNIT * 0.62, UNIT * 0.35, UNIT * 0.18, UNIT * 0.25, 0.35, 0, Math.PI * 2);
+    ctx.ellipse( UNIT * 0.62, UNIT * 0.35, UNIT * 0.18, UNIT * 0.25,  0.35, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
 
     // 身体（极短的圆胖身躯，Q版夸张比例）
@@ -278,11 +458,43 @@ class Renderer {
     ctx.beginPath();
     safeRoundRect(ctx, -UNIT * 0.4, UNIT * 0.12, UNIT * 0.8, UNIT * 0.55, UNIT * 0.28);
     ctx.fill(); ctx.stroke();
-    // 肚皮高光（浅色调斑点）
+    // 肚皮高光（严格对齐植物高光：左上 45° 位置与透明度）
     ctx.fillStyle = 'rgba(255,255,255,0.35)';
     ctx.beginPath();
-    ctx.ellipse(0, UNIT * 0.4, UNIT * 0.22, UNIT * 0.16, 0, 0, Math.PI * 2);
+    ctx.ellipse(-UNIT * 0.14, UNIT * 0.28, UNIT * 0.16, UNIT * 0.26, -0.5, 0, Math.PI * 2);
     ctx.fill();
+
+    // 护甲僵尸专属：胸甲 + 肩甲（金属护具，覆盖在身体上但保留萌系脸）
+    if (type === 'armored') {
+      // 胸甲（圆角矩形板，覆盖身体正面）
+      ctx.fillStyle = T.COLORS.Z_ARMOR_LIGHT;
+      ctx.beginPath();
+      safeRoundRect(ctx, -UNIT * 0.30, UNIT * 0.18, UNIT * 0.60, UNIT * 0.42, UNIT * 0.10);
+      ctx.fill(); ctx.stroke();
+      // 胸甲中缝线（金属甲片分界）
+      this._setStroke(ctx, T.COLORS.Z_ARMOR_DARK, this._strokeW(T.STROKE.THIN));
+      ctx.beginPath();
+      ctx.moveTo(0, UNIT * 0.20);
+      ctx.lineTo(0, UNIT * 0.58);
+      ctx.stroke();
+      // 胸甲铆钉（4 颗，四角）
+      ctx.fillStyle = T.COLORS.Z_BOLT;
+      const boltY = UNIT * 0.26;
+      ctx.beginPath();
+      ctx.arc(-UNIT * 0.22, boltY, UNIT * 0.045, 0, Math.PI * 2);
+      ctx.arc( UNIT * 0.22, boltY, UNIT * 0.045, 0, Math.PI * 2);
+      ctx.arc(-UNIT * 0.22, boltY + UNIT * 0.26, UNIT * 0.045, 0, Math.PI * 2);
+      ctx.arc( UNIT * 0.22, boltY + UNIT * 0.26, UNIT * 0.045, 0, Math.PI * 2);
+      ctx.fill();
+      // 肩甲（左右两片圆形护肩，叠在手臂上方）
+      ctx.fillStyle = T.COLORS.Z_ARMOR;
+      ctx.beginPath();
+      ctx.arc(-UNIT * 0.62, UNIT * 0.30, UNIT * 0.16, 0, Math.PI * 2);
+      ctx.arc( UNIT * 0.62, UNIT * 0.30, UNIT * 0.16, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      // 恢复主描边色
+      this._setStroke(ctx, T.COLORS.STROKE, this._strokeW(T.STROKE.MAIN));
+    }
 
     // 腿（两只短短的圆腿）
     ctx.fillStyle = def.color;
@@ -290,134 +502,196 @@ class Renderer {
     ctx.ellipse(-UNIT * 0.2, UNIT * 0.8, UNIT * 0.16, UNIT * 0.14, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
     ctx.beginPath();
-    ctx.ellipse(UNIT * 0.2, UNIT * 0.8, UNIT * 0.16, UNIT * 0.14, 0, 0, Math.PI * 2);
+    ctx.ellipse( UNIT * 0.2, UNIT * 0.8, UNIT * 0.16, UNIT * 0.14, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
 
     // 大头（Q版核心：占身体 60% 以上，上移以便装饰头顶）
-    const headCY = -UNIT * 0.18;
-    const headR  =  UNIT * 0.68;
+    const H = T.HEAD;
+    const headCY = UNIT * H.ZOMBIE_HEAD_CY;
+    const headR  = UNIT * H.ZOMBIE_HEAD_R;
     ctx.fillStyle = def.color;
     ctx.beginPath();
     ctx.arc(0, headCY, headR, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
 
-    // 头顶装饰（按类型差异化：交通锥/蝴蝶结/头盔+角）
+    // 头顶高光（和植物头部高光完全一致：左上 45°）
+    ctx.fillStyle = 'rgba(255,255,255,' + H.HLIGHT_ALPHA + ')';
+    ctx.beginPath();
+    ctx.ellipse(headR * H.HLIGHT_X, headCY + headR * H.HLIGHT_Y,
+                headR * H.HLIGHT_W, headR * H.HLIGHT_H,
+                H.HLIGHT_ROT, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 头顶装饰（按类型差异化：交通锥/蝴蝶结/头盔+角）—— 颜色全部从 Tokens 取
     if (type === 'normal') {
-      // 交通锥（小黄锥 + 白纹）
-      ctx.fillStyle = '#FFCA28';
+      ctx.fillStyle = T.COLORS.Z_CONE;
       ctx.beginPath();
       ctx.moveTo(-headR * 0.55, headCY - headR * 0.2);
-      ctx.lineTo(headR * 0.55, headCY - headR * 0.2);
-      ctx.lineTo(headR * 0.28, headCY - headR * 1.35);
+      ctx.lineTo( headR * 0.55, headCY - headR * 0.2);
+      ctx.lineTo( headR * 0.28, headCY - headR * 1.35);
       ctx.lineTo(-headR * 0.28, headCY - headR * 1.35);
       ctx.closePath();
       ctx.fill(); ctx.stroke();
-      // 白条纹
-      ctx.fillStyle = '#FFFFFF';
+      ctx.fillStyle = T.COLORS.STROKE;   // 白条纹
       ctx.beginPath();
       safeRoundRect(ctx, -headR * 0.4, headCY - headR * 0.48, headR * 0.8, headR * 0.12, headR * 0.05);
       ctx.fill(); ctx.stroke();
     } else if (type === 'fast') {
-      // 蝴蝶结头带（飘带 + 中央爱心）
-      ctx.fillStyle = '#FF6E40';
+      // 橙红蝴蝶结（v3 删中央爱心——小尺寸糊成一团；保留横带 + 双飘带 3 段核心结构）
+      ctx.fillStyle = T.COLORS.Z_RIBBON;
       ctx.beginPath();
-      safeRoundRect(ctx, -headR * 0.95, headCY - headR * 0.55, headR * 1.9, headR * 0.18, headR * 0.08);
+      safeRoundRect(ctx, -headR * 0.95, headCY - headR * 0.55, headR * 1.9, headR * 0.20, headR * 0.08);
       ctx.fill(); ctx.stroke();
-      // 蝴蝶结左侧
       ctx.beginPath();
       ctx.moveTo(-headR * 0.3, headCY - headR * 0.46);
       ctx.lineTo(-headR * 0.85, headCY - headR * 0.95);
       ctx.lineTo(-headR * 0.85, headCY - headR * 0.02);
       ctx.closePath();
       ctx.fill(); ctx.stroke();
-      // 蝴蝶结右侧
       ctx.beginPath();
-      ctx.moveTo(headR * 0.3, headCY - headR * 0.46);
-      ctx.lineTo(headR * 0.85, headCY - headR * 0.95);
-      ctx.lineTo(headR * 0.85, headCY - headR * 0.02);
+      ctx.moveTo( headR * 0.3, headCY - headR * 0.46);
+      ctx.lineTo( headR * 0.85, headCY - headR * 0.95);
+      ctx.lineTo( headR * 0.85, headCY - headR * 0.02);
       ctx.closePath();
       ctx.fill(); ctx.stroke();
-      // 中央爱心
-      ctx.fillStyle = '#FFFFFF';
-      this._drawHeartShape(ctx, 0, headCY - headR * 0.48, headR * 0.16);
+    } else if (type === 'armored') {
+      // 护甲全盔（金属骑士盔：覆盖头顶+两侧太阳穴，留出脸部露萌系脸）
+      // 比强壮的半盔更包：从 0.85π 到 2.15π，两侧延伸到 headR*0.92
+      ctx.fillStyle = T.COLORS.Z_ARMOR;
+      ctx.beginPath();
+      ctx.arc(0, headCY, headR * 1.02, Math.PI * 0.85, Math.PI * 2.15);
+      ctx.lineTo( headR * 0.92, headCY + headR * 0.18);
+      ctx.lineTo(-headR * 0.92, headCY + headR * 0.18);
+      ctx.closePath();
       ctx.fill(); ctx.stroke();
+      // 头盔金属反光高光（左上椭圆，与统一高光位对齐）
+      ctx.fillStyle = T.COLORS.Z_ARMOR_LIGHT;
+      ctx.beginPath();
+      ctx.ellipse(-headR * 0.28, headCY - headR * 0.62, headR * 0.24, headR * 0.13, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      // 额缝护面边沿（头盔下沿暗色窄条，强化"盔"感）
+      this._setStroke(ctx, T.COLORS.Z_ARMOR_DARK, this._strokeW(T.STROKE.THIN));
+      ctx.beginPath();
+      ctx.moveTo(-headR * 0.92, headCY + headR * 0.18);
+      ctx.lineTo( headR * 0.92, headCY + headR * 0.18);
+      ctx.stroke();
+      // 铆钉（额头正中 1 颗 + 两侧各 1 颗，金属扣件识别符号）
+      ctx.fillStyle = T.COLORS.Z_BOLT;
+      ctx.beginPath();
+      ctx.arc(0, headCY - headR * 0.40, headR * 0.085, 0, Math.PI * 2);
+      ctx.arc(-headR * 0.58, headCY - headR * 0.28, headR * 0.07, 0, Math.PI * 2);
+      ctx.arc( headR * 0.58, headCY - headR * 0.28, headR * 0.07, 0, Math.PI * 2);
+      ctx.fill();
+      // 恢复主描边
+      this._setStroke(ctx, T.COLORS.STROKE, this._strokeW(T.STROKE.MAIN));
     } else {
-      // 强壮头盔：银灰色 + 两个小熊耳朵 + 星章
-      ctx.fillStyle = '#B0BEC5';
+      // 强壮头盔（v3 简化：保留半圆头盔本体 + 直接画在头顶；删除耳朵/五角星——小尺寸下都糊）
+      ctx.fillStyle = T.COLORS.Z_HELMET;
       ctx.beginPath();
       ctx.arc(0, headCY, headR * 0.95, Math.PI * 1.02, Math.PI * 1.98);
-      ctx.lineTo(headR * 0.92, headCY);
+      ctx.lineTo( headR * 0.92, headCY);
       ctx.lineTo(-headR * 0.92, headCY);
       ctx.closePath();
       ctx.fill(); ctx.stroke();
-      // 两个耳朵（圆）
-      ctx.fillStyle = '#78909C';
-      ctx.beginPath();
-      ctx.arc(-headR * 0.78, headCY - headR * 0.98, headR * 0.22, 0, Math.PI * 2);
-      ctx.fill(); ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(headR * 0.78, headCY - headR * 0.98, headR * 0.22, 0, Math.PI * 2);
-      ctx.fill(); ctx.stroke();
-      // 中央星章
-      ctx.fillStyle = '#FFD54F';
-      this._drawStarShape(ctx, 0, headCY - headR * 0.48, headR * 0.16, 5, 0.45);
-      ctx.fill(); ctx.stroke();
+      if (T.SIMPLIFY.STRONG_HELMET_EAR) {
+        ctx.fillStyle = T.COLORS.Z_HELMET_EAR;   // 耳朵（默认关闭）
+        ctx.beginPath();
+        ctx.arc(-headR * 0.78, headCY - headR * 0.98, headR * 0.22, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+        ctx.beginPath();
+        ctx.arc( headR * 0.78, headCY - headR * 0.98, headR * 0.22, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+      }
+      if (T.SIMPLIFY.STRONG_STAR_BADGE) {
+        ctx.fillStyle = T.COLORS.Z_STAR;         // 星章（默认关闭）
+        this._drawStarShape(ctx, 0, headCY - headR * 0.48, headR * 0.16, 5, 0.45);
+        ctx.fill(); ctx.stroke();
+      }
     }
 
-    // 超大大眼（Q版核心）
-    const eyeY  = headCY + headR * 0.02;
-    const eyeR  = headR * 0.27;
-    const eyeDX = headR * 0.33;
-    // 眼白（略带淡粉，萌）
-    ctx.fillStyle = '#FFFFFF';
+    /* =============================================================
+       表情：严格对齐 _drawCuteFace 比例（否则僵尸与植物脸的"萌感比例"不一致）
+       - eyeDX=0.36, eyeR=0.24 × headR（取代僵尸原 0.33/0.27 自定义）
+       - 瞳孔= eyeR × 0.56, 右下偏位 × 0.16 / 0.14
+       - 双高光（大 0.42 × pupilR / 小 0.18 × pupilR）
+       - 腮红爱心 × 0.22 eyeR
+       - 嘴：O 型张嘴惊讶笑（保持）
+       ============================================================= */
+    const F = T.FACE;
+    const eyeY  = headCY + headR * F.EYE_Y_OFFSET;
+    const eyeR  = headR * F.EYE_R_RATIO;
+    const eyeDX = headR * F.EYE_DX_RATIO;
+
+    // 眼白（统一白描边，和植物一致）
+    ctx.fillStyle = T.COLORS.STROKE;
     ctx.beginPath();
-    ctx.arc(-eyeDX, eyeY, eyeR, 0, Math.PI * 2);
-    ctx.arc( eyeDX, eyeY, eyeR, 0, Math.PI * 2);
+    ctx.ellipse(-eyeDX, eyeY, eyeR * 0.96, eyeR, 0, 0, Math.PI * 2);
+    ctx.ellipse( eyeDX, eyeY, eyeR * 0.96, eyeR, 0, 0, Math.PI * 2);
     ctx.fill();
-    // 瞳孔（夸张大，看向右下方显得无辜呆萌）
-    ctx.fillStyle = '#4E342E';
+    this._setStroke(ctx, T.COLORS.STROKE, this._strokeW(T.STROKE.EYE));
+    ctx.stroke();
+
+    // 瞳孔（偏右下，无辜呆萌）
+    ctx.fillStyle = T.COLORS.INK;
+    const pupilR = eyeR * F.PUPIL_R_RATIO;
+    const pOffX  = eyeR * F.PUPIL_OFF_X;
+    const pOffY  = eyeR * F.PUPIL_OFF_Y;
     ctx.beginPath();
-    ctx.arc(-eyeDX + eyeR * 0.18, eyeY + eyeR * 0.18, eyeR * 0.62, 0, Math.PI * 2);
-    ctx.arc( eyeDX + eyeR * 0.18, eyeY + eyeR * 0.18, eyeR * 0.62, 0, Math.PI * 2);
+    ctx.arc(-eyeDX + pOffX, eyeY + pOffY, pupilR, 0, Math.PI * 2);
+    ctx.arc( eyeDX + pOffX, eyeY + pOffY, pupilR, 0, Math.PI * 2);
     ctx.fill();
-    // 瞳仁高光（两点，灵动）
-    ctx.fillStyle = '#FFFFFF';
+
+    // 双高光（与 _drawCuteFace 完全一致：大+小两颗）
+    ctx.fillStyle = T.COLORS.STROKE;
     ctx.beginPath();
-    ctx.arc(-eyeDX + eyeR * 0.08, eyeY + eyeR * 0.02, eyeR * 0.18, 0, Math.PI * 2);
-    ctx.arc( eyeDX + eyeR * 0.08, eyeY + eyeR * 0.02, eyeR * 0.18, 0, Math.PI * 2);
+    ctx.arc(-eyeDX + eyeR * 0.05, eyeY - eyeR * 0.08, pupilR * F.PUPIL_SHINE1, 0, Math.PI * 2);
+    ctx.arc( eyeDX + eyeR * 0.05, eyeY - eyeR * 0.08, pupilR * F.PUPIL_SHINE1, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(-eyeDX + eyeR * 0.34, eyeY + eyeR * 0.34, eyeR * 0.08, 0, Math.PI * 2);
-    ctx.arc( eyeDX + eyeR * 0.34, eyeY + eyeR * 0.34, eyeR * 0.08, 0, Math.PI * 2);
+    ctx.arc(-eyeDX + eyeR * 0.38, eyeY + eyeR * 0.26, pupilR * F.PUPIL_SHINE2, 0, Math.PI * 2);
+    ctx.arc( eyeDX + eyeR * 0.38, eyeY + eyeR * 0.26, pupilR * F.PUPIL_SHINE2, 0, Math.PI * 2);
     ctx.fill();
-    // 眼角下垂线（丧萌感）
-    ctx.strokeStyle = '#4E342E';
-    ctx.lineWidth = 2;
+
+    // 眼角下垂线（丧萌）—— 线宽从 TOKENS.INK 取
+    this._setStroke(ctx, T.COLORS.INK, this._strokeW(T.STROKE.INK));
     ctx.beginPath();
     ctx.moveTo(-eyeDX - eyeR * 0.95, eyeY + eyeR * 0.2);
     ctx.quadraticCurveTo(-eyeDX - eyeR * 0.5, eyeY + eyeR * 0.55, -eyeDX + eyeR * 0.1, eyeY + eyeR * 0.7);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(eyeDX + eyeR * 0.95, eyeY + eyeR * 0.2);
-    ctx.quadraticCurveTo(eyeDX + eyeR * 0.5, eyeY + eyeR * 0.55, eyeDX - eyeR * 0.1, eyeY + eyeR * 0.7);
+    ctx.moveTo( eyeDX + eyeR * 0.95, eyeY + eyeR * 0.2);
+    ctx.quadraticCurveTo( eyeDX + eyeR * 0.5, eyeY + eyeR * 0.55,  eyeDX - eyeR * 0.1, eyeY + eyeR * 0.7);
     ctx.stroke();
 
-    // 腮红（爱心形，更萌）
-    ctx.fillStyle = 'rgba(255, 120, 150, 0.65)';
-    this._drawHeartShape(ctx, -eyeDX * 1.55, eyeY + eyeR * 0.82, eyeR * 0.22);
-    ctx.fill();
-    this._drawHeartShape(ctx,  eyeDX * 1.55, eyeY + eyeR * 0.82, eyeR * 0.22);
-    ctx.fill();
+    // 腮红：v3 统一实心圆（与 _drawCuteFace 一致；爱心在小尺寸下糊）
+    ctx.fillStyle = T.COLORS.BLUSH_ZOMBIE;
+    const blushCX = headR * F.BLUSH_CX;
+    const blushCY = eyeY + headR * F.BLUSH_CY;
+    const blushR  = eyeR * F.BLUSH_ZOMBIE * (T.SIMPLIFY.BLUSH_SHAPE === 'circle' ? 1.0 : 1.0);
+    if (T.SIMPLIFY.BLUSH_SHAPE === 'circle') {
+      ctx.beginPath();
+      ctx.arc(-blushCX, blushCY, blushR, 0, Math.PI * 2);
+      ctx.arc( blushCX, blushCY, blushR, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      this._drawHeartShape(ctx, -blushCX, blushCY, eyeR * F.BLUSH_ZOMBIE);
+      ctx.fill();
+      this._drawHeartShape(ctx,  blushCX, blushCY, eyeR * F.BLUSH_ZOMBIE);
+      ctx.fill();
+    }
 
-    // 小嘴巴（O型张嘴惊讶笑，更萌）
-    ctx.fillStyle = '#E91E63';
+    // O型张嘴惊讶笑（嘴Y位置统一：eyeY + 0.5 headR）
+    const mouthY = eyeY + headR * F.MOUTH_Y_OFFSET;
+    ctx.fillStyle = T.COLORS.MOUTH_PINK;
     ctx.beginPath();
-    ctx.ellipse(0, eyeY + headR * 0.62, headR * 0.12, headR * 0.17, 0, 0, Math.PI * 2);
-    ctx.fill(); ctx.stroke();
-    // 小嘴内部高光（下嘴唇）
-    ctx.fillStyle = '#F48FB1';
+    ctx.ellipse(0, mouthY, headR * 0.12, headR * 0.17, 0, 0, Math.PI * 2);
+    ctx.fill();
+    this._setStroke(ctx, T.COLORS.STROKE, this._strokeW(T.STROKE.LIP));
+    ctx.stroke();
+    // 下唇高光
+    ctx.fillStyle = T.COLORS.MOUTH_LIP;
     ctx.beginPath();
-    ctx.ellipse(0, eyeY + headR * 0.68, headR * 0.06, headR * 0.07, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, mouthY + headR * 0.06, headR * 0.06, headR * 0.07, 0, 0, Math.PI * 2);
     ctx.fill();
 
     return canvas;
@@ -626,35 +900,41 @@ class Renderer {
     const r = size * 0.42;            // 头部基准半径
     const wobbleX = Math.sin(plant.wobble) * 2;
 
+    // 以 r 为基准设置动态描边
+    const T = this.T;
+    this._strokeW(1, r);
+    const swMain = this._strokeW(T.STROKE.MAIN);
+
     ctx.save();
     ctx.translate(plant.x + wobbleX, plant.y);
     // 受击闪烁
     if (plant.hitFlash > 0) {
       ctx.globalAlpha = 0.5 + 0.5 * Math.sin(plant.hitFlash / 20);
     }
-    // 阴影
-    ctx.fillStyle = 'rgba(0,0,0,0.14)';
+    // 地面阴影椭圆（统一 Tokens 比例）
+    ctx.fillStyle = T.COLORS.SHADOW;
     ctx.beginPath();
-    ctx.ellipse(0, r * 1.05, r * 0.9, r * 0.22, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, r * T.SHADOW.Y, r * T.SHADOW.RX, r * T.SHADOW.RY, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 公共描边样式（与僵尸统一的萌系白边）
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 3;
-    ctx.lineJoin = 'round';
+    // 公共描边（与僵尸统一的萌系白描边，粗细按 r 动态计算）
+    this._setStroke(ctx, T.COLORS.STROKE, swMain);
 
     // 按类型绘制植物造型（wobble 作为眨眼动画相位传递下去）
     switch (def.type) {
-      case 'shooter': this._drawShooter(ctx, r, def, plant.wobble); break;
-      case 'wall':    this._drawWall(ctx, r, def, plant.wobble); break;
-      case 'freezer': this._drawFreezer(ctx, r, def, plant.wobble); break;
-      default:        this._drawWall(ctx, r, def, plant.wobble); break;
+      case 'shooter':    this._drawShooter(ctx, r, def, plant.wobble); break;
+      case 'wall':       this._drawWall(ctx, r, def, plant.wobble); break;
+      case 'freezer':    this._drawFreezer(ctx, r, def, plant.wobble); break;
+      case 'cherry':     this._drawCherry(ctx, r, def, plant); break;
+      case 'fire':       this._drawFire(ctx, r, def, plant.wobble); break;
+      case 'heart_base': this._drawHeartBase(ctx, r, def, plant.wobble); break;
+      default:           this._drawWall(ctx, r, def, plant.wobble); break;
     }
 
     // 血条（受伤时显示）
     if (plant.maxHealth > 1 && plant.health < plant.maxHealth) {
       const barW = size * 0.9;
-      const barH = 5;
+      const barH = Math.max(4, 0.095 * r);
       const barY = -size * 0.62;
       ctx.globalAlpha = 1;
       ctx.fillStyle = 'rgba(0,0,0,0.3)';
@@ -667,67 +947,62 @@ class Renderer {
   }
 
   /**
-   * 萌系表情（Q版升级）：支持眨眼动画、爱心腮红、多种嘴型
-   * @param {number} r     - 头部基准半径
-   * @param {number} cy    - 表情中心 y 坐标
-   * @param {Object} [opts]
-   * @param {'smile'|'o'|'grin'} [opts.mouth='smile'] - 嘴型
-   * @param {number} [opts.wobblePhase=0] - 摇摆相位（用于眨眼动画）
-   * @param {string} [opts.blushColor='rgba(255,150,170,0.65)'] - 腮红色
+   * 萌系表情（设计系统 Tokens v2）：眨眼动画、爱心腮红、三种嘴型
+   * 所有比例严格从 T.FACE 取，确保僵尸 ↔ 植物 ↔ shop-avatar 三方 1:1 一致
    */
   _drawCuteFace(ctx, r, cy, opts = {}) {
+    const T = this.T;
+    const F = T.FACE;
     const mouth       = opts.mouth       || 'smile';
     const wobblePhase = opts.wobblePhase || 0;
-    const blushColor  = opts.blushColor  || 'rgba(255, 150, 170, 0.65)';
-    // 眼睛参数：Q版大比例
-    const eyeDX = r * 0.36;
-    const eyeR  = r * 0.24;
+    const blushColor  = opts.blushColor  || T.COLORS.BLUSH_PINK;
+
+    // 眼睛参数（1:1 Tokens）
+    const eyeDX = r * F.EYE_DX_RATIO;
+    const eyeR  = r * F.EYE_R_RATIO;
     const eyeY  = cy;
-    // 眨眼：每 2.5s 眨一次（wobblePhase 驱动的 sin 周期），持续约 120ms
-    const blinkT = (Math.sin(wobblePhase) + 1) / 2;   // 0~1
-    const blink  = blinkT > 0.94 ? (1 - (blinkT - 0.94) / 0.06) : 1;  // 1 睁眼 → 0 闭眼
+    // 眨眼：约 2.5s 一次，持续 120ms
+    const blinkT = (Math.sin(wobblePhase) + 1) / 2;
+    const blink  = blinkT > 0.94 ? (1 - (blinkT - 0.94) / 0.06) : 1;
     const eyeH   = Math.max(0.05, eyeR * blink);
 
     ctx.save();
     ctx.lineJoin = 'round';
     ctx.lineCap  = 'round';
 
-    // 眼白（睁眼时椭圆，闭眼时窄缝）
-    ctx.fillStyle = '#FFFFFF';
+    // 眼白（睁眼椭圆 / 闭眼窄缝）
+    ctx.fillStyle = T.COLORS.STROKE;
     ctx.beginPath();
     ctx.ellipse(-eyeDX, eyeY, eyeR * 0.96, eyeH, 0, 0, Math.PI * 2);
     ctx.ellipse( eyeDX, eyeY, eyeR * 0.96, eyeH, 0, 0, Math.PI * 2);
     ctx.fill();
-    // 眼睛白描边
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 1.2;
+    // 眼白描边
+    this._setStroke(ctx, T.COLORS.STROKE, this._strokeW(T.STROKE.EYE));
     ctx.stroke();
 
     if (blink > 0.4) {
-      // 瞳孔（仅睁眼状态）
-      ctx.fillStyle = '#4E342E';
-      const pupilR = eyeR * 0.56 * blink;
-      // 瞳孔偏右下，显得无辜呆萌
-      const pOffsetX = eyeR * 0.16;
-      const pOffsetY = eyeR * 0.14;
+      // 瞳孔（偏右下无辜感，比例 Tokens 严格对齐）
+      ctx.fillStyle = T.COLORS.INK;
+      const pupilR = eyeR * F.PUPIL_R_RATIO * blink;
+      const pOffX  = eyeR * F.PUPIL_OFF_X;
+      const pOffY  = eyeR * F.PUPIL_OFF_Y;
       ctx.beginPath();
-      ctx.arc(-eyeDX + pOffsetX, eyeY + pOffsetY, pupilR, 0, Math.PI * 2);
-      ctx.arc( eyeDX + pOffsetX, eyeY + pOffsetY, pupilR, 0, Math.PI * 2);
+      ctx.arc(-eyeDX + pOffX, eyeY + pOffY, pupilR, 0, Math.PI * 2);
+      ctx.arc( eyeDX + pOffX, eyeY + pOffY, pupilR, 0, Math.PI * 2);
       ctx.fill();
-      // 双高光（灵动）
-      ctx.fillStyle = '#FFFFFF';
+      // 双高光（灵动两颗）
+      ctx.fillStyle = T.COLORS.STROKE;
       ctx.beginPath();
-      ctx.arc(-eyeDX + eyeR * 0.05, eyeY - eyeR * 0.08, pupilR * 0.42, 0, Math.PI * 2);
-      ctx.arc( eyeDX + eyeR * 0.05, eyeY - eyeR * 0.08, pupilR * 0.42, 0, Math.PI * 2);
+      ctx.arc(-eyeDX + eyeR * 0.05, eyeY - eyeR * 0.08, pupilR * F.PUPIL_SHINE1, 0, Math.PI * 2);
+      ctx.arc( eyeDX + eyeR * 0.05, eyeY - eyeR * 0.08, pupilR * F.PUPIL_SHINE1, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(-eyeDX + eyeR * 0.38, eyeY + eyeR * 0.26, pupilR * 0.18, 0, Math.PI * 2);
-      ctx.arc( eyeDX + eyeR * 0.38, eyeY + eyeR * 0.26, pupilR * 0.18, 0, Math.PI * 2);
+      ctx.arc(-eyeDX + eyeR * 0.38, eyeY + eyeR * 0.26, pupilR * F.PUPIL_SHINE2, 0, Math.PI * 2);
+      ctx.arc( eyeDX + eyeR * 0.38, eyeY + eyeR * 0.26, pupilR * F.PUPIL_SHINE2, 0, Math.PI * 2);
       ctx.fill();
     } else {
-      // 闭眼：用两条弧线代替（眯眯笑眼）
-      ctx.strokeStyle = '#4E342E';
-      ctx.lineWidth = 2.2;
+      // 闭眼眯眯笑眼
+      this._setStroke(ctx, T.COLORS.INK, this._strokeW(T.STROKE.INK));
       ctx.beginPath();
       ctx.arc(-eyeDX, eyeY + eyeR * 0.2, eyeR * 0.5, Math.PI * 1.12, Math.PI * 1.88);
       ctx.stroke();
@@ -736,50 +1011,53 @@ class Renderer {
       ctx.stroke();
     }
 
-    // 腮红（爱心形，视觉更萌）
+    // 腮红：v3 统一实心圆（小尺寸/物品栏不糊；之前的心形边缘复杂、识别度低）
+    // 位置/大小仍然严格用 T.FACE Tokens
     ctx.fillStyle = blushColor;
-    const blushCX = r * 0.62;
-    const blushCY = cy + r * 0.38;
-    this._drawHeartShape(ctx, -blushCX, blushCY, r * 0.15);
-    ctx.fill();
-    this._drawHeartShape(ctx,  blushCX, blushCY, r * 0.15);
-    ctx.fill();
+    const blushCX = r * F.BLUSH_CX;
+    const blushCY = cy + r * F.BLUSH_CY;
+    const blushR  = r * F.BLUSH_SIZE * (T.SIMPLIFY.BLUSH_SHAPE === 'circle' ? 1.15 : 1.0);
+    if (T.SIMPLIFY.BLUSH_SHAPE === 'circle') {
+      // 平涂圆 + 内柔边（通过小半透明实现，无需贝塞尔，性能与清晰度兼顾）
+      ctx.beginPath();
+      ctx.arc(-blushCX, blushCY, blushR, 0, Math.PI * 2);
+      ctx.arc( blushCX, blushCY, blushR, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      this._drawHeartShape(ctx, -blushCX, blushCY, r * F.BLUSH_SIZE);
+      ctx.fill();
+      this._drawHeartShape(ctx,  blushCX, blushCY, r * F.BLUSH_SIZE);
+      ctx.fill();
+    }
 
-    // 嘴型（三种）
-    const mouthY = cy + r * 0.5;
+    // 嘴型（Y 位置统一 Tokens：cy + MOUTH_Y_OFFSET × r）
+    const mouthY = cy + r * F.MOUTH_Y_OFFSET;
     if (mouth === 'o') {
-      // O型张嘴惊讶笑
-      ctx.fillStyle = '#E91E63';
+      ctx.fillStyle = T.COLORS.MOUTH_PINK;
       ctx.beginPath();
       ctx.ellipse(0, mouthY, r * 0.13, r * 0.18, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 1.6;
+      this._setStroke(ctx, T.COLORS.STROKE, this._strokeW(T.STROKE.LIP));
       ctx.stroke();
-      // 下嘴唇内高光
-      ctx.fillStyle = '#F48FB1';
+      ctx.fillStyle = T.COLORS.MOUTH_LIP;
       ctx.beginPath();
       ctx.ellipse(0, mouthY + r * 0.06, r * 0.06, r * 0.07, 0, 0, Math.PI * 2);
       ctx.fill();
     } else if (mouth === 'grin') {
-      // 露齿笑（宽嘴）
-      ctx.fillStyle = '#E91E63';
+      ctx.fillStyle = T.COLORS.MOUTH_PINK;
       ctx.beginPath();
       ctx.arc(0, mouthY - r * 0.02, r * 0.28, 0.1 * Math.PI, 0.9 * Math.PI);
       ctx.lineTo(r * 0.22, mouthY - r * 0.02);
       ctx.closePath();
       ctx.fill();
-      // 牙齿
-      ctx.fillStyle = '#FFFFFF';
+      ctx.fillStyle = T.COLORS.STROKE;  // 白牙齿
       safeRoundRect(ctx, -r * 0.15, mouthY - r * 0.02, r * 0.3, r * 0.1, r * 0.03);
       ctx.fill();
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 1.6;
+      this._setStroke(ctx, T.COLORS.STROKE, this._strokeW(T.STROKE.LIP));
       ctx.stroke();
     } else {
-      // 微笑（默认）：上扬弧线
-      ctx.strokeStyle = '#4E342E';
-      ctx.lineWidth = 2.4;
+      // 微笑弧线
+      this._setStroke(ctx, T.COLORS.INK, this._strokeW(T.STROKE.INK));
       ctx.beginPath();
       ctx.arc(0, mouthY - r * 0.15, r * 0.22, 0.15 * Math.PI, 0.85 * Math.PI);
       ctx.stroke();
@@ -789,184 +1067,460 @@ class Renderer {
   }
 
   /**
-   * 豌豆射手（Q版升级）：大头 + 头顶豌豆 + 圆润茎叶 + 大大发射口
+   * 豌豆射手（设计系统 Tokens v2）：所有颜色/比例/高光从统一 tokens 取
    */
   _drawShooter(ctx, r, def, wobblePhase) {
-    const headR = r * 1.0;            // 头部更大
-    const headY = -r * 0.25;          // 头部略偏上
-    // 底部三片叶子（更饱满扇形）
-    ctx.fillStyle = '#AED581';
+    const T = this.T;
+    const C = T.COLORS;
+    const H = T.HEAD;
+    const headR = r * 1.0;
+    const headY = -r * 0.25;
+    const swThin = this._strokeW(T.STROKE.THIN);
+
+    // 两片叶（v3 简化：删除正下方第三片 DARK_LIGHT；保留左右两侧 LEAF_DARK/LEAF_MID 2 档更干净）
+    ctx.fillStyle = C.S_LEAF_DARK;
     ctx.beginPath();
     ctx.ellipse(-r * 0.7, r * 0.55, r * 0.46, r * 0.22, -0.55, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#9CCC65';
+    ctx.fillStyle = T.SIMPLIFY.LEAF_TIERS >= 2 ? C.S_LEAF_MID : C.S_LEAF_DARK;
     ctx.beginPath();
     ctx.ellipse( r * 0.7, r * 0.55, r * 0.46, r * 0.22,  0.55, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#C5E1A5';
-    ctx.beginPath();
-    ctx.ellipse(0, r * 0.72, r * 0.32, r * 0.18, 0, 0, Math.PI * 2);
-    ctx.fill(); ctx.stroke();
-    // 茎（粗短，圆润）
-    ctx.fillStyle = '#7CB342';
+    // 茎（颜色加深一档，核心结构视觉更集中）
+    ctx.fillStyle = C.S_STEM;
     ctx.beginPath();
     safeRoundRect(ctx, -r * 0.16, r * 0.1, r * 0.32, r * 0.52, r * 0.13);
     ctx.fill(); ctx.stroke();
-    // 头部（略椭圆、圆头圆脑）
+    // 头
     ctx.fillStyle = def.color;
     ctx.beginPath();
     ctx.ellipse(0, headY, headR * 1.0, headR * 0.95, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    // 头顶"待发射"豌豆（小绿珠在口前上方，暗示攻击）
-    ctx.fillStyle = '#C5E1A5';
+    // 统一高光位：左上 45°
+    ctx.fillStyle = 'rgba(255,255,255,' + H.HLIGHT_ALPHA + ')';
     ctx.beginPath();
-    ctx.arc(0, headY - headR * 0.72, headR * 0.22, 0, Math.PI * 2);
+    ctx.ellipse(headR * H.HLIGHT_X, headY + headR * H.HLIGHT_Y,
+                headR * H.HLIGHT_W, headR * H.HLIGHT_H,
+                H.HLIGHT_ROT, 0, Math.PI * 2);
+    ctx.fill();
+    // 发射口（上下两层：外圈+内黑孔，v3 保留并加粗描边——核心识别符号）
+    ctx.fillStyle = C.S_MOUTH_OUT;
+    ctx.beginPath();
+    ctx.ellipse(0, headY - headR * 0.5, headR * 0.38, headR * 0.20, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#F1F8E9';
+    ctx.fillStyle = C.S_MOUTH_IN;
     ctx.beginPath();
-    ctx.arc(-headR * 0.07, headY - headR * 0.78, headR * 0.07, 0, Math.PI * 2);
+    ctx.ellipse(0, headY - headR * 0.5, headR * 0.24, headR * 0.10, 0, 0, Math.PI * 2);
     ctx.fill();
-    // 发射口（在豌豆下方）
-    ctx.fillStyle = '#558B2F';
+    // 头顶待发射豌豆 + 高光（核心识别符号，v3 略微加大 22→24%）
+    ctx.fillStyle = C.S_PEA_LIGHT;
     ctx.beginPath();
-    ctx.ellipse(0, headY - headR * 0.5, headR * 0.38, headR * 0.18, 0, 0, Math.PI * 2);
+    ctx.arc(0, headY - headR * 0.72, headR * 0.24, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#33691E';
+    ctx.fillStyle = C.S_PEA_SHINE;
     ctx.beginPath();
-    ctx.ellipse(0, headY - headR * 0.5, headR * 0.22, headR * 0.09, 0, 0, Math.PI * 2);
+    ctx.arc(-headR * 0.07, headY - headR * 0.78, headR * 0.08, 0, Math.PI * 2);
     ctx.fill();
-    // 头部高光
-    ctx.fillStyle = 'rgba(255,255,255,0.32)';
-    ctx.beginPath();
-    ctx.ellipse(-headR * 0.38, headY - headR * 0.3, headR * 0.2, headR * 0.36, -0.5, 0, Math.PI * 2);
-    ctx.fill();
-    // 表情（露齿笑）
-    this._drawCuteFace(ctx, headR, headY + headR * 0.08, { mouth: 'grin', wobblePhase: wobblePhase });
+    // 表情
+    this._drawCuteFace(ctx, headR, headY + headR * H.SHOOTER_EYE_Y, {
+      mouth: 'grin', wobblePhase: wobblePhase
+    });
+    // 消除 lint 提示（swThin 保留给后续细节扩展）
+    void swThin;
   }
 
   /**
-   * 坚果墙（Q版升级）：大头 + 头顶小芽 + 坚毅纹 + 腮红
+   * 坚果墙（Tokens v2）：高光统一位置 + 坚果线宽动态
    */
   _drawWall(ctx, r, def, wobblePhase) {
+    const T = this.T;
+    const C = T.COLORS;
+    const H = T.HEAD;
     const headR = r * 1.02;
     const headY = r * 0.02;
-    // 头顶三片嫩芽（代替小叶，更可爱）
-    ctx.fillStyle = '#66BB6A';
-    ctx.beginPath();
-    ctx.ellipse(-r * 0.28, -r * 0.92, r * 0.18, r * 0.3, -0.35, 0, Math.PI * 2);
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#81C784';
-    ctx.beginPath();
-    ctx.ellipse(0, -r * 1.02, r * 0.15, r * 0.36, 0, 0, Math.PI * 2);
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#66BB6A';
-    ctx.beginPath();
-    ctx.ellipse(r * 0.28, -r * 0.92, r * 0.18, r * 0.3, 0.35, 0, Math.PI * 2);
-    ctx.fill(); ctx.stroke();
-    // 身体（圆胖坚果）
+
+    // 嫩芽：v3 只留中间最高一颗（核心识别符号），两侧删除——小尺寸下 2~3 颗会糊成一团
+    if (T.SIMPLIFY.NUT_SPROUT_COUNT >= 1) {
+      ctx.fillStyle = C.W_SPROUT_LIGHT;
+      ctx.beginPath();
+      ctx.ellipse(0, -r * 1.02, r * 0.20, r * 0.42, 0, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+    }
+    if (T.SIMPLIFY.NUT_SPROUT_COUNT >= 3) {
+      ctx.fillStyle = C.W_SPROUT_DARK;
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.28, -r * 0.92, r * 0.18, r * 0.3, -0.35, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse( r * 0.28, -r * 0.92, r * 0.18, r * 0.3,  0.35, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+    }
+    // 坚果身体
     ctx.fillStyle = def.color;
     ctx.beginPath();
     ctx.ellipse(0, headY, headR * 1.0, headR * 1.05, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    // 坚果树纹（三条弧形横纹，坚果质感）
-    ctx.strokeStyle = 'rgba(109, 76, 65, 0.35)';
-    ctx.lineWidth = 2;
-    for (let i = -1; i <= 1; i++) {
+    // 坚果壳纹：v3 3→2 条粗横纹（NUT_RIND_COUNT Tokens 控制），间距拉宽，一眼识别
+    ctx.strokeStyle = C.W_RIND;
+    ctx.lineWidth = this._strokeW(T.STROKE.THIN);
+    const rindN = T.SIMPLIFY.NUT_RIND_COUNT; // 2 条：-0.22, +0.22（比原 ±0.28 间隔更紧凑但清晰）
+    for (let i = 0; i < rindN; i++) {
+      const t = rindN === 2 ? (i === 0 ? -0.22 : 0.22) : (i - 1) * 0.28;
       ctx.beginPath();
-      ctx.ellipse(0, headY + i * headR * 0.28, headR * 0.78, headR * 0.06, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, headY + t * headR, headR * 0.78, headR * 0.065, 0, 0, Math.PI * 2);
       ctx.stroke();
     }
-    // 高光（大块）
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    // 统一高光
+    ctx.fillStyle = 'rgba(255,255,255,' + H.HLIGHT_ALPHA + ')';
     ctx.beginPath();
-    ctx.ellipse(-headR * 0.4, headY - headR * 0.38, headR * 0.26, headR * 0.44, -0.5, 0, Math.PI * 2);
+    ctx.ellipse(headR * H.HLIGHT_X, headY + headR * H.HLIGHT_Y,
+                headR * (H.HLIGHT_W + 0.04), headR * (H.HLIGHT_H + 0.04),
+                H.HLIGHT_ROT, 0, Math.PI * 2);
     ctx.fill();
-    // 表情（坚毅微笑 + 深红腮红）
-    this._drawCuteFace(ctx, headR, headY + headR * 0.1, {
-      mouth: 'smile',
-      wobblePhase: wobblePhase,
-      blushColor: 'rgba(244, 143, 177, 0.75)'
+    // 表情（坚毅微笑 + 浓腮红）
+    this._drawCuteFace(ctx, headR, headY + headR * H.WALL_EYE_Y, {
+      mouth: 'smile', wobblePhase: wobblePhase, blushColor: C.BLUSH_RICH
     });
   }
 
   /**
-   * 寒冰射手（Q版升级）：大头 + 头顶雪花冰晶 + 晶莹冰感 + 雪花散落装饰
+   * 寒冰射手（Tokens v2）：冰晶色板统一 + 雪花装饰
    */
   _drawFreezer(ctx, r, def, wobblePhase) {
+    const T = this.T;
+    const C = T.COLORS;
+    const H = T.HEAD;
     const headR = r * 1.0;
     const headY = -r * 0.25;
-    // 底部三片冰蓝叶
-    ctx.fillStyle = '#B2EBF2';
+
+    // 两片冰蓝叶（v3 简化：删除正下方第三片 LIGHT；保留左右两片 2 档色差）
+    ctx.fillStyle = C.F_LEAF_DARK;
     ctx.beginPath();
     ctx.ellipse(-r * 0.7, r * 0.55, r * 0.46, r * 0.22, -0.55, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#80DEEA';
+    ctx.fillStyle = T.SIMPLIFY.LEAF_TIERS >= 2 ? C.F_LEAF_MID : C.F_LEAF_DARK;
     ctx.beginPath();
     ctx.ellipse( r * 0.7, r * 0.55, r * 0.46, r * 0.22,  0.55, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#D1F4F8';
-    ctx.beginPath();
-    ctx.ellipse(0, r * 0.72, r * 0.32, r * 0.18, 0, 0, Math.PI * 2);
-    ctx.fill(); ctx.stroke();
     // 茎
-    ctx.fillStyle = '#4DD0E1';
+    ctx.fillStyle = C.F_STEM;
     ctx.beginPath();
     safeRoundRect(ctx, -r * 0.16, r * 0.1, r * 0.32, r * 0.52, r * 0.13);
     ctx.fill(); ctx.stroke();
-    // 头部（冰蓝）
+    // 头
     ctx.fillStyle = def.color;
     ctx.beginPath();
     ctx.ellipse(0, headY, headR * 1.0, headR * 0.95, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    // 头部大块高光（冰感）
-    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    // 冰感高光：比植物通用 +10% 大小 + 10% alpha
+    ctx.fillStyle = 'rgba(255,255,255,' + Math.min(.55, H.HLIGHT_ALPHA + 0.1) + ')';
     ctx.beginPath();
-    ctx.ellipse(-headR * 0.42, headY - headR * 0.3, headR * 0.22, headR * 0.42, -0.5, 0, Math.PI * 2);
+    ctx.ellipse(headR * (H.HLIGHT_X - 0.04), headY + headR * H.HLIGHT_Y,
+                headR * (H.HLIGHT_W + 0.02), headR * (H.HLIGHT_H + 0.02),
+                H.HLIGHT_ROT, 0, Math.PI * 2);
     ctx.fill();
-    // 发射口
-    ctx.fillStyle = '#0277BD';
+    // 发射口（保留并加粗——寒冰射手核心识别符号，"枪口"感）
+    ctx.fillStyle = C.F_MOUTH_OUT;
     ctx.beginPath();
-    ctx.ellipse(0, headY - headR * 0.5, headR * 0.36, headR * 0.18, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, headY - headR * 0.5, headR * 0.38, headR * 0.20, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#01579B';
+    ctx.fillStyle = C.F_MOUTH_IN;
     ctx.beginPath();
-    ctx.ellipse(0, headY - headR * 0.5, headR * 0.2, headR * 0.09, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, headY - headR * 0.5, headR * 0.22, headR * 0.10, 0, 0, Math.PI * 2);
     ctx.fill();
-    // 发射口上方大冰晶（菱形雪花）
-    ctx.fillStyle = '#E1F5FE';
+    // 头顶大菱形冰晶（寒冰唯一最强识别符号，v3 保留并略微增大 0.22→0.24/高 1.05→1.12）
+    ctx.fillStyle = C.F_CRYSTAL;
     ctx.beginPath();
-    ctx.moveTo(0, headY - headR * 1.05);
-    ctx.lineTo(headR * 0.2, headY - headR * 0.7);
-    ctx.lineTo(0, headY - headR * 0.36);
-    ctx.lineTo(-headR * 0.2, headY - headR * 0.7);
+    ctx.moveTo(0, headY - headR * 1.12);
+    ctx.lineTo( headR * 0.24, headY - headR * 0.72);
+    ctx.lineTo(0, headY - headR * 0.34);
+    ctx.lineTo(-headR * 0.24, headY - headR * 0.72);
     ctx.closePath();
     ctx.fill(); ctx.stroke();
-    // 冰晶十字纹
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 1.8;
+    // 冰晶十字纹：加粗（走 THIN v3 2.6），中心"十字"一眼识别，不再靠弱雪花
+    this._setStroke(ctx, C.STROKE, this._strokeW(T.STROKE.THIN));
     ctx.beginPath();
-    ctx.moveTo(0, headY - headR * 1.0); ctx.lineTo(0, headY - headR * 0.42);
-    ctx.moveTo(-headR * 0.15, headY - headR * 0.7); ctx.lineTo(headR * 0.15, headY - headR * 0.7);
+    ctx.moveTo(0, headY - headR * 1.05);  ctx.lineTo(0, headY - headR * 0.40);
+    ctx.moveTo(-headR * 0.18, headY - headR * 0.72); ctx.lineTo(headR * 0.18, headY - headR * 0.72);
     ctx.stroke();
-    // 头部周围两颗小雪花点缀
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    this._drawStarShape(ctx, headR * 0.55, headY - headR * 0.05, headR * 0.1, 6, 0.5);
+    // v3 删掉六角雪花两颗（与冰晶信息重复、小尺寸糊成白点）
+    // 原: _drawStarShape(ctx headR*0.55/_drawStarShape(ctx -headR*0.60…)
+    // 表情：O型惊讶 + 冰蓝腮红
+    this._drawCuteFace(ctx, headR, headY + headR * H.FREEZER_EYE_Y, {
+      mouth: 'o', wobblePhase: wobblePhase, blushColor: C.BLUSH_COOL
+    });
+  }
+
+  /**
+   * 樱桃炸弹（v2 新增植物）：双樱桃 + 绿色引线 + 引信火花 + 爆炸前蓄力震动
+   * 核心识别符号：两颗红樱桃 + 顶部绿色茎/引线 + 闪烁火星
+   * @param {Object} plant - 植物对象（含 fuseTimer 用于蓄力震动）
+   */
+  _drawCherry(ctx, r, def, plant) {
+    const T = this.T;
+    const C = T.COLORS;
+    const H = T.HEAD;
+    const wobblePhase = plant.wobble;
+    // 引信阶段震动：剩余时间越短震动越剧烈（< 800ms 开始抖）
+    const fuseLeft = plant.fuseTimer || 0;
+    const shake = fuseLeft > 0 && fuseLeft < 800
+      ? (Math.sin(Date.now() / 30) * (1 - fuseLeft / 800) * 4)
+      : 0;
+    const headR = r * 0.72;
+    const headY = -r * 0.05;
+
+    ctx.save();
+    if (shake) ctx.translate(shake, 0);
+
+    // 绿色茎/引线（从两颗樱桃之间向上伸出，弯曲）
+    ctx.fillStyle = C.C_FUSE;
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.05, headY);
+    ctx.quadraticCurveTo(-r * 0.35, headY - r * 0.7, -r * 0.15, headY - r * 1.05);
+    ctx.quadraticCurveTo(r * 0.05, headY - r * 1.15, r * 0.20, headY - r * 0.95);
+    ctx.quadraticCurveTo(r * 0.40, headY - r * 0.6, r * 0.05, headY);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // 顶部小叶子
+    ctx.fillStyle = C.C_LEAF;
+    ctx.beginPath();
+    ctx.ellipse(r * 0.22, headY - r * 1.0, r * 0.20, r * 0.12, 0.6, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+
+    // 左樱桃（略小，靠后）
+    const lx = -r * 0.42, ly = headY + r * 0.18;
+    ctx.fillStyle = C.C_BODY_DARK;
+    ctx.beginPath();
+    ctx.arc(lx, ly, headR * 0.88, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,' + H.HLIGHT_ALPHA + ')';
+    ctx.beginPath();
+    ctx.ellipse(lx - headR * 0.28, ly - headR * 0.28, headR * 0.20, headR * 0.30, -0.5, 0, Math.PI * 2);
     ctx.fill();
-    this._drawStarShape(ctx, -headR * 0.6, headY + headR * 0.2, headR * 0.08, 6, 0.5);
+
+    // 右樱桃（略大，靠前，主表情）
+    const rx = r * 0.40, ry = headY + r * 0.25;
+    ctx.fillStyle = C.C_BODY;
+    ctx.beginPath();
+    ctx.arc(rx, ry, headR * 1.0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 统一高光
+    ctx.fillStyle = 'rgba(255,255,255,' + H.HLIGHT_ALPHA + ')';
+    ctx.beginPath();
+    ctx.ellipse(rx + headR * H.HLIGHT_X, ry + headR * H.HLIGHT_Y,
+                headR * H.HLIGHT_W, headR * H.HLIGHT_H, H.HLIGHT_ROT, 0, Math.PI * 2);
     ctx.fill();
-    // 表情（O型惊讶 + 冷调腮蓝）
-    this._drawCuteFace(ctx, headR, headY + headR * 0.08, {
-      mouth: 'o',
-      wobblePhase: wobblePhase,
-      blushColor: 'rgba(120, 200, 255, 0.55)'
+
+    // 右樱桃表情（愤怒爆发前：grin 露齿 + 浓腮红）
+    this._drawCuteFace(ctx, headR, ry + headR * H.SHOOTER_EYE_Y, {
+      mouth: 'grin', wobblePhase: wobblePhase, blushColor: C.BLUSH_RICH
+    });
+
+    // 左樱桃简易表情（单只小眯眼 + 小腮红，避免两颗脸打架）
+    ctx.fillStyle = T.COLORS.STROKE;
+    ctx.beginPath();
+    ctx.arc(lx - headR * 0.22, ly - headR * 0.05, headR * 0.16, 0, Math.PI * 2);
+    ctx.arc(lx + headR * 0.22, ly - headR * 0.05, headR * 0.16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = T.COLORS.INK;
+    ctx.beginPath();
+    ctx.arc(lx - headR * 0.18, ly - headR * 0.02, headR * 0.09, 0, Math.PI * 2);
+    ctx.arc(lx + headR * 0.26, ly - headR * 0.02, headR * 0.09, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = C.BLUSH_RICH;
+    ctx.beginPath();
+    ctx.arc(lx - headR * 0.40, ly + headR * 0.18, headR * 0.12, 0, Math.PI * 2);
+    ctx.arc(lx + headR * 0.40, ly + headR * 0.18, headR * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 引信火花（引信末端闪烁星，引信<1s 时高频闪）
+    if (fuseLeft > 0 && fuseLeft < 1000) {
+      const sparkAlpha = 0.4 + 0.6 * Math.abs(Math.sin(Date.now() / (fuseLeft < 500 ? 50 : 100)));
+      ctx.globalAlpha = sparkAlpha;
+      ctx.fillStyle = C.C_SPARK;
+      this._drawStarShape(ctx, r * 0.22, headY - r * 1.05, r * 0.16, 4, 0.5);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+
+  /**
+   * 火焰射手（v2 新增植物）：橙红头 + 火焰冠 + 火焰发射口 + 穿透弹植物本体
+   * 核心识别符号：头顶跳动火焰冠 + 深色火焰枪口 + 暖色腮红
+   */
+  _drawFire(ctx, r, def, wobblePhase) {
+    const T = this.T;
+    const C = T.COLORS;
+    const H = T.HEAD;
+    const headR = r * 1.0;
+    const headY = -r * 0.25;
+
+    // 两片暖色叶（与豌豆射手结构一致，色板换成暖橙绿）
+    ctx.fillStyle = C.C_LEAF;
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.7, r * 0.55, r * 0.46, r * 0.22, -0.55, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C.C_FUSE;
+    ctx.beginPath();
+    ctx.ellipse( r * 0.7, r * 0.55, r * 0.46, r * 0.22,  0.55, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 茎
+    ctx.fillStyle = C.C_FUSE;
+    ctx.beginPath();
+    safeRoundRect(ctx, -r * 0.16, r * 0.1, r * 0.32, r * 0.52, r * 0.13);
+    ctx.fill(); ctx.stroke();
+    // 头（橙红圆头）
+    ctx.fillStyle = def.color;
+    ctx.beginPath();
+    ctx.ellipse(0, headY, headR * 1.0, headR * 0.95, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 统一高光
+    ctx.fillStyle = 'rgba(255,255,255,' + H.HLIGHT_ALPHA + ')';
+    ctx.beginPath();
+    ctx.ellipse(headR * H.HLIGHT_X, headY + headR * H.HLIGHT_Y,
+                headR * H.HLIGHT_W, headR * H.HLIGHT_H, H.HLIGHT_ROT, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 头顶跳动火焰冠（3 簇火苗，随 wobblePhase 摆动，核心识别符号）
+    const flameSwing = Math.sin(wobblePhase * 1.5) * r * 0.06;
+    ctx.fillStyle = C.FIRE_FLAME;
+    // 中间大火焰
+    ctx.beginPath();
+    ctx.moveTo(0, headY - headR * 0.55);
+    ctx.quadraticCurveTo(-headR * 0.22, headY - headR * 0.95 + flameSwing,
+                         0, headY - headR * 1.15 + flameSwing);
+    ctx.quadraticCurveTo( headR * 0.22, headY - headR * 0.95 + flameSwing,
+                         0, headY - headR * 0.55);
+    ctx.fill(); ctx.stroke();
+    // 左右小火焰
+    ctx.beginPath();
+    ctx.moveTo(-headR * 0.32, headY - headR * 0.50);
+    ctx.quadraticCurveTo(-headR * 0.48, headY - headR * 0.80 - flameSwing,
+                         -headR * 0.30, headY - headR * 0.95 - flameSwing);
+    ctx.quadraticCurveTo(-headR * 0.18, headY - headR * 0.78 - flameSwing,
+                         -headR * 0.32, headY - headR * 0.50);
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo( headR * 0.32, headY - headR * 0.50);
+    ctx.quadraticCurveTo( headR * 0.48, headY - headR * 0.80 + flameSwing,
+                         headR * 0.30, headY - headR * 0.95 + flameSwing);
+    ctx.quadraticCurveTo( headR * 0.18, headY - headR * 0.78 + flameSwing,
+                         headR * 0.32, headY - headR * 0.50);
+    ctx.fill(); ctx.stroke();
+    // 火焰内核高亮（黄色，更亮更小）
+    ctx.fillStyle = C.FIRE_FLAME_LIGHT;
+    ctx.beginPath();
+    ctx.ellipse(0, headY - headR * 0.82 + flameSwing, headR * 0.10, headR * 0.18, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 火焰发射口（深色枪口，比豌豆射手更粗壮——穿透弹植物）
+    ctx.fillStyle = C.FIRE_MUZZLE;
+    ctx.beginPath();
+    ctx.ellipse(0, headY - headR * 0.5, headR * 0.42, headR * 0.22, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 枪口内火芯（亮黄，蓄能感）
+    ctx.fillStyle = C.FIRE_CORE;
+    ctx.beginPath();
+    ctx.ellipse(0, headY - headR * 0.5, headR * 0.22, headR * 0.10, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 表情（自信 grin + 暖橙腮红）
+    this._drawCuteFace(ctx, headR, headY + headR * H.SHOOTER_EYE_Y, {
+      mouth: 'grin', wobblePhase: wobblePhase, blushColor: C.FIRE_BLUSH
+    });
+  }
+
+  /**
+   * 心形花（v2 基地植物 / 防线核心）：心形花冠 + 柔光晕 + 茎叶
+   * 核心识别符号：粉心形花头 + 脉动光晕（防线状态指示）+ 绿茎
+   * 被啃食时受击闪烁由 _drawPlant 统一处理；血量低时光晕变红警示
+   * @param {Object} plant - 含 health/maxHealth 用于光晕颜色
+   */
+  _drawHeartBase(ctx, r, def, wobblePhase) {
+    const T = this.T;
+    const C = T.COLORS;
+    const H = T.HEAD;
+    const headR = r * 1.05;
+    const headY = -r * 0.15;
+
+    // 茎 + 两片叶（与射手结构一致，绿色）
+    ctx.fillStyle = C.HB_LEAF;
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.65, r * 0.55, r * 0.44, r * 0.20, -0.55, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse( r * 0.65, r * 0.55, r * 0.44, r * 0.20,  0.55, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C.C_FUSE;
+    ctx.beginPath();
+    safeRoundRect(ctx, -r * 0.14, r * 0.05, r * 0.28, r * 0.55, r * 0.12);
+    ctx.fill(); ctx.stroke();
+
+    // 脉动光晕（防线核心呼吸感；周期 2s，wobblePhase 已在 ~3rad/s 累积）
+    const pulse = 0.5 + 0.5 * Math.sin(wobblePhase * 0.7);
+    ctx.fillStyle = C.HB_GLOW;
+    ctx.globalAlpha = 0.35 + 0.25 * pulse;
+    ctx.beginPath();
+    ctx.arc(0, headY, headR * (1.25 + 0.10 * pulse), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // 心形花冠（用 _drawHeartShape 统一形状，粉色填充 + 深粉描边）
+    this._drawHeartShape(ctx, 0, headY + headR * 0.15, headR * 0.92);
+    ctx.fillStyle = C.HB_BODY;
+    ctx.fill();
+    this._setStroke(ctx, T.COLORS.STROKE, this._strokeW(T.STROKE.MAIN));
+    ctx.stroke();
+    // 心形高光（左上椭圆，与统一高光位对齐）
+    ctx.fillStyle = 'rgba(255,255,255,' + H.HLIGHT_ALPHA + ')';
+    ctx.beginPath();
+    ctx.ellipse(headR * (H.HLIGHT_X + 0.10), headY + headR * (H.HLIGHT_Y - 0.05),
+                headR * H.HLIGHT_W, headR * H.HLIGHT_H, H.HLIGHT_ROT, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 表情（温柔微笑 + 粉腮红，防线守护者气质）
+    this._drawCuteFace(ctx, headR, headY + headR * H.WALL_EYE_Y, {
+      mouth: 'smile', wobblePhase: wobblePhase, blushColor: C.BLUSH_RICH
     });
   }
 
   /**
    * 绘制投射物（实心圆 + 拖尾）
+   * v2: 火焰弹（type='fire'）使用多层火焰拖尾，区分穿透弹视觉
    */
   _drawProjectile(ctx, proj) {
     ctx.save();
+    if (proj.type === 'fire') {
+      // 火焰弹：3 层渐变火焰球（外橙红 → 中橙 → 内黄白火芯）+ 拖尾火苗
+      const x = proj.x, y = proj.y, R = proj.radius;
+      // 拖尾火苗（向后偏移，随速度拉长）
+      const trailOff = -proj.vy * 0.025;
+      ctx.globalAlpha = 0.45;
+      ctx.fillStyle = this.T.COLORS.FIRE_FLAME;
+      ctx.beginPath();
+      ctx.ellipse(x, y + trailOff, R * 1.0, R * 1.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // 外层火焰球
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = this.T.COLORS.FIRE_BODY_DARK;
+      ctx.beginPath();
+      ctx.arc(x, y, R * 1.1, 0, Math.PI * 2);
+      ctx.fill();
+      // 中层橙
+      ctx.fillStyle = this.T.COLORS.FIRE_FLAME;
+      ctx.beginPath();
+      ctx.arc(x, y, R * 0.85, 0, Math.PI * 2);
+      ctx.fill();
+      // 内核亮黄
+      ctx.fillStyle = this.T.COLORS.FIRE_CORE;
+      ctx.beginPath();
+      ctx.arc(x, y, R * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
+    // 普通弹 / 冰弹：实心圆 + 拖尾
     // 拖尾
     ctx.globalAlpha = 0.35;
     ctx.fillStyle = proj.color;

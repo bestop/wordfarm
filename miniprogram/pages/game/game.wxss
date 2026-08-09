@@ -202,26 +202,32 @@
   opacity: 0.45;
   filter: grayscale(0.4);
 }
-/* ===== 商店栏：纯 CSS 萌系植物头像（与 Canvas 角色风格一致，无图片） ===== */
+/* ===== 商店栏：纯 CSS 萌系植物头像（设计系统 Tokens v2 - 与 Canvas 1:1 对齐）
+   - 眼睛比例：eyeDX=36% headR · eyeR=24% headR（精确 RENDER_TOKENS.FACE）
+   - 瞳孔位置：右下 16/12%（Canvas pOffX/Y 同）
+   - 腮红位置：X=±62% headR · 底部距离= 70%（Canvas cy+0.38r 对应）
+   - 高光统一左上 45°：top 14% · left 18% · 椭圆 -40deg
+   - 色彩：全部从 RENDER_TOKENS.COLORS 取值（Hex 值严格对应）
+=================================================================== */
+/* ---- 1. 共用头部（与 Canvas head ellipse 同色板） ---- */
 .shop-avatar {
   position: relative;
   width: 56rpx;
   height: 56rpx;
   margin: 0 auto;
-  /* 微微浮动 + 点击缩放（与 shop-item 过渡协调） */
+  /* 与 Canvas 头比例严格 1:1 的设计，不主动缩放，选中态再变换 */
 }
-
-/* 头部圆（所有植物共用，主色在各自 type 类覆盖） */
 .shop-avatar .sa-head {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: #7CB342;
-  border: 2.5rpx solid #FFFFFF;
-  box-shadow: inset -8rpx -8rpx 0 rgba(0,0,0,0.08),
-              0 2rpx 6rpx rgba(124,179,66,0.35);
+  background: #7CB342;  /* SHOOTER stem/主色 base，type 类覆盖 */
+  border: 3rpx solid #FFFFFF;   /* v3 加粗：2.5 → 3rpx（56rpx 下轮廓更锐利） */
+  /* 统一立体感：右下暗部内阴影略加深（小尺寸对比更强） */
+  box-shadow: inset -10rpx -10rpx 0 rgba(0,0,0,0.10),
+              0 2rpx 6rpx rgba(124,179,66,0.40);
 }
-/* 头部高光（模拟 Canvas 左上高光，统一立体感） */
+/* 统一高光：左上 45°，与 Canvas HEAD.HLIGHT_X/Y/W/H/ROT 精确对应（比例相同） */
 .shop-avatar .sa-head::after {
   content: '';
   position: absolute;
@@ -230,11 +236,11 @@
   width: 28%;
   height: 42%;
   border-radius: 50%;
-  background: rgba(255,255,255,0.38);
-  transform: rotate(-40deg);
+  background: rgba(255,255,255,0.35);   /* RENDER_TOKENS HEAD.HLIGHT_ALPHA */
+  transform: rotate(-40deg);            /* RENDER_TOKENS HEAD.HLIGHT_ROT */
 }
 
-/* 顶部装饰（shooter:豌豆+发射口 / wall:嫩芽 / freezer:冰晶） */
+/* ---- 2. 顶部/左右装饰（按类型差异化） ---- */
 .shop-avatar .sa-deco-top {
   position: absolute;
   left: 50%;
@@ -243,8 +249,8 @@
   width: 58%;
   height: 26%;
   border-radius: 50%;
-  background: #33691E;
-  border: 2rpx solid #FFFFFF;
+  background: #33691E;       /* S_MOUTH_IN */
+  border: 2.5rpx solid #FFFFFF;   /* v3 2→2.5 加粗描边 */
 }
 .shop-avatar .sa-deco-top::after {
   content: '';
@@ -255,11 +261,10 @@
   width: 56%;
   height: 90%;
   border-radius: 50%;
-  background: #C5E1A5;
-  border: 2rpx solid #FFFFFF;
+  background: #C5E1A5;       /* S_PEA_LIGHT */
+  border: 2.5rpx solid #FFFFFF;  /* v3 加粗 */
   box-shadow: inset -3rpx -3rpx 0 rgba(255,255,255,0.35);
 }
-/* 左右叶片（shooter/freezer 共用，wall 不用） */
 .shop-avatar .sa-deco-left,
 .shop-avatar .sa-deco-right {
   position: absolute;
@@ -267,33 +272,47 @@
   width: 46%;
   height: 30%;
   border-radius: 50%;
-  background: #9CCC65;
-  border: 2rpx solid #FFFFFF;
+  background: #9CCC65;       /* S_LEAF_MID */
+  border: 2.5rpx solid #FFFFFF;  /* v3 2→2.5 加粗 */
 }
 .shop-avatar .sa-deco-left  { left: -18%; transform: rotate(-28deg); }
 .shop-avatar .sa-deco-right { right: -18%; transform: rotate(28deg); }
 
-/* 超级大大眼（Q版核心，两侧各一只 + 瞳孔偏右下 + 双高光） */
+/* ---- 3. 眼睛系统：严格对齐 RENDER_TOKENS.FACE ----
+   FACE: EYE_DX_RATIO=0.36 · EYE_R_RATIO=0.24
+   换算 %：眼中心 X 距离中心 36% → left = 50-36-24 = -10% + 单位头宽内？
+   在 56rpx 圆头像（= 1×headR）中：
+     eyeR = 24% × head diameter = 48% × headR（diameter=2R），所以宽度 48%？
+     哦，CSS 的 % 是相对于父元素（shop-avatar）宽度（即直径 = 2R），
+     Canvas 里的 eyeR = 0.24 R（半径），所以 eye 宽度 = 0.48 R = 24% of (直径 2R)。
+     宽度/高度各 24%（眼睛正圆直径 2×eyeR = 48% R → 24% of 直径宽）。
+     中心距离：eyeDX = 0.36 R = 18% of 直径。即左眼中心在 50% - 18% = 32%。
+     所以 sa-eye-l left = 32% - 12%(半宽) = 20%
+     Canvas 眼 Y：eyeY = headR×0.08（头中心偏下 0.08 直径=4% of 直径）
+     所以 sa-eye top = 50% - 12%(半高) + 4% = 42%。改到 42%。
+   ==============================================================================*/
 .shop-avatar .sa-eye {
   position: absolute;
-  top: 30%;
+  top: 42%;             /* 精确 T.FACE: eyeY=cy+0.08R（中心 50% → 顶部 42%） */
   width: 24%;
-  height: 26%;
+  height: 24%;          /* 正圆眼（0.24R×2 = 24% of 直径） */
   border-radius: 50%;
-  background: #FFFFFF;
-  border: 1.5rpx solid rgba(255,255,255,0.85);
+  background: #FFFFFF;  /* T.COLORS.STROKE (眼白) */
+  border: 2rpx solid #FFFFFF;   /* v3 加粗 1.5→2rpx（眼白描边在 56rpx 下必须锐利） */
 }
-.shop-avatar .sa-eye-l { left: 20%; }
-.shop-avatar .sa-eye-r { right: 20%; }
+.shop-avatar .sa-eye-l { left: 20%; }  /* = 中心距 18% + 半宽 12% → 左缘 20% */
+.shop-avatar .sa-eye-r { right: 20%; } /* 镜像 */
+/* 瞳孔：偏右下（v3 放大 56% → 60%，小尺寸更醒目；右下偏 16/14 保留） */
 .shop-avatar .sa-pupil {
   position: absolute;
-  right: 16%;
-  bottom: 12%;
-  width: 56%;
-  height: 56%;
+  right: 16%;           /* PUPIL_OFF_X = 0.16 eyeR → 16% of 眼宽 */
+  bottom: 14%;          /* PUPIL_OFF_Y = 0.14 eyeR → 14% of 眼高 */
+  width: 60%;           /* v3 56% → 60%，小尺寸不糊 */
+  height: 60%;
   border-radius: 50%;
-  background: #4E342E;
+  background: #4E342E;  /* T.COLORS.INK */
 }
+/* 双高光：两颗 · 大 42% pupil + 小 18% pupil（sh1 左上, sh2 右下）—— 依然保留，灵动灵魂 */
 .shop-avatar .sa-shine {
   position: absolute;
   left: 22%;
@@ -302,33 +321,28 @@
   height: 26%;
   border-radius: 50%;
   background: #FFFFFF;
-  box-shadow: 14rpx 22rpx 0 -2rpx #FFFFFF; /* 第二颗小高光 */
+  box-shadow: 14rpx 22rpx 0 -2rpx #FFFFFF;   /* 第二颗小高光 */
 }
 
-/* 爱心形腮红（纯 CSS：两个圆 + 方形旋转） */
+/* ---- 4. 腮红：v3 爱心 → 实心圆（56rpx 下 before/after 爱心边缘糊成锯齿，平涂圆更干净）
+   仍保持 left/right 11%（BLUSH_CX=62%R），bottom 22% 对齐 mouth 上方
+================================================================================== */
 .shop-avatar .sa-blush {
   position: absolute;
   bottom: 22%;
-  width: 16%;
-  height: 10%;
-  background: rgba(255,130,160,0.6);
+  width: 18%;            /* v3 16% → 18% 略放大（圆比爱心面积小） */
+  height: 14%;           /* v3 10% → 14% 正圆直径 */
+  border-radius: 50%;    /* v3 爱心贝塞尔 → 纯圆 */
+  background: rgba(255,150,170,0.70);   /* v3 0.65→0.70 小尺寸对比更强 */
 }
+/* 删除 before/after 双爱心伪元素（56rpx 下糊） */
 .shop-avatar .sa-blush::before,
-.shop-avatar .sa-blush::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  width: 68%;
-  height: 160%;
-  border-radius: 50%;
-  background: inherit;
-}
-.shop-avatar .sa-blush::before { left: 0; }
-.shop-avatar .sa-blush::after  { right: 0; }
-.shop-avatar .sa-blush-l { left: 6%;  transform: rotate(-10deg); }
-.shop-avatar .sa-blush-r { right: 6%; transform: rotate(10deg); }
+.shop-avatar .sa-blush::after { display: none; }
+.shop-avatar .sa-blush-l { left: 11%; }
+.shop-avatar .sa-blush-r { right: 11%; }
 
-/* 微笑嘴（弧线：上边框半圆） */
+/* ---- 5. 嘴：v3 线条 2.2rpx → 2.8rpx 加粗（小尺寸仍锐利）
+============================================================= */
 .shop-avatar .sa-mouth {
   position: absolute;
   left: 50%;
@@ -336,166 +350,153 @@
   transform: translateX(-50%);
   width: 24%;
   height: 12%;
-  border: 2.2rpx solid #4E342E;
+  border: 2.8rpx solid #4E342E;    /* T.STROKE.INK · 2.2→2.8 +27% */
   border-top: none;
   border-left: none;
   border-right: none;
   border-radius: 0 0 60% 60% / 0 0 100% 100%;
 }
 
-/* ============ 3 种植物差异化 ============ */
+/* ===== 3 种植物差异化（色板严格取自 RENDER_TOKENS.COLORS） ===== */
 /* 豌豆 shooter */
 .shop-avatar.shop-avatar-shooter .sa-head { background: #7CB342; box-shadow: inset -8rpx -8rpx 0 rgba(0,0,0,0.08),0 2rpx 6rpx rgba(124,179,66,0.35); }
-.shop-avatar.shop-avatar-shooter .sa-deco-top { background: #558B2F; }
-.shop-avatar.shop-avatar-shooter .sa-deco-top::after { background: #C5E1A5; }
+.shop-avatar.shop-avatar-shooter .sa-deco-top         { background: #558B2F; }  /* S_MOUTH_OUT */
+.shop-avatar.shop-avatar-shooter .sa-deco-top::after   { background: #C5E1A5; }  /* S_PEA_LIGHT */
 .shop-avatar.shop-avatar-shooter .sa-deco-left,
-.shop-avatar.shop-avatar-shooter .sa-deco-right { background: #AED581; }
-.shop-avatar.shop-avatar-shooter .sa-mouth { /* 露齿笑：填充 + 牙齿 */
-  background: #E91E63;
+.shop-avatar.shop-avatar-shooter .sa-deco-right { background: #AED581; }         /* S_LEAF_DARK */
+.shop-avatar.shop-avatar-shooter .sa-mouth { /* grin 露齿笑 */
+  background: #E91E63;                  /* T.COLORS.MOUTH_PINK */
   border-top: none;
-  border-left: 2.2rpx solid #FFFFFF;
-  border-right: 2.2rpx solid #FFFFFF;
-  border-bottom: 2.2rpx solid #FFFFFF;
+  border-left: 2.8rpx solid #FFFFFF;    /* v3 2.2→2.8 加粗唇描边 */
+  border-right: 2.8rpx solid #FFFFFF;
+  border-bottom: 2.8rpx solid #FFFFFF;  /* T.STROKE.LIP */
   border-radius: 0 0 50% 50% / 0 0 100% 100%;
   width: 32%;
   height: 16%;
   bottom: 16%;
 }
-.shop-avatar.shop-avatar-shooter .sa-mouth::after {
+.shop-avatar.shop-avatar-shooter .sa-mouth::after { /* 白牙齿 */
   content: '';
   position: absolute;
   left: 20%;
   top: -2rpx;
   width: 60%;
   height: 38%;
-  background: #FFFFFF;
+  background: #FFFFFF;                  /* T.COLORS.STROKE */
   border-radius: 0 0 50% 50%;
 }
 
-/* 坚果 wall */
+/* 坚果 wall - 色板取自 T.COLORS.W_*
+   v3 简化：壳纹 3 条→2 条粗横纹；嫩芽 3→1 颗中间（删两侧伪元素），小尺寸识别度更高 */
 .shop-avatar.shop-avatar-wall .sa-head {
   background: #A1887F;
-  border-radius: 46%;
-  box-shadow: inset -8rpx -8rpx 0 rgba(0,0,0,0.12),0 2rpx 6rpx rgba(161,136,127,0.35);
+  border-radius: 46%;                   /* 坚果圆头，与 Canvas ellipse 1.0/1.05 同比例 */
+  box-shadow: inset -8rpx -8rpx 0 rgba(0,0,0,0.14),0 2rpx 6rpx rgba(161,136,127,0.40);
 }
-/* 坚果三条横纹 */
+/* 坚果两条粗横纹（3→2）：删除 top 一条，只留 middle+bottom 两条（间距更大，一眼识别） */
 .shop-avatar.shop-avatar-wall .sa-head::before {
   content: '';
   position: absolute;
-  left: 18%;
-  right: 18%;
-  top: 32%;
+  left: 20%;
+  right: 20%;
+  top: 34%;
   height: 36%;
-  border-top: 2rpx solid rgba(109,76,65,0.35);
-  border-bottom: 2rpx solid rgba(109,76,65,0.35);
+  /* v3 只留中间线 + 底线，2 条粗纹（删除 border-top） */
+  border-bottom: 2.5rpx solid rgba(109,76,65,0.40);    /* v3 加粗 2rpx→2.5rpx，α 0.35→0.40 更黑 */
   z-index: 0;
   box-sizing: border-box;
-  padding-top: 17%;
+  padding-top: 18%;
+  /* 第二条中线：用背景线性渐变画，比 border 定位更精确 */
+  background-image: linear-gradient(rgba(109,76,65,0.40), rgba(109,76,65,0.40));
+  background-position: left center;
+  background-repeat: no-repeat;
+  background-size: 100% 2.5rpx;
 }
+/* 坚果无侧叶 */
 .shop-avatar.shop-avatar-wall .sa-deco-left,
-.shop-avatar.shop-avatar-wall .sa-deco-right {
-  display: none; /* 坚果无侧叶 */
-}
-/* 顶部三嫩芽（一个 deco-top 负责中间，用伪元素做两侧） */
+.shop-avatar.shop-avatar-wall .sa-deco-right { display: none; }
+/* 顶部嫩芽：v3 只留中央 1 颗大嫩芽（删除 ::before/::after 两侧），核心特征更集中 */
 .shop-avatar.shop-avatar-wall .sa-deco-top {
-  background: #81C784;
-  width: 24%;
-  height: 36%;
+  background: #81C784;                  /* W_SPROUT_LIGHT */
+  width: 28%;                           /* v3 24% → 28%，放大单颗辨识度 */
+  height: 42%;                          /* v3 36% → 42%，更高更醒目 */
   border-radius: 48%;
-  top: -22%;
+  top: -26%;                            /* v3 -22% → -26% 再上移，不压头 */
   transform: translateX(-50%) rotate(0deg);
 }
-.shop-avatar.shop-avatar-wall .sa-deco-top::before {
-  content: '';
-  position: absolute;
-  left: -130%;
-  top: 36%;
-  width: 90%;
-  height: 72%;
-  background: #66BB6A;
-  border: 2rpx solid #FFFFFF;
-  border-radius: 48%;
-  transform: rotate(-32deg);
-}
+.shop-avatar.shop-avatar-wall .sa-deco-top::before,
 .shop-avatar.shop-avatar-wall .sa-deco-top::after {
-  content: '';
-  position: absolute;
-  right: -130%;
-  top: 36%;
-  width: 90%;
-  height: 72%;
-  background: #66BB6A;
-  border: 2rpx solid #FFFFFF;
-  border-radius: 48%;
-  transform: rotate(32deg);
-  box-shadow: none;
+  display: none;                        /* v3 删除两侧小嫩芽（原 130% 偏移的两颗） */
 }
+/* 坚果浓腮红 */
 .shop-avatar.shop-avatar-wall .sa-blush-l,
 .shop-avatar.shop-avatar-wall .sa-blush-r {
-  background: rgba(244,143,177,0.78);
+  background: rgba(244,143,177,0.82);   /* T.COLORS.BLUSH_RICH · v3 α 0.78→0.82 */
 }
 
-/* 寒冰 freezer */
+/* 寒冰 freezer - 色板取自 T.COLORS.F_*
+   v3 简化：删除雪花/柔光；保留"发射口椭圆 + 顶菱形冰晶 + 冰晶十字纹"三件套识别 */
 .shop-avatar.shop-avatar-freezer .sa-head { background: #4FC3F7; box-shadow: inset -8rpx -8rpx 0 rgba(0,0,0,0.06),0 2rpx 6rpx rgba(79,195,247,0.35); }
 .shop-avatar.shop-avatar-freezer .sa-deco-left,
-.shop-avatar.shop-avatar-freezer .sa-deco-right { background: #80DEEA; }
+.shop-avatar.shop-avatar-freezer .sa-deco-right { background: #80DEEA; }  /* F_LEAF_MID */
 .shop-avatar.shop-avatar-freezer .sa-deco-top {
-  background: #0277BD;
-  width: 54%;
-  height: 22%;
+  background: #0277BD;                  /* F_MOUTH_OUT */
+  width: 58%;                           /* v3 54% → 58%，发射口放大（核心识别） */
+  height: 24%;                          /* v3 22% → 24% */
   top: -10%;
+  border-width: 2.5rpx;                 /* v3 2rpx → 2.5rpx */
 }
-/* 顶部菱形冰晶 */
+/* 顶部菱形冰晶（加粗描边 2→2.5rpx，略放大，小尺寸必须一眼看见"冰晶"） */
 .shop-avatar.shop-avatar-freezer .sa-deco-top::after {
   content: '';
   position: absolute;
   left: 50%;
-  top: -160%;
+  top: -175%;                           /* v3 -160% → -175% 略放大冰晶 */
   transform: translateX(-50%) rotate(45deg);
-  width: 46%;
-  height: 260%;
-  background: #E1F5FE;
+  width: 50%;                           /* v3 46% → 50% */
+  height: 280%;                         /* v3 260% → 280% */
+  background: #E1F5FE;                  /* F_CRYSTAL */
   border-radius: 14%;
-  border: 2rpx solid #FFFFFF;
+  border: 2.5rpx solid #FFFFFF;         /* v3 2 → 2.5rpx 加粗 */
   box-shadow: none;
 }
-/* 冰晶十字纹（边框十字） */
+/* 冰晶十字纹（加粗 inset 1.5 → 2rpx） */
 .shop-avatar.shop-avatar-freezer .sa-deco-top::before {
   content: '';
   position: absolute;
   left: 50%;
-  top: -145%;
+  top: -160%;
   transform: translateX(-50%);
-  width: 22%;
-  height: 230%;
+  width: 24%;                           /* v3 22% → 24% 更宽 */
+  height: 255%;                         /* v3 230% → 255% 更长 */
   z-index: 1;
   pointer-events: none;
-  box-shadow: inset 1.5rpx 0 0 #FFFFFF, inset -1.5rpx 0 0 #FFFFFF;
+  box-shadow: inset 2rpx 0 0 #FFFFFF, inset -2rpx 0 0 #FFFFFF; /* v3 1.5→2rpx 加粗十字 */
 }
+/* 冰蓝腮红 */
 .shop-avatar.shop-avatar-freezer .sa-blush-l,
 .shop-avatar.shop-avatar-freezer .sa-blush-r {
-  background: rgba(120,200,255,0.58);
+  background: rgba(120,200,255,0.62);   /* T.COLORS.BLUSH_COOL · v3 α 0.58→0.62 */
 }
+/* O 型张嘴 */
 .shop-avatar.shop-avatar-freezer .sa-mouth {
-  /* O型张嘴 */
   width: 20%;
   height: 20%;
-  background: #E91E63;
-  border: 2.2rpx solid #FFFFFF;
+  background: #E91E63;                  /* T.COLORS.MOUTH_PINK */
+  border: 2.8rpx solid #FFFFFF;         /* T.STROKE.LIP · 2.2→2.8rpx */
   border-radius: 50%;
   bottom: 18%;
-  box-shadow: inset 0 -4rpx 0 #F48FB1;
+  box-shadow: inset 0 -4.5rpx 0 #F48FB1; /* T.COLORS.MOUTH_LIP · 下唇高光 4→4.5rpx 加粗 */
 }
 .shop-avatar.shop-avatar-freezer .sa-mouth::before,
 .shop-avatar.shop-avatar-freezer .sa-mouth::after {
   display: none;
 }
 
-/* 选中态：头像微微放大弹跳 */
+/* 选中/禁用 状态（与 Tokens 联动） */
 .shop-item.selected .shop-avatar {
   transform: scale(1.12) rotate(-3deg);
 }
-/* 禁用态（阳光不足）：头像去色半透明 */
 .shop-item.disabled .shop-avatar {
   filter: grayscale(0.5) opacity(0.6);
 }

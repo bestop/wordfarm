@@ -12,16 +12,19 @@
           <text>{{sunlight}}</text>
         </view>
       </view>
-      <!-- 分数 -->
+      <!-- 分数 + 关卡 -->
       <view class="hud-item hud-score">
         <view class="hud-label">分数</view>
-        <view class="hud-value">{{score}}</view>
+        <view class="hud-value">
+          <text class="level-badge">Lv.{{level}}</text>
+          <text>{{score}}</text>
+        </view>
       </view>
-      <!-- 生命值 -->
-      <view class="hud-item hud-lives">
-        <view class="hud-label">生命</view>
+      <!-- 防线（v2 替代生命：3 道基地植物防线） -->
+      <view class="hud-item hud-defense">
+        <view class="hud-label">防线</view>
         <view class="lives-row">
-          <text wx:for="{{[1,2,3]}}" wx:key="*this" class="heart {{lives >= item ? 'on' : 'off'}}">❤️</text>
+          <text wx:for="{{[1,2,3]}}" wx:key="*this" class="flower {{defenseLines >= item ? 'on' : 'off'}}">🌸</text>
         </view>
       </view>
       <!-- 连击 -->
@@ -86,14 +89,22 @@
       style="width: 100%; height: 100%;"
     ></canvas>
 
-    <!-- 暂停遮罩 -->
-    <view wx:if="{{paused}}" class="pause-mask" bindtap="onTogglePause">
+    <!-- 暂停遮罩
+         事件绑定策略（v3 修复 button 原生组件失响应）：
+         1. mask 用 catchtap="onTogglePause"：点空白处继续 + 阻止穿透到 canvas
+         2. pause-card 不绑定任何事件：点 card 非按钮区域冒泡到 mask → 继续（符合"点击屏幕继续"提示）
+         3. button 用 catchtap 阻止冒泡：避免点按钮时再冒泡到 mask 导致 onTogglePause 双触发
+         ⚠ 严禁使用 catchtouchstart/catchtouchend：
+            <button> 是原生组件，tap 依赖完整 touchstart→touchend 序列，
+            父层 catchtouch* 会切断序列 → button 永远不触发 tap → 按钮无响应
+    -->
+    <view wx:if="{{paused}}" class="pause-mask" catchtap="onTogglePause">
       <view class="pause-card kawaii-card">
         <view class="pause-title">⏸ 已暂停</view>
         <view class="pause-tip">点击屏幕继续</view>
         <view class="pause-actions">
-          <button class="kawaii-btn kawaii-btn-mint" bindtap="onTogglePause">继续游戏</button>
-          <button class="kawaii-btn kawaii-btn-ghost" bindtap="onQuit">退出本局</button>
+          <button class="kawaii-btn kawaii-btn-mint" catchtap="onTogglePause" hover-class="none">继续游戏</button>
+          <button class="kawaii-btn kawaii-btn-ghost" catchtap="onQuit" hover-class="none">退出本局</button>
         </view>
       </view>
     </view>

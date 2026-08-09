@@ -86,17 +86,17 @@
 .page > .content-scroll,
 .page > .start-wrap { position: relative; z-index: 1; }
 
-/* 最外层 padding：左右 40 · 顶部 48（hero 占位）；避免滚动条顶边贴边 */
-.page > .hero           { padding: var(--sp-6) var(--sp-5) var(--sp-4); }
+/* 最外层 padding：左右 40 · 顶部 32（hero 占位，单屏优化压缩 48→32）；避免滚动条顶边贴边 */
+.page > .hero           { padding: var(--sp-4) var(--sp-5) var(--sp-3); }
 .page > .content-scroll { padding: 0 var(--sp-5); }
 .page > .start-wrap     { padding: var(--sp-2) var(--sp-5) 0; }
 
-/* ---------- 3. Hero 品牌区（大留白 · 极简排版） ---------- */
+/* ---------- 3. Hero 品牌区（大留白 · 极简排版，单屏优化压缩 padding） ---------- */
 .hero {
   position: relative;
   z-index: 1;
   text-align: left;   /* 从居中改左对齐，更"高级"克制 */
-  padding: var(--sp-6) var(--sp-5) var(--sp-4);
+  padding: var(--sp-4) var(--sp-5) var(--sp-3);
 }
 
 .hero-icons {
@@ -119,8 +119,9 @@
   flex-shrink: 0;
 }
 
+/* 单屏优化：标题略小 76→64rpx */
 .title-main {
-  font-size: 76rpx;
+  font-size: 64rpx;
   font-weight: 900;
   letter-spacing: 3rpx;
   line-height: 1.05;
@@ -144,12 +145,12 @@
           mask-image: none !important;
 }
 
-/* 标签 pill：去掉彩色边框，改成极淡 brand-50 胶囊 + 主色文字，更现代 */
+/* 标签 pill：去掉彩色边框，改成极淡 brand-50 胶囊 + 主色文字，更现代；单屏压缩 margin */
 .hero-tags {
   display: flex;
   justify-content: flex-start;
   gap: var(--sp-2);
-  margin-top: var(--sp-3);
+  margin-top: var(--sp-2);
 }
 .tag {
   padding: 8rpx 20rpx;
@@ -177,12 +178,12 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* ---------- 5. 数据卡（去彩色数字，用深色 fw900 更沉稳） ---------- */
+/* ---------- 5. 数据卡（单屏优化压缩 padding 32→24） ---------- */
 .stats-card {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: var(--sp-4) var(--sp-3);
+  padding: var(--sp-3) var(--sp-3);
   background: var(--surface);
   border-radius: var(--radius-lg);
   border: none;
@@ -201,8 +202,9 @@
 
 .stat-item { flex: 1; text-align: center; min-width: 0; }
 
+/* 单屏优化：stat-num 38→34rpx，label 紧凑 */
 .stat-num {
-  font-size: 38rpx;
+  font-size: 34rpx;
   font-weight: 900;
   color: var(--text-900);      /* 深色而非彩色，克制 */
   line-height: 1.1;
@@ -225,17 +227,17 @@
   opacity: .55;
 }
 
-/* ---------- 6. 区块标题（去 emoji，加结构化 accent 竖线） ---------- */
-.section { margin-top: var(--sp-5); }
+/* ---------- 6. 区块标题（单屏优化：margin-top 40→24, margin-bottom 24→16） ---------- */
+.section { margin-top: var(--sp-3); }
 
 .section-title {
   display: flex;
   align-items: center;
   gap: 10rpx;
-  font-size: 30rpx;
+  font-size: 28rpx;          /* 单屏优化：30→28rpx */
   font-weight: 700;
   color: var(--text-900);
-  margin-bottom: var(--sp-3);
+  margin-bottom: var(--sp-2);
   padding: 0 2rpx;
   letter-spacing: -.3rpx;
 }
@@ -251,21 +253,26 @@
 }
 .section-emoji { display: none; }   /* 精简：去掉 emoji，让文字本身成为焦点 */
 
-/* ---------- 7. 难度选择（同构 · 结构化 accent 条承载差异化） ---------- */
-.difficulty-list {
+/* ---------- 7. 难度选择（单屏优化：纵向 3 卡 → 横向 3 列网格，节省 ~120rpx） ---------- */
+/* 横向 3 列等宽布局 */
+.difficulty-grid {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--sp-2);
 }
 
-/* 高权重覆盖 WXML 里的 inline 渐变背景（要求"克制统一"） */
+/* 卡片：垂直堆叠内容（emoji / name / desc），高度紧凑 */
 .difficulty-card,
 .page .difficulty-card[style] {
+  flex: 1 1 0;
+  min-width: 0;             /* 关键：让 flex 子项在 3 列时正确收缩 */
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--sp-3);
-  padding: var(--sp-4);
-  border-radius: var(--radius-lg);
+  justify-content: center;
+  gap: 6rpx;
+  padding: var(--sp-3) var(--sp-1) var(--sp-2);
+  border-radius: var(--radius-md);
   background: var(--surface) !important;
   border: 2rpx solid transparent;
   box-shadow: var(--shadow-card);
@@ -277,107 +284,118 @@
   position: relative;
   overflow: hidden;
 }
-.difficulty-card:active { transform: scale(.98); box-shadow: var(--shadow-soft); }
+.difficulty-card:active { transform: scale(.96); box-shadow: var(--shadow-soft); }
 
-/* 每张卡的 accent 色条（左侧竖条，结构化差异化，符合经验） */
+/* 顶部 accent 色条（横向卡片用顶条更协调） */
 .difficulty-card::before {
   content: "";
   position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 6rpx;
+  left: 0; right: 0; top: 0;
+  height: 4rpx;
   background: var(--card-accent, var(--brand-300));
   opacity: .9;
 }
-.difficulty-card-easy   { --card-accent: var(--accent-easy); }
-.difficulty-card-medium { --card-accent: var(--accent-med);  }
-.difficulty-card-hard   { --card-accent: var(--accent-hard); }
+.difficulty-card-primary { --card-accent: var(--accent-easy); }
+.difficulty-card-middle  { --card-accent: var(--accent-med);  }
+.difficulty-card-college { --card-accent: var(--accent-hard); }
 
-/* 选中态：外描边品牌色 + 淡粉底 + 阴影加强 · 保持极简不花哨 */
+/* 选中态：外描边品牌色 + 淡粉底 + 阴影加强 */
 .difficulty-card.active {
   background: var(--brand-50) !important;
   border-color: var(--brand-400);
   box-shadow:
-    0 10rpx 28rpx rgba(201,123,151, .16),
+    0 8rpx 22rpx rgba(201,123,151, .16),
     inset 0 0 0 1rpx rgba(255,255,255,.85);
 }
 
-/* 难度 emoji 外包裹：统一 72rpx 圆角方 + 用 accent 色做淡背景（不是彩色块） */
+/* emoji 圆角方：紧凑尺寸 72→56rpx */
 .diff-emoji {
-  font-size: 36rpx;
+  font-size: 32rpx;
   flex-shrink: 0;
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: var(--radius-md);
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--brand-50);   /* 默认淡粉，再按难度类型单独覆盖（兼容旧基础库，不用 color-mix） */
+  background: var(--brand-50);
   position: relative;
   z-index: 1;
 }
-.difficulty-card-easy   .diff-emoji { background: rgba(143,183,167, .18); }  /* 莫兰迪绿 18% */
-.difficulty-card-medium .diff-emoji { background: rgba(201,123,151, .16); }  /* 豆沙粉 16% */
-.difficulty-card-hard   .diff-emoji { background: rgba(181,126,86,  .16); }  /* 陶土橙 16% */
+.difficulty-card-primary .diff-emoji { background: rgba(143,183,167, .18); }
+.difficulty-card-middle  .diff-emoji { background: rgba(201,123,151, .16); }
+.difficulty-card-college .diff-emoji { background: rgba(181,126,86,  .16); }
 
-.diff-info { flex: 1; min-width: 0; position: relative; z-index: 1; }
+/* 名称居中显示 */
 .diff-name {
-  font-size: 28rpx;
+  font-size: 26rpx;
   font-weight: 700;
   color: var(--text-900);
+  line-height: 1.25;
+  letter-spacing: .2rpx;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+/* 描述：紧凑两行 */
+.diff-desc {
+  font-size: 18rpx;
+  color: var(--text-500);
   line-height: 1.3;
   letter-spacing: .2rpx;
-}
-.diff-desc {
-  font-size: 20rpx;
-  color: var(--text-500);
-  margin-top: 6rpx;
-  letter-spacing: .2rpx;
+  text-align: center;
+  position: relative;
+  z-index: 1;
 }
 
+/* 选中勾：右上角小圆点（紧凑布局用小尺寸） */
 .diff-check {
-  width: 40rpx;
-  height: 40rpx;
-  border-radius: 12rpx;            /* 圆角方替代圆，更现代 */
+  position: absolute;
+  top: 8rpx;
+  right: 8rpx;
+  width: 28rpx;
+  height: 28rpx;
+  border-radius: 50%;
   background: var(--brand-500);
   color: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 900;
-  font-size: 24rpx;
+  font-size: 18rpx;
   flex-shrink: 0;
-  position: relative;
-  z-index: 1;
-  box-shadow: 0 6rpx 16rpx rgba(201,123,151, .32);
+  z-index: 2;
+  box-shadow: 0 4rpx 10rpx rgba(201,123,151, .32);
 }
 
-/* ---------- 8. 玩法说明（2×2 卡片变极简 pill item） ---------- */
-.howto-grid {
+/* ---------- 8. 玩法说明（单屏优化：2×2 卡片 → 1 行 4 chip，节省 ~90rpx） ---------- */
+.howto-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
+  flex-direction: row;
+  gap: var(--sp-1);
 }
 
-.howto-item {
-  flex: 1 1 calc(50% - 8rpx);
-  min-width: calc(50% - 8rpx);
+.howto-chip {
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 14rpx;
-  padding: var(--sp-3) var(--sp-3);
+  gap: 6rpx;
+  padding: var(--sp-2) var(--sp-1);
   background: var(--surface);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   border: none;
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-soft);
   transition: transform var(--dur) var(--ease);
 }
-.howto-item:active { transform: scale(.985); }
+.howto-chip:active { transform: scale(.96); }
 
 .howto-emoji {
-  font-size: 26rpx;
+  font-size: 24rpx;
   flex-shrink: 0;
-  width: 48rpx;
-  height: 48rpx;
+  width: 40rpx;
+  height: 40rpx;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
@@ -387,11 +405,12 @@
 }
 
 .howto-text {
-  font-size: 24rpx;
+  font-size: 20rpx;
   color: var(--text-700);
   font-weight: 600;
   letter-spacing: .2rpx;
-  line-height: 1.35;
+  line-height: 1.2;
+  text-align: center;
   min-width: 0;
 }
 
@@ -405,6 +424,7 @@
 }
 
 /* 高权重覆盖 global.kawaii.scss 的 kawaii-btn / kawaii-btn-primary */
+/* 单屏优化：padding 26→22rpx，font-size 32→30rpx */
 .start-btn.kawaii-btn.kawaii-btn-primary,
 .page .start-btn.kawaii-btn.kawaii-btn-primary {
   width: 100%;
@@ -413,10 +433,10 @@
   align-items: center;
   justify-content: center;
   gap: 12rpx;
-  font-size: 32rpx;
+  font-size: 30rpx;
   font-weight: 700;
   letter-spacing: 2rpx;
-  padding: 26rpx 0;
+  padding: 22rpx 0;
   color: #FFFFFF;
   /* 克制渐变：主色 → 浅主色，同色相，不跨色 */
   background: linear-gradient(135deg, var(--brand-500) 0%, var(--brand-400) 100%);
@@ -454,8 +474,9 @@
   opacity: .95;
 }
 
+/* 单屏优化：tip margin 24→12rpx */
 .tip-text {
-  margin-top: var(--sp-3);
+  margin-top: var(--sp-1);
   font-size: 20rpx;
   color: var(--text-500);
   font-weight: 500;

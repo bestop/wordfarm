@@ -2,7 +2,7 @@
 // 负责: 植物对象池、投射物对象池、网格放置、攻击/产阳光/投射物飞行与碰撞
 // 植物3种: shooter(豌豆射手) / wall(坚果墙) / freezer(寒冰射手)
 
-const { PLANT_TYPES, GRID, PROJECTILE, SUNLIGHT } = require('./constants.js');
+const { PLANT_TYPES, GRID, PROJECTILE, SUNLIGHT, BASE_PLANT } = require('./constants.js');
 const { pathManager } = require('./pathManager.js');
 
 let __plantIdSeed = 1;
@@ -24,6 +24,37 @@ class PlantManager {
   reset() {
     this.plants = [];
     this.projectiles = [];
+  }
+
+  /**
+   * v2 初始化基地植物（防线核心）
+   * 在每条车道的 slot=4（最靠近房子侧）预置 1 朵心形花
+   * 由 gameManager.initGame 调用
+   */
+  initBasePlants() {
+    for (let lane = 0; lane < GRID.ROWS; lane++) {
+      const pos = pathManager.getGridCellCenter(lane, BASE_PLANT.SLOT);
+      const def = PLANT_TYPES[BASE_PLANT.TYPE];
+      this.plants.push({
+        id: __plantIdSeed++,
+        type: BASE_PLANT.TYPE,
+        def: def,
+        isBase: true,           // 标记为基地植物
+        lane: lane,
+        slot: BASE_PLANT.SLOT,
+        x: pos.x,
+        y: pos.y,
+        health: BASE_PLANT.HEALTH,
+        maxHealth: BASE_PLANT.HEALTH,
+        attackCooldown: 0,
+        sunCooldown: 0,
+        state: 'idle',
+        stateTimer: 0,
+        hitFlash: 0,
+        wobble: Math.random() * Math.PI * 2,
+        active: true
+      });
+    }
   }
 
   /**
@@ -63,6 +94,10 @@ class PlantManager {
     if (lane < 0 || lane >= GRID.ROWS || slot < 0 || slot >= GRID.COLS) {
       return { ok: false, reason: '位置越界' };
     }
+    // v2: 基地植物槽位（slot=4）禁止玩家放置
+    if (slot === BASE_PLANT.SLOT) {
+      return { ok: false, reason: '该格为防线位置' };
+    }
     if (this.getPlantAt(lane, slot)) {
       return { ok: false, reason: '该格已有植物' };
     }
@@ -83,7 +118,10 @@ class PlantManager {
       stateTimer: 0,
       hitFlash: 0,
       wobble: Math.random() * Math.PI * 2,
-      active: true
+      active: true,
+      // v2 樱桃炸弹引信字段（仅 isExplosive 植物使用）
+      fuseTimer: def.isExplosive ? def.fuseTime : 0,
+      exploded: false
     };
     this.plants.push(plant);
     return { ok: true, plant: plant, cost: def.cost };
@@ -93,30 +131,34 @@ class PlantManager {
    * 植物受击（被僵尸啃）
    * @param {Object} plant
    * @param {number} amount
-   * @returns {boolean} 是否死亡
+   * @returns {Object} {died: boolean, isBase: boolean, lane: number}
+   *   v2: 返回对象而非布尔值，携带基地植物被毁信息
    */
   takeDamage(plant, amount) {
-    if (!plant || plant.state === 'dead') return false;
+    if (!plant || plant.state === 'dead') return { died: false, isBase: false, lane: -1 };
     plant.health -= amount;
     plant.hitFlash = 180;
     if (plant.health <= 0) {
       plant.health = 0;
       plant.state = 'dead';
-      return true;
+      return { died: true, isBase: !!plant.isBase, lane: plant.lane };
     }
-    return false;
+    return { died: false, isBase: false, lane: -1 };
   }
 
   /**
    * 每帧更新植物与投射物
    * @param {number} dt - 帧间隔(ms)
-   * @param {Object} ctx - { getZombiesInLane: (lane)=>[], onHitZombie: (zombie, projectile)=>void }
+   * @param {Object} ctx - {
+   *   getZombiesInLane: (lane)=>[],
+   *   onHitZombie: (zombie, projectile)=>void,
+   *   onPlantExplode: (plant)=>void   v2 樱桃炸弹爆炸回调
+   * }
    * @returns {number} 本帧植物产出的阳光总量
    */
   update(dt, ctx) {
     let sunlightProduced = 0;
     const dtSec = dt / 1000;
-    const zombiesByLane = null; // 按需通过 ctx.getZombiesInLane 获取
 
     // 1. 更新植物
     for (let i = this.plants.length - 1; i >= 0; i--) {
@@ -129,6 +171,20 @@ class PlantManager {
       if (p.hitFlash > 0) p.hitFlash -= dt;
 
       const def = p.def;
+
+      // v2 樱桃炸弹引信倒计时
+      if (def.isExplosive && !p.exploded) {
+        p.fuseTimer -= dt;
+        if (p.fuseTimer <= 0) {
+          p.exploded = true;
+          p.state = 'dead';   // 爆炸后植物消失
+          if (ctx.onPlantExplode) ctx.onPlantExplode(p);
+          continue;  // 跳过后续攻击逻辑（已爆炸）
+        }
+        // 引信中不执行攻击
+        continue;
+      }
+
       // 攻击型植物：射击
       if (def.attackInterval > 0 && def.projectile) {
         p.attackCooldown -= dt;
@@ -169,23 +225,41 @@ class PlantManager {
         continue;
       }
       // 碰撞检测：基于僵尸半径 + 炮弹半径的圆形判定
-      // 旧逻辑用固定 16px 方形判定，远小于僵尸视觉半径(30~44)，导致炮弹
-      // "看起来打中身体却无伤害"。改为圆形判定让命中与视觉一致，告别穿模。
       const laneZombies = ctx.getZombiesInLane(pr.lane);
+      const projDef = pr.def || {};
+      // v2 火焰穿透：命中后不消失，记录已命中目标避免重复伤害
+      const isPierce = !!projDef.pierce;
       let hit = false;
       for (const z of laneZombies) {
+        // 跳过已命中过的僵尸（穿透模式）
+        if (isPierce && pr.hitTargets && pr.hitTargets.includes(z.id)) continue;
         const zpos = pathManager.getPosition(z.pathIndex, z.progress);
         const dx = pr.x - zpos.x;
         const dy = pr.y - zpos.y;
         const hitR = z.radius + pr.radius;
         if (dx * dx + dy * dy < hitR * hitR) {
           if (ctx.onHitZombie) ctx.onHitZombie(z, pr);
-          hit = true;
-          break;
+          if (isPierce) {
+            // 穿透：记录命中目标，减少剩余穿透次数
+            if (!pr.hitTargets) pr.hitTargets = [];
+            pr.hitTargets.push(z.id);
+            pr.pierceCount = (pr.pierceCount || 0) + 1;
+            if (pr.pierceCount >= (projDef.pierceMax || 3)) {
+              // 达到穿透上限，回收
+              pr.active = false;
+              hit = true;
+              break;
+            }
+            // 继续飞行，不回收
+          } else {
+            // 普通投射物：命中即消失
+            pr.active = false;
+            hit = true;
+            break;
+          }
         }
       }
       if (hit) {
-        pr.active = false;
         this.projectiles.splice(i, 1);
       }
     }
@@ -216,6 +290,7 @@ class PlantManager {
 
   /**
    * 生成投射物
+   * v2: 携带 def 信息以支持火焰穿透
    */
   _spawnProjectile(plant, projDef) {
     const slow = projDef.slow || null;
@@ -226,10 +301,13 @@ class PlantManager {
       y: plant.y - 10,         // 略偏上发射
       vy: -projDef.speed,      // 负值=向上
       damage: plant.def.damage,
-      type: projDef.type,      // 'normal' | 'ice'
+      type: projDef.type,      // 'normal' | 'ice' | 'fire'
       slow: slow,
       color: projDef.color,
       radius: projDef.radius,
+      def: projDef,            // v2: 保留完整 def 供穿透判定
+      hitTargets: [],          // v2: 已命中目标列表（穿透用）
+      pierceCount: 0,          // v2: 已穿透次数
       active: true
     });
   }

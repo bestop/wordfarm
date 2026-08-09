@@ -2,7 +2,7 @@
 // 负责: 游戏状态、主循环(requestAnimationFrame)、协调各子系统、阳光经济、植物放置、战斗结算
 
 const {
-  DIFFICULTY_CONFIG, LIVES, PERFORMANCE, ASSET_KEYS,
+  DIFFICULTY_CONFIG, LIVES, LEVEL, PERFORMANCE, ASSET_KEYS,
   SUNLIGHT, PLANT_TYPES, COMBAT
 } = require('./constants.js');
 const { zombieManager } = require('./zombieManager.js');
@@ -29,14 +29,15 @@ class GameManager {
     // 游戏状态对象
     this.state = {
       score: 0,
-      lives: LIVES.INITIAL,
-      level: 1,
+      defenseLines: LIVES.INITIAL,  // v2: lives → defenseLines（3 道基地植物防线）
+      level: 1,                     // v2: 当前关卡
+      levelTimer: 0,                // v2: 关卡计时器(ms)
       combo: 0,
       isPlaying: false,
       gameTime: 0,           // 累计游戏时长(ms)
       paused: false,
       phase: PHASE.READY,
-      difficulty: 'medium',
+      difficulty: 'middle',
       maxCombo: 0,
       killedZombies: 0,
       plantsPlaced: 0,       // 已放置植物数
@@ -54,11 +55,12 @@ class GameManager {
     this.onQuestionChange = null;   // 题目变化回调
     this.onGameOver = null;         // 游戏结束回调
     this.onScoreChange = null;      // 分数变化回调
-    this.onLifeChange = null;       // 生命值变化回调
+    this.onDefenseChange = null;    // v2: 防线变化回调（替代 onLifeChange）
     this.onComboChange = null;      // 连击变化回调
     this.onSunlightChange = null;   // 阳光变化回调
     this.onShopSelect = null;       // 商店选中变化回调
     this.onRenderError = null;      // 渲染致命错误回调
+    this.onLevelChange = null;      // v2: 关卡变化回调
     this.canvas = null;
   }
 
@@ -71,15 +73,16 @@ class GameManager {
 
   /**
    * 初始化新游戏
-   * @param {string} difficulty - easy/medium/hard
+   * @param {string} difficulty - primary(小学) / middle(中学) / college(大学)
    * @param {Array} wordBank - 题库
    */
   initGame(difficulty, wordBank) {
-    const cfg = DIFFICULTY_CONFIG[difficulty] || DIFFICULTY_CONFIG.medium;
+    const cfg = DIFFICULTY_CONFIG[difficulty] || DIFFICULTY_CONFIG.middle;
     this.state = {
       score: 0,
-      lives: LIVES.INITIAL,
+      defenseLines: LIVES.INITIAL,  // v2: 3 道防线
       level: 1,
+      levelTimer: 0,
       combo: 0,
       isPlaying: false,
       gameTime: 0,
@@ -102,12 +105,15 @@ class GameManager {
     quizManager.reset(4);
     zombieManager.reset(cfg, difficulty);
     plantManager.reset();
+    plantManager.initBasePlants();   // v2: 初始化 3 道基地植物防线
     renderer.clear();
     fpsMonitor.reset();
 
     this._notifyAll();
     if (this.onSunlightChange) this.onSunlightChange(this.state.sunlight);
     if (this.onShopSelect) this.onShopSelect(this.state.selectedPlant);
+    if (this.onDefenseChange) this.onDefenseChange(this.state.defenseLines);
+    if (this.onLevelChange) this.onLevelChange(this.state.level);
   }
 
   /**
@@ -155,14 +161,29 @@ class GameManager {
       fpsMonitor.tick();
       this.state.gameTime += dt;
 
-      // 1. 植物/投射物更新（攻击、产阳光、飞行、碰撞）
+      // v2: 关卡推进（混合模式）— 每 levelTime ms 推进一关
+      this.state.levelTimer += dt;
+      const cfg = DIFFICULTY_CONFIG[this.state.difficulty];
+      const levelTime = (cfg && cfg.levelTime) || LEVEL.TIME_PER_LEVEL;
+      if (this.state.levelTimer >= levelTime && this.state.level < LEVEL.MAX_LEVEL) {
+        this.state.level++;
+        this.state.levelTimer = 0;
+        const rampCfg = (cfg && cfg.levelRamp) || LEVEL.RAMP;
+        zombieManager.applyLevelRamp(this.state.level, rampCfg);
+        if (this.onLevelChange) this.onLevelChange(this.state.level);
+        // 关卡提示振动
+        wx.vibrateShort && wx.vibrateShort({ type: 'light' });
+      }
+
+      // 1. 植物/投射物更新（攻击、产阳光、飞行、碰撞、v2樱桃炸弹引信）
       const sunlightProduced = plantManager.update(dt, {
         getZombiesInLane: (lane) => zombieManager.getZombiesInLane(lane),
-        onHitZombie: (zombie, proj) => this._onProjectileHit(zombie, proj)
+        onHitZombie: (zombie, proj) => this._onProjectileHit(zombie, proj),
+        onPlantExplode: (plant) => this._onPlantExplode(plant)   // v2 樱桃炸弹爆炸
       });
       if (sunlightProduced > 0) this._addSunlight(sunlightProduced);
 
-      // 2. 僵尸-植物战斗（僵尸啃植物 / 阻挡）
+      // 2. 僵尸-植物战斗（僵尸啃植物 / 阻挡，v2: 基地植物被毁触发防线扣减）
       this._resolveZombiePlantCombat(dt);
 
       // 3. 僵尸更新（移动、生成、状态机）
@@ -176,8 +197,8 @@ class GameManager {
         plantManager.getProjectiles()
       );
 
-      // 检查结束条件
-      if (this.state.lives <= 0) {
+      // v2: 失败判定改为防线全部被毁（替代 lives <= 0）
+      if (this.state.defenseLines <= 0) {
         this._gameOver();
         return;
       }
@@ -226,6 +247,7 @@ class GameManager {
    * - walking 僵尸到达植物槽位 → 转 eating，停止前进
    * - eating 僵尸按间隔啃咬植物
    * - 植物死亡 → 僵尸恢复 walking
+   * v2: 基地植物被毁时触发防线扣减 + takeDamage 返回对象
    */
   _resolveZombiePlantCombat(dt) {
     const plants = plantManager.getPlants();
@@ -260,12 +282,16 @@ class GameManager {
         z.state = 'eating';
         z.blockedBy = blockPlant.id;
         if (z.attackCooldown <= 0) {
-          const plantDied = plantManager.takeDamage(blockPlant, COMBAT.ZOMBIE_ATTACK_DAMAGE);
+          const dmgResult = plantManager.takeDamage(blockPlant, COMBAT.ZOMBIE_ATTACK_DAMAGE);
           z.attackCooldown = COMBAT.ZOMBIE_ATTACK_INTERVAL;
-          if (plantDied) {
+          if (dmgResult.died) {
             // 植物被啃掉，僵尸恢复前进
             z.state = 'walking';
             z.blockedBy = null;
+            // v2: 基地植物被毁 → 防线扣减
+            if (dmgResult.isBase) {
+              this._onBaseDestroyed(dmgResult.lane);
+            }
           }
         }
       } else if (z.state === 'eating') {
@@ -274,6 +300,59 @@ class GameManager {
         z.blockedBy = null;
       }
     }
+  }
+
+  /**
+   * v2: 基地植物被摧毁 — 防线扣减
+   */
+  _onBaseDestroyed(lane) {
+    this.state.defenseLines = Math.max(0, this.state.defenseLines - 1);
+    if (this.onDefenseChange) this.onDefenseChange(this.state.defenseLines);
+    if (this.state.combo > 0) {
+      this.state.combo = 0;
+      if (this.onComboChange) this.onComboChange(0);
+    }
+    // 爆炸粒子效果
+    const pos = pathManager.getGridCellCenter(lane, 4);
+    renderer.addBurst(pos.x, pos.y, '#F48FB1', 20);
+    wx.vibrateShort && wx.vibrateShort({ type: 'heavy' });
+    // defenseLines <= 0 的失败判定在 _loop 末尾统一处理
+  }
+
+  /**
+   * v2: 樱桃炸弹爆炸 — 范围伤害
+   */
+  _onPlantExplode(plant) {
+    const def = plant.def;
+    if (!def || !def.isExplosive) return;
+    const blastR = def.blastRadius || 0.15;
+    const plantProgress = (plant.slot + 0.5) / 5;
+    // 爆炸影响范围：同车道 ± blastR progress + 相邻车道
+    const lanes = [plant.lane - 1, plant.lane, plant.lane + 1];
+    let killCount = 0;
+    for (const lane of lanes) {
+      if (lane < 0 || lane >= 3) continue;  // GRID.ROWS=3
+      const zombies = zombieManager.getZombiesInLane(lane);
+      for (const z of zombies) {
+        // 同车道按 progress 距离判定；相邻车道全范围生效
+        if (lane === plant.lane) {
+          if (Math.abs(z.progress - plantProgress) > blastR) continue;
+        }
+        const killed = zombieManager.takeDamage(z, def.damage);
+        if (killed) {
+          this.state.killedZombies++;
+          this.state.score += z.scoreReward;
+          killCount++;
+          const pos = pathManager.getPosition(z.pathIndex, z.progress);
+          renderer.addBurst(pos.x, pos.y, z.color, 12);
+        }
+      }
+    }
+    if (killCount > 0 && this.onScoreChange) this.onScoreChange(this.state.score);
+    // 爆炸中心粒子
+    const pos = pathManager.getGridCellCenter(plant.lane, plant.slot);
+    renderer.addBurst(pos.x, pos.y, '#FF5722', 24);
+    audioManager.play(ASSET_KEYS.AUDIO.KILL);
   }
 
   /**
@@ -286,20 +365,13 @@ class GameManager {
   }
 
   /**
-   * 僵尸到达终点 - 扣血
+   * v2: 僵尸到达终点 — 防线已破，僵尸冲入房子后消失（不再扣命）
+   * 失败判定由基地植物防线决定，此处仅做振动反馈
    */
   _onZombieReachEnd(zombie) {
-    this.state.lives = Math.max(0, this.state.lives - 1);
-    if (this.onLifeChange) this.onLifeChange(this.state.lives);
-    if (this.state.combo > 0) {
-      this.state.combo = 0;
-      if (this.onComboChange) this.onComboChange(0);
-    }
-    if (this.state.lives <= 0) {
-      this._gameOver();
-    } else {
-      wx.vibrateShort && wx.vibrateShort({ type: 'heavy' });
-    }
+    // 防线已破的僵尸冲入房子，仅清除（_loop 中由 zombieManager 自动回收 dying 状态）
+    // 振动反馈
+    wx.vibrateShort && wx.vibrateShort({ type: 'medium' });
   }
 
   /**
@@ -387,25 +459,52 @@ class GameManager {
 
   /**
    * 暂停
+   * @returns {boolean} true 表示成功执行，false 被守卫拒绝
    */
   pause() {
-    if (this.state.phase !== PHASE.PLAYING) return;
+    if (this.state.phase !== PHASE.PLAYING) {
+      console.warn('[GameManager] pause 被拒绝：phase=', this.state.phase);
+      return false;
+    }
+    if (this.state.paused) {
+      console.warn('[GameManager] pause 重复调用，已处于暂停状态');
+      return false;
+    }
     this.state.paused = true;
     this.state.isPlaying = false;
     this._cancelRaf();
     this._notifyAll();
+    return true;
   }
 
   /**
    * 恢复
+   * @returns {boolean} true 表示成功执行，false 被守卫拒绝
    */
   resume() {
-    if (this.state.phase !== PHASE.PLAYING) return;
+    if (this.state.phase !== PHASE.PLAYING) {
+      console.warn('[GameManager] resume 被拒绝：phase=', this.state.phase);
+      return false;
+    }
+    if (!this.state.paused) {
+      console.warn('[GameManager] resume 重复调用，当前未暂停');
+      return false;
+    }
     this.state.paused = false;
     this.state.isPlaying = true;
     this.lastTime = Date.now();
+    // 清理残留 rafId（极端场景下 pause 前后可能残留挂起的回调），保证 _loop 重新注册
+    if (this.rafId) {
+      if (this.canvas && this.canvas.cancelAnimationFrame) {
+        try { this.canvas.cancelAnimationFrame(this.rafId); } catch (e) {}
+      } else {
+        try { clearTimeout(this.rafId); } catch (e) {}
+      }
+      this.rafId = null;
+    }
     this._loop();
     this._notifyAll();
+    return true;
   }
 
   /**
@@ -443,6 +542,7 @@ class GameManager {
     const stars = acc >= 0.9 ? 3 : acc >= 0.7 ? 2 : acc >= 0.5 ? 1 : 0;
     return {
       score: this.state.score,
+      level: this.state.level,            // v2: 最终关卡
       maxCombo: this.state.maxCombo,
       killedZombies: this.state.killedZombies,
       plantsPlaced: this.state.plantsPlaced,

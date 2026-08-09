@@ -5,11 +5,11 @@ const { applyLayout } = require('../../utils/layoutUtil.js');
 
 Page({
   data: {
-    difficulty: 'medium',          // 当前选中难度
+    difficulty: 'middle',          // 当前选中难度（小学/中学/大学）
     difficulties: [
-      { key: 'easy',   name: '简单', desc: '慢速僵尸 · 基础词汇', emoji: '🌱', color: '#B5EAD7' },
-      { key: 'medium', name: '中等', desc: '标准节奏 · 进阶词汇', emoji: '🌿', color: '#FFD1DC' },
-      { key: 'hard',   name: '困难', desc: '高速强敌 · 高阶词汇', emoji: '🔥', color: '#FFDAC1' }
+      { key: 'primary', name: '小学', desc: '基础词汇 · 慢速僵尸', emoji: '🌱', color: '#B5EAD7' },
+      { key: 'middle',  name: '中学', desc: '进阶词汇 · 标准节奏', emoji: '🌿', color: '#FFD1DC' },
+      { key: 'college', name: '大学', desc: '高阶词汇 · 高速强敌', emoji: '🎓', color: '#FFDAC1' }
     ],
     soundEnabled: true,
     highestScore: 0,

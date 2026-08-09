@@ -6,7 +6,7 @@ const { STORAGE_KEYS } = require('./constants.js');
 const DEFAULT_USER_DATA = {
   highestScore: 0,
   totalGames: 0,
-  difficulty: 'medium',
+  difficulty: 'middle',
   soundEnabled: true,
   lastPlayedAt: 0
 };

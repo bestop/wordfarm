@@ -18,8 +18,8 @@ Page({
     accuracy: 0,
     stars: 0,
     gameTime: 0,
-    difficulty: 'medium',
-    difficultyName: '中等',
+    difficulty: 'middle',
+    difficultyName: '中学',
     safeTop: 0,
     safeBottom: 0,
     // 星星动画
@@ -39,7 +39,12 @@ Page({
       return;
     }
 
-    const diffMap = { easy: '简单', medium: '中等', hard: '困难' };
+    // 难度映射表（新版 key + 兼容老数据）
+    const diffMap = {
+      primary: '小学', middle: '中学', college: '大学',
+      // 老数据兼容
+      easy: '小学', medium: '中学', hard: '大学'
+    };
     this.setData({
       isRecord,
       score: result.score || 0,
@@ -51,8 +56,8 @@ Page({
       accuracy: Math.round((result.accuracy || 0) * 100),
       stars: result.stars || 0,
       gameTime: Math.round((result.gameTime || 0) / 1000),
-      difficulty: result.difficulty || 'medium',
-      difficultyName: diffMap[result.difficulty] || '中等',
+      difficulty: result.difficulty || 'middle',
+      difficultyName: diffMap[result.difficulty] || '中学',
       safeTop: app.globalData.safeAreaInset.top,
       safeBottom: app.globalData.safeAreaInset.bottom
     });

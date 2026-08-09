@@ -2,7 +2,7 @@
 // 包含: 僵尸对象池、生成管理、移动算法、生命值、状态机、减速/加速 buff
 // 注: 僵尸不再绑定题目，由植物投射物击杀；答错触发全场加速
 
-const { ZOMBIE_TYPES, ZOMBIE_TYPE_WEIGHTS, PERFORMANCE, COMBAT } = require('./constants.js');
+const { ZOMBIE_TYPES, ZOMBIE_TYPE_WEIGHTS, PERFORMANCE, COMBAT, LEVEL } = require('./constants.js');
 const { pathManager } = require('./pathManager.js');
 
 let __zombieIdSeed = 1;
@@ -130,6 +130,7 @@ class ZombiePool {
 /**
  * 僵尸生成管理器
  * 控制生成频率、类型分布、路径选择（不再绑定题目）
+ * v2: 新增 applyLevelRamp 关卡递增参数刷新
  */
 class ZombieSpawner {
   constructor() {
@@ -138,23 +139,68 @@ class ZombieSpawner {
     this.baseSpeed = 38;
     this.speedRamp = 0.09;
     this.maxZombies = 8;
-    this.typeWeights = ZOMBIE_TYPE_WEIGHTS.medium;
+    this.typeWeights = ZOMBIE_TYPE_WEIGHTS.middle;
     this.gameStartTime = 0;
+    // v2: 保存基础参数（关卡递增的基准）
+    this._baseSpawnInterval = 3200;
+    this._baseBaseSpeed = 38;
+    this._baseTypeWeights = ZOMBIE_TYPE_WEIGHTS.middle;
+    this._currentLevel = 1;
   }
 
   /**
    * 配置生成器
    * @param {Object} cfg - 来自 DIFFICULTY_CONFIG
-   * @param {string} difficulty - easy/medium/hard
+   * @param {string} difficulty - primary / middle / college
    */
   configure(cfg, difficulty) {
     this.spawnInterval = cfg.spawnInterval;
     this.baseSpeed = cfg.baseSpeed;
     this.speedRamp = cfg.speedRamp;
     this.maxZombies = cfg.maxZombies;
-    this.typeWeights = ZOMBIE_TYPE_WEIGHTS[difficulty] || ZOMBIE_TYPE_WEIGHTS.medium;
+    this.typeWeights = ZOMBIE_TYPE_WEIGHTS[difficulty] || ZOMBIE_TYPE_WEIGHTS.middle;
     this.gameStartTime = Date.now();
     this.spawnTimer = 0;
+    // v2: 保存基础参数
+    this._baseSpawnInterval = cfg.spawnInterval;
+    this._baseBaseSpeed = cfg.baseSpeed;
+    this._baseTypeWeights = { ...this.typeWeights };
+    this._currentLevel = 1;
+  }
+
+  /**
+   * v2 关卡递增：根据 level 动态调整生成间隔、速度、类型权重
+   * @param {number} level - 当前关卡（1-based）
+   * @param {Object} rampCfg - 来自 DIFFICULTY_CONFIG[diff].levelRamp
+   */
+  applyLevelRamp(level, rampCfg) {
+    const r = rampCfg || LEVEL.RAMP;
+    const lv = Math.min(level, LEVEL.MAX_LEVEL);
+    this._currentLevel = lv;
+    // 生成间隔递减（越来越快）
+    const intervalMult = Math.pow(r.SPAWN_INTERVAL_MULT, lv - 1);
+    this.spawnInterval = Math.max(1200, this._baseSpawnInterval * intervalMult);
+    // 速度递增
+    const speedMult = Math.pow(r.SPEED_MULT, lv - 1);
+    this.baseSpeed = this._baseBaseSpeed * speedMult;
+    // strong+armored 概率递增（从 normal 中转移）
+    const bonus = Math.min(0.30, r.TOUGH_PROB_BONUS * (lv - 1));  // 上限 30%
+    this.typeWeights = this._adjustWeights(this._baseTypeWeights, bonus);
+  }
+
+  /**
+   * 调整类型权重：从 normal 中转移概率给 strong+armored
+   * @param {Object} base - 基础权重
+   * @param {number} bonus - 转移量
+   * @returns {Object} 调整后的权重
+   */
+  _adjustWeights(base, bonus) {
+    const w = { ...base };
+    w.normal = Math.max(0.10, (w.normal || 0) - bonus);  // normal 至少保留 10%
+    // strong 和 armored 各分一半 bonus
+    w.strong = (w.strong || 0) + bonus * 0.5;
+    w.armored = (w.armored || 0) + bonus * 0.5;
+    return w;
   }
 
   /**
@@ -185,7 +231,7 @@ class ZombieSpawner {
       this.spawnTimer = 0;
       const type = this._rollType();
       const pathIndex = Math.floor(Math.random() * pathManager.getPathCount());
-      // 当前速度（随时间递增）
+      // 当前速度（随时间递增 + 关卡递增已含在 this.baseSpeed 中）
       const speedMult = 1 + this.speedRamp * Math.min(elapsed / 60, 1) * 2;
       return { type, pathIndex, baseSpeed: this.baseSpeed * speedMult };
     }
@@ -210,6 +256,13 @@ class ZombieManager {
     this.pool.clearAll();
     this.zombies = [];
     this.spawner.configure(cfg, difficulty);
+  }
+
+  /**
+   * v2 关卡递增（转发给 spawner）
+   */
+  applyLevelRamp(level, rampCfg) {
+    this.spawner.applyLevelRamp(level, rampCfg);
   }
 
   /**

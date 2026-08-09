@@ -42,53 +42,50 @@
       </view>
     </view>
 
-    <!-- 难度选择 -->
-    <view class="section">
+    <!-- 难度选择（3 列横排紧凑布局，缩小整体高度） -->
+    <view class="section section-difficulty">
       <view class="section-title">
         <text class="section-emoji">🎯</text>
         <text>选择难度</text>
       </view>
-      <view class="difficulty-list">
+      <view class="difficulty-grid">
         <view
           wx:for="{{difficulties}}"
           wx:key="key"
           class="difficulty-card difficulty-card-{{item.key}} {{difficulty === item.key ? 'active' : ''}}"
           data-key="{{item.key}}"
           bindtap="onSelectDifficulty"
-          style="background: linear-gradient(145deg, {{item.color}}, #FFFFFF 130%);"
         >
           <view class="diff-emoji">{{item.emoji}}</view>
-          <view class="diff-info">
-            <view class="diff-name">{{item.name}}</view>
-            <view class="diff-desc">{{item.desc}}</view>
-          </view>
+          <view class="diff-name">{{item.name}}</view>
+          <view class="diff-desc">{{item.desc}}</view>
           <view wx:if="{{difficulty === item.key}}" class="diff-check">✓</view>
         </view>
       </view>
     </view>
 
-    <!-- 玩法说明（2×2 网格） -->
-    <view class="section">
+    <!-- 玩法说明（1 行 4 chip，节省纵向空间） -->
+    <view class="section section-howto">
       <view class="section-title">
         <text class="section-emoji">🎮</text>
         <text>玩法</text>
       </view>
-      <view class="howto-grid">
-        <view class="howto-item">
+      <view class="howto-row">
+        <view class="howto-chip">
           <text class="howto-emoji">✅</text>
-          <text class="howto-text">答对消除僵尸</text>
+          <text class="howto-text">答对消除</text>
         </view>
-        <view class="howto-item">
+        <view class="howto-chip">
           <text class="howto-emoji">⚡</text>
-          <text class="howto-text">答错僵尸加速</text>
+          <text class="howto-text">答错加速</text>
         </view>
-        <view class="howto-item">
+        <view class="howto-chip">
           <text class="howto-emoji">🔥</text>
-          <text class="howto-text">连击得分翻倍</text>
+          <text class="howto-text">连击翻倍</text>
         </view>
-        <view class="howto-item">
+        <view class="howto-chip">
           <text class="howto-emoji">❤️</text>
-          <text class="howto-text">3命守卫小屋</text>
+          <text class="howto-text">3命守屋</text>
         </view>
       </view>
     </view>

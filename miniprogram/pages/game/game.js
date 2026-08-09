@@ -31,9 +31,10 @@ function buildShopItems(sunlight) {
 Page({
   data: {
     // UI 状态
-    difficulty: 'medium',
+    difficulty: 'middle',
     score: 0,
-    lives: 3,
+    defenseLines: 3,          // v2: 防线数（替代 lives）
+    level: 1,                 // v2: 当前关卡
     combo: 0,
     comboMult: 1,
     maxCombo: 0,
@@ -59,12 +60,13 @@ Page({
   },
 
   onLoad(options) {
-    const difficulty = options.difficulty || app.globalData.difficulty || 'medium';
+    const difficulty = options.difficulty || app.globalData.difficulty || 'middle';
     this.setData({
       difficulty,
       safeTop: app.globalData.safeAreaInset.top,
       safeBottom: app.globalData.safeAreaInset.bottom,
-      lives: 3
+      defenseLines: 3,
+      level: 1
     });
     // 应用自适应布局
     applyLayout(this);
@@ -76,10 +78,13 @@ Page({
     gameManager.onStateChange = (state) => this._onStateChange(state);
     gameManager.onQuestionChange = (q) => this._onQuestionChange(q);
     gameManager.onScoreChange = (s) => this.setData({ score: s });
-    gameManager.onLifeChange = (l) => {
-      this.setData({ lives: l });
+    // v2: 防线变化（替代 onLifeChange）
+    gameManager.onDefenseChange = (dl) => {
+      this.setData({ defenseLines: dl });
       if (wx.vibrateShort) wx.vibrateShort({ type: 'heavy' });
     };
+    // v2: 关卡变化
+    gameManager.onLevelChange = (lv) => this.setData({ level: lv });
     gameManager.onComboChange = (c) => this.setData({ combo: c });
     gameManager.onSunlightChange = (sunlight) => this._onSunlightChange(sunlight);
     gameManager.onShopSelect = (type) => this.setData({ selectedPlant: type });
@@ -348,14 +353,24 @@ Page({
 
   /**
    * 暂停/继续
+   * 事件绑定策略（见 game.wxml 注释）：
+   *   - mask catchtap="onTogglePause"（点空白处继续）
+   *   - button catchtap 阻止冒泡（避免双触发）
+   *   - 80ms 防抖为双保险（部分安卓机型一次 tap 触发 2 次的边缘情况）
    */
   onTogglePause() {
+    const now = Date.now();
+    if (this._lastTogglePauseTs && now - this._lastTogglePauseTs < 80) return;
+    this._lastTogglePauseTs = now;
+
     if (gameManager.state.paused) {
-      gameManager.resume();
+      const ok = gameManager.resume();
       this.setData({ paused: false });
+      console.log('[Game] 继续游戏', { ok, phase: gameManager.state.phase });
     } else {
-      gameManager.pause();
+      const ok = gameManager.pause();
       this.setData({ paused: true });
+      console.log('[Game] 暂停游戏', { ok, phase: gameManager.state.phase });
     }
   },
 

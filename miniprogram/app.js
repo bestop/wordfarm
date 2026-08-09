@@ -7,7 +7,7 @@ const audioManager = require('./utils/audioManager.js');
 App({
   globalData: {
     // 用户配置
-    difficulty: 'medium',        // 难度: easy / medium / hard
+    difficulty: 'middle',        // 难度: primary(小学) / middle(中学) / college(大学)
     soundEnabled: true,          // 音效开关
     // 用户数据
     highestScore: 0,             // 历史最高分
@@ -39,7 +39,9 @@ App({
       const stored = storageManager.loadUserData();
       this.globalData.highestScore = stored.highestScore || 0;
       this.globalData.totalGames = stored.totalGames || 0;
-      this.globalData.difficulty = stored.difficulty || 'medium';
+      // 老数据迁移：旧版 easy/medium/hard → 新版 primary/middle/college
+      const rawDiff = stored.difficulty || 'middle';
+      this.globalData.difficulty = this._migrateDifficulty(rawDiff);
       this.globalData.soundEnabled = stored.soundEnabled !== false;
 
       // 4. 预加载音频资源
@@ -202,5 +204,21 @@ App({
       difficulty: this.globalData.difficulty,
       soundEnabled: this.globalData.soundEnabled
     });
+  },
+
+  /**
+   * 难度 key 迁移：旧版 easy/medium/hard → 新版 primary/middle/college
+   * 兼容老用户 storage 数据，未识别的值回退到 'middle'
+   * @param {string} raw
+   * @returns {string} primary | middle | college
+   */
+  _migrateDifficulty(raw) {
+    const map = { easy: 'primary', medium: 'middle', hard: 'college' };
+    if (raw && Object.prototype.hasOwnProperty.call(map, raw)) {
+      return map[raw];
+    }
+    // 已经是新 key 或未知值，做合法性校验
+    if (raw === 'primary' || raw === 'middle' || raw === 'college') return raw;
+    return 'middle';
   }
 });
