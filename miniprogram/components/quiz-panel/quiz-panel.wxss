@@ -1,26 +1,32 @@
 /* components/quiz-panel/quiz-panel.wxss - 答题面板样式 */
 
+/* v12 关键修复：自定义组件宿主节点默认 inline，部分机型高度计算异常
+   导致面板内容（尤其底部选项）被裁切。显式声明 block 保证布局稳定。 */
+:host {
+  display: block;
+  width: 100%;
+}
+
 .quiz-panel {
   position: relative;
   width: 100%;
-  height: 100%;
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,245,248,0.98) 100%);
-  border-radius: 48rpx 48rpx 0 0;
-  border-top: 6rpx solid #FFFFFF;
-  box-shadow: 0 -12rpx 32rpx rgba(243,139,168,0.18);
-  overflow: hidden;
+  border-radius: 38rpx 38rpx 0 0;
+  border-top: 4rpx solid #FFFFFF;
+  box-shadow: 0 -10rpx 28rpx rgba(243,139,168,0.18);
+  overflow: visible;
 }
 
-/* ============ 题目区（按内容自适应高度，把剩余空间让给选项区） ============ */
+/* ============ 题目区（v9 按内容收缩，弹性让位给选项区） ============ */
 .question-area {
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 14rpx 32rpx;
+  padding: 2rpx 18rpx 0;
   position: relative;
   transition: background 0.2s ease;
 }
@@ -28,81 +34,101 @@
 .question-area.fb-wrong { background: rgba(255,205,210,0.35); }
 
 .question-label {
-  font-size: 22rpx;
-  color: #8D6E63;
+  font-size: 16rpx;
+  color: #6D4C41;
   font-weight: 700;
-  margin-bottom: 8rpx;
+  line-height: 1.2;
+  margin-bottom: 2rpx;
 }
 .question-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6rpx;
+  gap: 2rpx;
 }
 .word {
-  font-size: 54rpx;
+  font-size: 32rpx;
   font-weight: 900;
-  color: #5D4037;
-  letter-spacing: 2rpx;
+  color: #4E342E;
+  letter-spacing: 0.5rpx;
   text-shadow: 0 2rpx 0 rgba(255,255,255,0.8);
+  line-height: 1.15;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .phonetic {
-  font-size: 28rpx;
+  font-size: 16rpx;
   color: #F48FB1;
   font-weight: 700;
   font-family: "Lucida Sans Unicode", "Arial Unicode MS", "Segoe UI", sans-serif;
+  line-height: 1.15;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .question-empty {
-  font-size: 28rpx;
+  font-size: 20rpx;
   color: #BCAAA4;
 }
 
-/* ============ 选项区（flex:1 占据题目区之外剩余空间，保证 4 选项完整可见） ============ */
+/* ============ 选项区（v12 flex-wrap 替代 grid，全引擎兼容；2×2 每行2个） ============ */
 .options-area {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 0 0 auto;
   display: flex;
-  flex-wrap: wrap;
-  padding: 12rpx 20rpx 20rpx;
+  flex-wrap: wrap;              /* 4项换行成 2×2，任何引擎都稳定 */
   gap: 12rpx;
-  align-content: stretch;
+  padding: 8rpx 14rpx 14rpx;
+  box-sizing: border-box;
 }
 .option {
-  flex: 1 1 calc(50% - 6rpx);
-  min-height: 72rpx;
-  background: linear-gradient(145deg, #FFFFFF, #FFF5F8);
-  border: 4rpx solid #FFE5EC;
-  border-radius: 24rpx;
+  flex: 0 0 calc(50% - 6rpx);   /* 2列均分（减去半个 gap） */
+  min-width: 0;
+  min-height: 72rpx;            /* v12 64→72 增大点击区与可读性 */
+  background: #FFFFFF;
+  border: 3rpx solid #F8BBD0;
+  border-radius: 14rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28rpx;
-  font-weight: 800;
-  color: #5D4037;
-  transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
-  box-shadow: 0 4rpx 0 rgba(243,139,168,0.15), inset 0 1rpx 0 rgba(255,255,255,0.95);
-  padding: 6rpx 10rpx;
+  padding: 8rpx 10rpx;
   box-sizing: border-box;
+  transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+  box-shadow: 0 3rpx 0 rgba(243,139,168,0.15),
+              inset 0 1rpx 0 rgba(255,255,255,0.95);
   overflow: hidden;
 }
 .option-text {
-  word-break: break-all;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
+  word-wrap: break-word;
+  white-space: normal;
   text-align: center;
-  line-height: 1.15;
+  line-height: 1.35;
+  font-size: 24rpx;          /* v12 22→24（375px屏≈12px，清晰舒适） */
+  font-weight: 800;
+  color: #4E342E;
+  letter-spacing: 0.3rpx;
+  width: 100%;
 }
 .option:active {
   transform: scale(0.96);
-  background: linear-gradient(145deg, #FFD1DC, #FFEFF3);
+  background: #FFEFF3;
 }
 .option.selected {
-  background: linear-gradient(145deg, #FFD1DC, #F48FB1);
-  border-color: #F48FB1;
+  background: linear-gradient(145deg, #EC407A, #E91E63);
+  border-color: #D81B60;
   color: #FFFFFF;
   transform: scale(0.97);
 }
 .option.reveal {
-  background: linear-gradient(145deg, #B5EAD7, #7BC9A6);
-  border-color: #7BC9A6;
+  background: linear-gradient(145deg, #66BB6A, #43A047);
+  border-color: #388E3C;
   color: #FFFFFF;
 }
 
@@ -112,9 +138,9 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  padding: 24rpx 48rpx;
+  padding: 18rpx 36rpx;
   border-radius: 999rpx;
-  font-size: 36rpx;
+  font-size: 30rpx;
   font-weight: 900;
   color: #FFFFFF;
   pointer-events: none;

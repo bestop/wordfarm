@@ -53,12 +53,13 @@ class GameManager {
     // UI 回调
     this.onStateChange = null;      // 状态变化回调
     this.onQuestionChange = null;   // 题目变化回调
-    this.onGameOver = null;         // 游戏结束回调
+    this.onGameOver = null;         // 游戏结束回调（失败/胜利统一触发，summary.result: 'win' | 'lose'）
     this.onScoreChange = null;      // 分数变化回调
     this.onDefenseChange = null;    // v2: 防线变化回调（替代 onLifeChange）
     this.onComboChange = null;      // 连击变化回调
     this.onSunlightChange = null;   // 阳光变化回调
     this.onShopSelect = null;       // 商店选中变化回调
+    this.onSunsChange = null;       // v3: 可收集阳光列表变化回调 (sunsView[]) => void
     this.onRenderError = null;      // 渲染致命错误回调
     this.onLevelChange = null;      // v2: 关卡变化回调
     this.canvas = null;
@@ -98,6 +99,10 @@ class GameManager {
       startTime: 0
     };
     this._loopErrorCount = 0;
+    this._lastSunViewVersion = -1;   // v3: 阳光上次同步版本
+    this._lastSunSyncAt = 0;         // v3: 上次阳光同步时间
+    this._lastSpawnLogTime = 0;      // v4: 僵尸生成健康日志上次输出时间
+    this._pauseStartTime = 0;        // v4: 暂停开始时间
 
     // 重置各子系统
     pathManager.init();
@@ -105,7 +110,6 @@ class GameManager {
     quizManager.reset(4);
     zombieManager.reset(cfg, difficulty);
     plantManager.reset();
-    plantManager.initBasePlants();   // v2: 初始化 3 道基地植物防线
     renderer.clear();
     fpsMonitor.reset();
 
@@ -175,13 +179,23 @@ class GameManager {
         wx.vibrateShort && wx.vibrateShort({ type: 'light' });
       }
 
-      // 1. 植物/投射物更新（攻击、产阳光、飞行、碰撞、v2樱桃炸弹引信）
+      // 1. 植物/投射物更新（攻击、产阳光、飞行、碰撞、v2樱桃炸弹引信、v4食人花近战）
       const sunlightProduced = plantManager.update(dt, {
         getZombiesInLane: (lane) => zombieManager.getZombiesInLane(lane),
         onHitZombie: (zombie, proj) => this._onProjectileHit(zombie, proj),
-        onPlantExplode: (plant) => this._onPlantExplode(plant)   // v2 樱桃炸弹爆炸
+        onPlantExplode: (plant) => this._onPlantExplode(plant),
+        onChomperBite: (plant, zombie, damage) => this._onChomperBite(plant, zombie, damage)
       });
       if (sunlightProduced > 0) this._addSunlight(sunlightProduced);
+
+      // 1.5 v3: 可收集阳光视图同步（每 80ms 或版本变化时推送到 UI 层）
+      const curVer = plantManager.getSunVersion();
+      if (curVer !== this._lastSunViewVersion ||
+          this.state.gameTime - this._lastSunSyncAt >= 80) {
+        this._lastSunViewVersion = curVer;
+        this._lastSunSyncAt = this.state.gameTime;
+        this._notifySunsView();
+      }
 
       // 2. 僵尸-植物战斗（僵尸啃植物 / 阻挡，v2: 基地植物被毁触发防线扣减）
       this._resolveZombiePlantCombat(dt);
@@ -199,11 +213,40 @@ class GameManager {
 
       // v2: 失败判定改为防线全部被毁（替代 lives <= 0）
       if (this.state.defenseLines <= 0) {
-        this._gameOver();
+        this._gameOver('lose');
         return;
       }
 
+      // v3: 胜利判定 — 达到 MAX_LEVEL 后，累计时间超过关卡上限且屏幕僵尸全部清理完毕
+      const cfgV = DIFFICULTY_CONFIG[this.state.difficulty];
+      const timePerLv = (cfgV && cfgV.levelTime) || LEVEL.TIME_PER_LEVEL;
+      const victoryAfterMs = timePerLv * LEVEL.MAX_LEVEL;
+      if (this.state.level >= LEVEL.MAX_LEVEL &&
+          this.state.gameTime >= victoryAfterMs &&
+          zombieManager.getAll().length === 0) {
+        this._gameOver('win');
+        return;
+      }
+
+      // v4: 僵尸生成健康日志 — 每 30s 输出一次关键指标，便于定位生成异常
+      if (!this._lastSpawnLogTime) this._lastSpawnLogTime = this.state.gameTime;
+      if (this.state.gameTime - this._lastSpawnLogTime >= 30000) {
+        const sp = zombieManager.spawner;
+        console.info('[GameManager] 僵尸生成健康报告: gameTime=' + this.state.gameTime +
+          'ms, level=' + this.state.level +
+          ', activeZombies=' + zombieManager.getAll().length +
+          ', totalSpawned=' + sp._totalSpawned +
+          ', failCount=' + sp._spawnFailCount +
+          ', spawnInterval=' + sp.spawnInterval.toFixed(0) + 'ms' +
+          ', spawnTimer=' + sp.spawnTimer.toFixed(0) + 'ms' +
+          ', maxZombies=' + sp.maxZombies +
+          ', poolSize=' + zombieManager.pool.pool.length +
+          ', poolActive=' + zombieManager.pool.active.size);
+        this._lastSpawnLogTime = this.state.gameTime;
+      }
+
       // 下一帧
+      this._loopErrorCount = 0;  // 成功帧重置错误计数，避免非连续错误累积导致误终止
       if (this.canvas && this.canvas.requestAnimationFrame) {
         this.rafId = this.canvas.requestAnimationFrame(() => this._loop());
       } else {
@@ -239,6 +282,34 @@ class GameManager {
       const pos = pathManager.getPosition(zombie.pathIndex, zombie.progress);
       renderer.addBurst(pos.x, pos.y, zombie.color, 14);
       if (this.onScoreChange) this.onScoreChange(this.state.score);
+    }
+  }
+
+  /**
+   * 食人花咬合僵尸：瞬时高额近战伤害（8点 = 通常可直接秒杀小鬼/铁桶）
+   * 对游戏进程影响机制：
+   *   1. 命中瞬间造成 damage 点伤害；若直接击杀，奖励等同于击杀分数 + 食人花专属 BONUS
+   *   2. 命中后食人花进入 3s 吞咽期（CD = 玩家决策风险：吞咽期被啃无法反击）
+   *   3. 击杀触发振动 + 紫色粒子爆（与普通击杀黄色区分）
+   */
+  _onChomperBite(plant, zombie, damage) {
+    const CHOMPER_KILL_BONUS = 25;  // 食人花专属击杀奖励（鼓励高cost近战投入）
+    const killed = zombieManager.takeDamage(zombie, damage, null);
+    // 咬合粒子：紫色飞溅（与食人花紫色花冠呼应）
+    const zpos = pathManager.getPosition(zombie.pathIndex, zombie.progress);
+    renderer.addBurst(zpos.x, zpos.y, plant.def.color, killed ? 18 : 8);
+
+    if (killed) {
+      this.state.killedZombies++;
+      // 食人花一口秒杀奖励：基础分 + 额外奖励（高风险高回报）
+      const reward = zombie.scoreReward + CHOMPER_KILL_BONUS;
+      this.state.score += reward;
+      audioManager.play(ASSET_KEYS.AUDIO.KILL);
+      if (wx.vibrateShort) wx.vibrateShort({ type: 'medium' });
+      if (this.onScoreChange) this.onScoreChange(this.state.score);
+    } else {
+      // 未击杀（例如橄榄球/舞王高血量）：轻微振动反馈，提示玩家补刀
+      if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
     }
   }
 
@@ -369,9 +440,12 @@ class GameManager {
    * 失败判定由基地植物防线决定，此处仅做振动反馈
    */
   _onZombieReachEnd(zombie) {
-    // 防线已破的僵尸冲入房子，仅清除（_loop 中由 zombieManager 自动回收 dying 状态）
+    // 僵尸到达终点：扣减防线
+    this.state.defenseLines = Math.max(0, this.state.defenseLines - 1);
+    if (this.onDefenseChange) this.onDefenseChange(this.state.defenseLines);
     // 振动反馈
-    wx.vibrateShort && wx.vibrateShort({ type: 'medium' });
+    wx.vibrateShort && wx.vibrateShort({ type: 'heavy' });
+    // 防线全破判定在 _loop 末尾
   }
 
   /**
@@ -422,6 +496,67 @@ class GameManager {
   }
 
   /**
+   * v3: 把 plantManager suns 转成页面 DOM 层可显示的视图模型（百分比坐标 + 状态）
+   * canvas-wrap 相对定位 → 阳光 left/top 用 canvas 内像素相对 canvas 宽高比转换
+   */
+  _notifySunsView() {
+    if (!this.onSunsChange) return;
+    const suns = plantManager.getSuns();
+    const cs = pathManager.canvasSize || { w: 0, h: 0 };
+    const scaleW = cs.w > 0 ? 100 / cs.w : 0;
+    const scaleH = cs.h > 0 ? 100 / cs.h : 0;
+    const list = new Array(suns.length);
+    for (let i = 0; i < suns.length; i++) {
+      const s = suns[i];
+      const x = (s.x + (s.offsetX || 0)) * scaleW;
+      const y = (s.y + (s.offsetY || 0)) * scaleH;
+      // 收集动画：飘到左上角（阳光HUD位置），12~15% progress 期间快速飘入
+      let left = x;
+      let top = y;
+      let opacity = 1;
+      let scale = 1;
+      if (s.collected) {
+        const u = Math.min(1, (s.t - s.collectAt) / 320);
+        left = x * (1 - u);          // 线性插值向 0,0（HUD左上方）
+        top = y * (1 - u);
+        opacity = 1 - u;
+        scale = 1 - 0.4 * u;
+      } else if (s.t < 260) {
+        // 出现动画：0~260ms 弹入放大
+        const u = Math.min(1, s.t / 260);
+        scale = 0.4 + 0.6 * u;
+        opacity = u;
+      }
+      list[i] = {
+        id: s.id,
+        value: s.value,
+        left: left.toFixed(2) + '%',
+        top: top.toFixed(2) + '%',
+        opacity: opacity.toFixed(2),
+        scale: scale.toFixed(2),
+        collected: !!s.collected
+      };
+    }
+    this.onSunsChange(list);
+  }
+
+  /**
+   * v3: 玩家点击收集一颗阳光
+   * @param {number} sunId
+   * @returns {{ok: boolean, value: number}}
+   */
+  collectSun(sunId) {
+    const res = plantManager.collectSun(sunId);
+    if (!res.ok) return { ok: false, value: 0 };
+    this._addSunlight(res.value);
+    audioManager.play(ASSET_KEYS.AUDIO.SUN);
+    if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
+    // 立即推送一版视图（触发收集动画开始）
+    this._notifySunsView();
+    return { ok: true, value: res.value };
+  }
+
+  /**
    * 选择/取消选择商店植物
    * @param {string} type - PLANT_TYPES 键名
    */
@@ -449,6 +584,7 @@ class GameManager {
     if (!res.ok) return { ok: false, reason: res.reason };
     this._addSunlight(-def.cost);
     this.state.plantsPlaced++;
+    audioManager.play(ASSET_KEYS.AUDIO.PLACE);
     // 放置后保持选中，便于连续放置（阳光不足时自动取消）
     if (this.state.sunlight < def.cost) {
       this.state.selectedPlant = null;
@@ -470,6 +606,7 @@ class GameManager {
       console.warn('[GameManager] pause 重复调用，已处于暂停状态');
       return false;
     }
+    this._pauseStartTime = Date.now();  // v4: 记录暂停开始时间，用于 resume 时平移 gameStartTime
     this.state.paused = true;
     this.state.isPlaying = false;
     this._cancelRaf();
@@ -490,10 +627,17 @@ class GameManager {
       console.warn('[GameManager] resume 重复调用，当前未暂停');
       return false;
     }
+    const pauseDuration = Date.now() - (this._pauseStartTime || Date.now());
     this.state.paused = false;
     this.state.isPlaying = true;
     this.lastTime = Date.now();
-    // 清理残留 rafId（极端场景下 pause 前后可能残留挂起的回调），保证 _loop 重新注册
+    // v4: 平移 spawner.gameStartTime，消除暂停期间 wall clock 跳变对 elapsed 的污染
+    // 否则暂停 30s 后恢复，elapsed 暴涨 → spawnInterval 被压到 1200ms 下限 → 生成异常密集
+    if (pauseDuration > 0 && zombieManager.spawner.gameStartTime > 0) {
+      zombieManager.spawner.gameStartTime += pauseDuration;
+    }
+    console.info('[GameManager] resume: 暂停时长=' + pauseDuration + 'ms, gameStartTime 已平移');
+    // 清理残留 rafId
     if (this.rafId) {
       if (this.canvas && this.canvas.cancelAnimationFrame) {
         try { this.canvas.cancelAnimationFrame(this.rafId); } catch (e) {}
@@ -522,25 +666,33 @@ class GameManager {
   }
 
   /**
-   * 游戏结束
+   * 游戏结束 / 胜利
+   * @param {'win'|'lose'} result
    */
-  _gameOver() {
-    this.state.phase = PHASE.GAME_OVER;
+  _gameOver(result) {
+    this.state.phase = (result === 'win') ? PHASE.VICTORY : PHASE.GAME_OVER;
     this.state.isPlaying = false;
     this._cancelRaf();
-    audioManager.play(ASSET_KEYS.AUDIO.GAME_OVER);
-    const summary = this.getSummary();
+    if (result === 'win') {
+      audioManager.play(ASSET_KEYS.AUDIO.LEVEL_UP);  // 复用胜利音效
+    } else {
+      audioManager.play(ASSET_KEYS.AUDIO.GAME_OVER);
+    }
+    const summary = this.getSummary(result);
     if (this.onGameOver) this.onGameOver(summary);
     this._notifyAll();
   }
 
   /**
    * 获取结算数据
+   * @param {'win'|'lose'} [result] - 可选显式指定结果，缺省基于 phase 推断
    */
-  getSummary() {
+  getSummary(result) {
     const acc = quizManager.getAccuracy();
     const stars = acc >= 0.9 ? 3 : acc >= 0.7 ? 2 : acc >= 0.5 ? 1 : 0;
+    const r = result || (this.state.phase === PHASE.VICTORY ? 'win' : 'lose');
     return {
+      result: r,
       score: this.state.score,
       level: this.state.level,            // v2: 最终关卡
       maxCombo: this.state.maxCombo,

@@ -16,9 +16,9 @@
 
     <!-- 顶部标题 -->
     <view class="result-header">
-      <view class="header-emoji">{{stars >= 2 ? '🎉' : '🎮'}}</view>
-      <view class="header-title">{{isRecord ? '🏆 新纪录！' : '游戏结束'}}</view>
-      <view class="header-sub">{{difficultyName}}模式 · 守卫完毕</view>
+      <view class="header-emoji">{{result === 'win' ? '🏆' : (stars >= 2 ? '🎉' : '🎮')}}</view>
+      <view class="header-title">{{isRecord ? '🏆 新纪录！' : (result === 'win' ? '🎉 通关胜利' : '游戏结束')}}</view>
+      <view class="header-sub">{{difficultyName}}模式 · {{result === 'win' ? '成功保卫庄园' : '守卫完毕'}}</view>
     </view>
 
     <!-- 星级评分 -->

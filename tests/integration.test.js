@@ -110,7 +110,8 @@ describe('Integration - 完整游戏流程', () => {
     expect(gameManager.state.sunlight).toBe(SUNLIGHT.INITIAL);
     expect(gameManager.state.phase).toBe('ready');
 
-    // 验证基地植物已初始化
+    // v2: 基地植物在 start() 中初始化（canvas 尺寸设置后），此处手动创建以验证
+    plantManager.initBasePlants();
     const plants = plantManager.getPlants();
     const basePlants = plants.filter(p => p.isBase);
     expect(basePlants).toHaveLength(3);

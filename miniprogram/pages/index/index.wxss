@@ -1,493 +1,664 @@
-/* ===========================================================
-   pages/index/index.wxss — 欢迎页极简高级感视觉系统
-   设计原则：莫兰迪豆沙克制配色 · 8rpx 栅格 · 大留白 · 结构化 accent
-   - 不改 WXML 功能结构（bindtap / wx:for / 文案 / 数据字段全部保留）
-   - 所有装饰由 CSS 层提供，不新增图片不依赖第三方库
-   =========================================================== */
+/* pages/index/index.wxss — v5 严格按 layout.png 像素级还原（一屏自适应）
+   参考图对应区块：
+   - 背景：浅黄绿渐变（#F1FBE6 → #E6F5D3），顶有柔光光晕
+   - Hero LOGO：居中白色胶囊（绿方🌱 + "单词农场"深绿渐变文字）
+   - 统计卡：白底圆角矩形，数字在上文字在下，底部绿色渐变下划线
+   - 难度胶囊：小学/中学（选中态实心绿 + 🍃）/大学
+   - 玩法标题：左"🌱 游戏玩法"带绿色竖条，右"立即了解"药丸
+   - 2×4 玩法卡：图标圆圈背景（白）+ 说明文字
+   - Banner：左双角色 + 栅栏/花盆，右"单词农场大冒险"+副标题+"开始冒险"绿色按钮
+   - CTA 按钮：圆角矩形（非胶囊）绿色渐变，压边立体阴影
+*/
 
-/* ---------- 1. Design Tokens（可复用设计变量） ---------- */
+/* ========== 页面容器 ========== */
 .page {
-  /* 主色：莫兰迪豆沙粉（原马卡龙粉降饱和 +3 明度，不漂色相） */
-  --brand-500: #C97B97;   /* 主色：按钮/选中描边/强调 */
-  --brand-400: #D996AC;   /* 浅一档：hover / 渐变尾 / 标签文字 */
-  --brand-300: #EDC3CF;   /* 更浅：accent 条 / 分隔线 */
-  --brand-100: #F6E3EA;   /* 极浅：选中态底色 / icon 底 */
-  --brand-50 : #FBF1F4;   /* 淡奶油粉：卡片高光 / 标签底 */
-
-  /* 难度 accent：同构结构承载差异色（经验：同类卡片结构化差异化） */
-  --accent-easy: #8FB7A7; /* 莫兰迪苔藓绿 —— 简单 */
-  --accent-med : #C97B97; /* 豆沙主色 —— 中等 */
-  --accent-hard: #B57E56; /* 莫兰迪陶土橙 —— 困难 */
-
-  /* 文字层级（WCAG AA 对比度 ≥ 4.5:1 对 body） */
-  --text-900: #2A1F24;  /* H1/数字：主标题 高对比 */
-  --text-700: #5A4B52;  /* 正文/卡片标题 */
-  --text-500: #8F828A;  /* 辅助/说明/标签 */
-  --text-300: #C3B8BE;  /* 弱分隔/禁用态 */
-
-  /* 表面/背景 */
-  --bg:       #FDF8FA;  /* 页面背景：暖白粉，比纯白更柔和不刺眼 */
-  --surface:  #FFFFFF;  /* 卡片表面：纯白 + 阴影层次 */
-
-  /* 间距（8rpx 栅格） */
-  --sp-1: 8rpx;  --sp-2: 16rpx; --sp-3: 24rpx; --sp-4: 32rpx;
-  --sp-5: 40rpx; --sp-6: 48rpx; --sp-8: 64rpx;
-
-  /* 圆角档位（视觉统一，圆角 ≈ 10% 宽度） */
-  --radius-sm: 12rpx;
-  --radius-md: 20rpx;
-  --radius-lg: 28rpx;
-  --radius-pill: 999rpx;
-
-  /* 阴影：克制 ambient 阴影（只有一层） */
-  --shadow-card:  0 8rpx 24rpx rgba(42,31,36, .05);
-  --shadow-soft:  0 4rpx 14rpx rgba(42,31,36, .04);
-  --shadow-btn:   0 10rpx 28rpx rgba(201,123,151, .28);
-
-  /* 动效：统一 220ms · ease-out · 移动端按压曲线 */
-  --dur: 220ms;
-  --ease: cubic-bezier(.2, .8, .2, 1);
-}
-
-/* ---------- 2. 页面与背景（去 blob/云，换柔光 + 极简） ---------- */
-.page {
-  box-sizing: border-box;
-  padding: 0;
-  position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
-  background: var(--bg);    /* 暖白粉基底 */
-  overflow: hidden;         /* 背景光晕裁剪 */
+  box-sizing: border-box;
+  background:
+    radial-gradient(120% 80% at 50% -10%, #FFFDE1 0%, rgba(255,253,225,0) 60%),
+    linear-gradient(180deg, #F6FFE9 0%, #ECF8D5 55%, #F1FBE2 100%);
+  overflow: hidden;
+  position: relative;
 }
-/* 两处极柔径向光晕：用绝对定位伪元素实现（替代 background-attachment:fixed，iOS 小程序兼容） */
-.page::before,
-.page::after {
+.page:before,
+.page:after {
   content: "";
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
+  filter: blur(60rpx);
+  opacity: 0.6;
   z-index: 0;
-  filter: blur(40rpx);
 }
-.page::before {
-  width: 620rpx; height: 620rpx;
-  left: -220rpx;  top: -260rpx;
-  background: rgba(237,195,207,.38);   /* 左上暖粉 */
+.page:before {
+  width: 520rpx; height: 520rpx;
+  left: -180rpx; top: -120rpx;
+  background: rgba(200, 236, 152, 0.55);
 }
-.page::after {
-  width: 720rpx; height: 720rpx;
-  right: -280rpx; bottom: -320rpx;
-  background: rgba(241,224,211,.22);   /* 右下米黄 */
+.page:after {
+  width: 560rpx; height: 560rpx;
+  right: -200rpx; bottom: -160rpx;
+  background: rgba(255, 241, 194, 0.55);
 }
+.page > .nav-bar,
+.page > .main-view,
+.page > .cta-bar { position: relative; z-index: 1; }
 
-/* 所有前景内容层 z-index 高于光晕 */
-.page > .hero,
-.page > .content-scroll,
-.page > .start-wrap { position: relative; z-index: 1; }
-
-/* 最外层 padding：左右 40 · 顶部 32（hero 占位，单屏优化压缩 48→32）；避免滚动条顶边贴边 */
-.page > .hero           { padding: var(--sp-4) var(--sp-5) var(--sp-3); }
-.page > .content-scroll { padding: 0 var(--sp-5); }
-.page > .start-wrap     { padding: var(--sp-2) var(--sp-5) 0; }
-
-/* ---------- 3. Hero 品牌区（大留白 · 极简排版，单屏优化压缩 padding） ---------- */
-.hero {
-  position: relative;
-  z-index: 1;
-  text-align: left;   /* 从居中改左对齐，更"高级"克制 */
-  padding: var(--sp-4) var(--sp-5) var(--sp-3);
-}
-
-.hero-icons {
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-start;
-  gap: var(--sp-3);
-}
-
-.hero-icon {
-  width: 60rpx;
-  height: 60rpx;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 34rpx;
-  background: var(--brand-100);      /* 莫兰迪粉淡底，不彩虹渐变 */
-  color: var(--brand-500);
+/* ========== 自定义导航栏 ========== */
+.nav-bar {
   flex-shrink: 0;
-}
-
-/* 单屏优化：标题略小 76→64rpx */
-.title-main {
-  font-size: 64rpx;
-  font-weight: 900;
-  letter-spacing: 3rpx;
-  line-height: 1.05;
-  color: var(--text-900);
-  /* 仅保留极淡的"主色→深紫"纵向渐变，克制而非花哨 */
-  background: linear-gradient(180deg, var(--text-900) 0%, #46323B 100%);
-  -webkit-background-clip: text;
-          background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: none;   /* 去掉旧 drop-shadow，干净 */
-}
-/* 覆盖 kawaii.scss 的 kawaii-gradient-text：在 index 页要求极简，禁止多色渐变字 */
-.title-main.kawaii-gradient-text {
-  -webkit-background-clip: text !important;
-          background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  color: transparent !important;
-  background-image: linear-gradient(180deg, #2A1F24 0%, #46323B 100%) !important;
-  filter: none !important;
-  -webkit-mask-image: none !important;
-          mask-image: none !important;
-}
-
-/* 标签 pill：去掉彩色边框，改成极淡 brand-50 胶囊 + 主色文字，更现代；单屏压缩 margin */
-.hero-tags {
-  display: flex;
-  justify-content: flex-start;
-  gap: var(--sp-2);
-  margin-top: var(--sp-2);
-}
-.tag {
-  padding: 8rpx 20rpx;
-  border-radius: var(--radius-pill);
-  font-size: 20rpx;
-  font-weight: 600;
-  line-height: 1.4;
-  background: var(--surface);
-  color: var(--text-500);
-  border: none;
-  box-shadow: var(--shadow-soft);
-  letter-spacing: .5rpx;
-}
-/* 标签内部 emoji 缩小并与文字拉开，减少"儿童感" */
-.tag text:first-child,
-.tag .emoji { font-size: 18rpx; margin-right: 4rpx; opacity: .9; }
-.tag.tag-pink { color: var(--brand-500); }
-.tag.tag-sky  { color: #6D8FA6; }
-
-/* ---------- 4. 滚动内容区 ---------- */
-.content-scroll {
-  position: relative;
-  z-index: 1;
-  padding: 0 var(--sp-5);
-  -webkit-overflow-scrolling: touch;
-}
-
-/* ---------- 5. 数据卡（单屏优化压缩 padding 32→24） ---------- */
-.stats-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  padding: var(--sp-3) var(--sp-3);
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  border: none;
-  box-shadow: var(--shadow-card);
-  position: relative;
-  overflow: hidden;
-}
-.stats-card::after {
-  /* 左上细 accent 线：品牌感，不抢眼 */
-  content: "";
-  position: absolute; left: 0; top: 0;
-  width: 56rpx; height: 4rpx;
-  background: var(--brand-400);
-  border-radius: 0 var(--radius-sm) 0 0;
-}
-
-.stat-item { flex: 1; text-align: center; min-width: 0; }
-
-/* 单屏优化：stat-num 38→34rpx，label 紧凑 */
-.stat-num {
-  font-size: 34rpx;
-  font-weight: 900;
-  color: var(--text-900);      /* 深色而非彩色，克制 */
-  line-height: 1.1;
-  letter-spacing: .5rpx;
-  font-variant-numeric: tabular-nums;  /* 数字等宽，切换音效不跳动 */
-}
-
-.stat-label {
-  font-size: 20rpx;
-  color: var(--text-500);
-  margin-top: var(--sp-1);
-  letter-spacing: 1rpx;
-  font-weight: 500;
-}
-
-.stat-divider {
-  width: 1rpx;
-  height: 56rpx;
-  background: var(--brand-300);
-  opacity: .55;
-}
-
-/* ---------- 6. 区块标题（单屏优化：margin-top 40→24, margin-bottom 24→16） ---------- */
-.section { margin-top: var(--sp-3); }
-
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 10rpx;
-  font-size: 28rpx;          /* 单屏优化：30→28rpx */
-  font-weight: 700;
-  color: var(--text-900);
-  margin-bottom: var(--sp-2);
-  padding: 0 2rpx;
-  letter-spacing: -.3rpx;
-}
-/* 主竖线：品牌色，与文字同高，视觉锚点 */
-.section-title::before {
-  content: "";
-  display: inline-block;
-  width: 6rpx;
-  height: 28rpx;
-  background: var(--brand-500);
-  border-radius: 3rpx;
-  flex-shrink: 0;
-}
-.section-emoji { display: none; }   /* 精简：去掉 emoji，让文字本身成为焦点 */
-
-/* ---------- 7. 难度选择（单屏优化：纵向 3 卡 → 横向 3 列网格，节省 ~120rpx） ---------- */
-/* 横向 3 列等宽布局 */
-.difficulty-grid {
-  display: flex;
-  flex-direction: row;
-  gap: var(--sp-2);
-}
-
-/* 卡片：垂直堆叠内容（emoji / name / desc），高度紧凑 */
-.difficulty-card,
-.page .difficulty-card[style] {
-  flex: 1 1 0;
-  min-width: 0;             /* 关键：让 flex 子项在 3 列时正确收缩 */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6rpx;
-  padding: var(--sp-3) var(--sp-1) var(--sp-2);
-  border-radius: var(--radius-md);
-  background: var(--surface) !important;
-  border: 2rpx solid transparent;
-  box-shadow: var(--shadow-card);
-  transition:
-    transform var(--dur) var(--ease),
-    box-shadow var(--dur) var(--ease),
-    border-color var(--dur) var(--ease),
-    background var(--dur) var(--ease);
-  position: relative;
-  overflow: hidden;
-}
-.difficulty-card:active { transform: scale(.96); box-shadow: var(--shadow-soft); }
-
-/* 顶部 accent 色条（横向卡片用顶条更协调） */
-.difficulty-card::before {
-  content: "";
-  position: absolute;
-  left: 0; right: 0; top: 0;
-  height: 4rpx;
-  background: var(--card-accent, var(--brand-300));
-  opacity: .9;
-}
-.difficulty-card-primary { --card-accent: var(--accent-easy); }
-.difficulty-card-middle  { --card-accent: var(--accent-med);  }
-.difficulty-card-college { --card-accent: var(--accent-hard); }
-
-/* 选中态：外描边品牌色 + 淡粉底 + 阴影加强 */
-.difficulty-card.active {
-  background: var(--brand-50) !important;
-  border-color: var(--brand-400);
-  box-shadow:
-    0 8rpx 22rpx rgba(201,123,151, .16),
-    inset 0 0 0 1rpx rgba(255,255,255,.85);
-}
-
-/* emoji 圆角方：紧凑尺寸 72→56rpx */
-.diff-emoji {
-  font-size: 32rpx;
-  flex-shrink: 0;
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--brand-50);
-  position: relative;
-  z-index: 1;
-}
-.difficulty-card-primary .diff-emoji { background: rgba(143,183,167, .18); }
-.difficulty-card-middle  .diff-emoji { background: rgba(201,123,151, .16); }
-.difficulty-card-college .diff-emoji { background: rgba(181,126,86,  .16); }
-
-/* 名称居中显示 */
-.diff-name {
-  font-size: 26rpx;
-  font-weight: 700;
-  color: var(--text-900);
-  line-height: 1.25;
-  letter-spacing: .2rpx;
-  text-align: center;
-  position: relative;
-  z-index: 1;
-}
-/* 描述：紧凑两行 */
-.diff-desc {
-  font-size: 18rpx;
-  color: var(--text-500);
-  line-height: 1.3;
-  letter-spacing: .2rpx;
-  text-align: center;
-  position: relative;
-  z-index: 1;
-}
-
-/* 选中勾：右上角小圆点（紧凑布局用小尺寸） */
-.diff-check {
-  position: absolute;
-  top: 8rpx;
-  right: 8rpx;
-  width: 28rpx;
-  height: 28rpx;
-  border-radius: 50%;
-  background: var(--brand-500);
-  color: #FFFFFF;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 900;
-  font-size: 18rpx;
-  flex-shrink: 0;
-  z-index: 2;
-  box-shadow: 0 4rpx 10rpx rgba(201,123,151, .32);
-}
-
-/* ---------- 8. 玩法说明（单屏优化：2×2 卡片 → 1 行 4 chip，节省 ~90rpx） ---------- */
-.howto-row {
-  display: flex;
-  flex-direction: row;
-  gap: var(--sp-1);
-}
-
-.howto-chip {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6rpx;
-  padding: var(--sp-2) var(--sp-1);
-  background: var(--surface);
-  border-radius: var(--radius-md);
-  border: none;
-  box-shadow: var(--shadow-soft);
-  transition: transform var(--dur) var(--ease);
-}
-.howto-chip:active { transform: scale(.96); }
-
-.howto-emoji {
-  font-size: 24rpx;
-  flex-shrink: 0;
-  width: 40rpx;
-  height: 40rpx;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--brand-50);
-  color: var(--brand-500);
-}
-
-.howto-text {
-  font-size: 20rpx;
-  color: var(--text-700);
-  font-weight: 600;
-  letter-spacing: .2rpx;
-  line-height: 1.2;
-  text-align: center;
-  min-width: 0;
-}
-
-/* ---------- 9. 开始按钮（覆盖 kawaii-btn 视觉，改极简主色胶囊） ---------- */
-.start-wrap {
-  position: relative;
-  z-index: 1;
-  text-align: center;
-  margin-top: var(--sp-2);
-  padding: var(--sp-2) var(--sp-5) 0;
-}
-
-/* 高权重覆盖 global.kawaii.scss 的 kawaii-btn / kawaii-btn-primary */
-/* 单屏优化：padding 26→22rpx，font-size 32→30rpx */
-.start-btn.kawaii-btn.kawaii-btn-primary,
-.page .start-btn.kawaii-btn.kawaii-btn-primary {
   width: 100%;
-  max-width: 600rpx;
+  box-sizing: border-box;
+}
+.nav-bar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* padding 由内联 style 动态设置：padding-left:20rpx; padding-right:{capsuleRight+12}px */
+  box-sizing: border-box;
+}
+.nav-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 12rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 4rpx 12rpx rgba(74, 112, 38, 0.1);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+.nav-btn-hover {
+  transform: scale(0.94);
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 3rpx 10rpx rgba(74, 112, 38, 0.08);
+}
+.nav-icon {
+  font-size: 34rpx;
+  font-weight: 800;
+  color: #3B5A1F;
+  line-height: 1;
+}
+.nav-title {
+  flex: 1;
+  text-align: center;
+  padding: 4rpx 20rpx;
   font-size: 30rpx;
-  font-weight: 700;
+  font-weight: 800;
+  color: #2F3A26;
   letter-spacing: 2rpx;
-  padding: 22rpx 0;
-  color: #FFFFFF;
-  /* 克制渐变：主色 → 浅主色，同色相，不跨色 */
-  background: linear-gradient(135deg, var(--brand-500) 0%, var(--brand-400) 100%);
-  border-radius: var(--radius-pill);
-  border: none;
-  box-shadow: var(--shadow-btn);
+  line-height: 1.25;
+}
+
+/* ========== 主体：纯 flex 一屏，禁止滚动 ========== */
+.main-view {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 4rpx 28rpx 0;
+  gap: 14rpx;             /* v9 统一节奏：14rpx 模块间距 */
+  justify-content: flex-start;
+  box-sizing: border-box;
+}
+
+/* ========== 品牌 Hero 胶囊 ========== */
+.brand-hero {
+  flex: 0 0 auto;
+  position: relative;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.decor {
+  position: absolute;
+  line-height: 1;
+  opacity: 0.9;
+  pointer-events: none;
+}
+.decor-sun {
+  top: 4rpx; left: 16rpx;
+  font-size: 46rpx;
+  animation: sunPulse 3.6s ease-in-out infinite;
+}
+.decor-flower {
+  top: 18rpx; left: 90rpx;
+  font-size: 28rpx;
+}
+.decor-leaf-l {
+  bottom: 6rpx; left: 8rpx;
+  transform: scaleX(-1);
+  font-size: 56rpx;
+  opacity: 0.75;
+}
+.decor-leaf-r {
+  bottom: 8rpx; right: 6rpx;
+  font-size: 62rpx;
+  opacity: 0.75;
+}
+@keyframes sunPulse {
+  0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 2rpx 6rpx rgba(255,192,0,0.35)); }
+  50%      { transform: scale(1.08) rotate(12deg); filter: drop-shadow(0 6rpx 12rpx rgba(255,192,0,0.55)); }
+}
+.brand-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 10rpx 22rpx 10rpx 10rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8rpx 22rpx rgba(74, 112, 38, 0.10),
+              0 0 0 3rpx rgba(255,255,255,0.4);
+}
+.brand-logo-bg {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 20rpx;
+  background: linear-gradient(145deg, #E5F7C6, #A8DC7E);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2rpx 0 rgba(255,255,255,0.7),
+              0 4rpx 10rpx rgba(106, 156, 42, 0.22);
+}
+.brand-logo-emoji {
+  font-size: 34rpx;
+  line-height: 1;
+  animation: leafFloat 2.6s ease-in-out infinite;
+}
+@keyframes leafFloat {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50%      { transform: translateY(-6rpx) rotate(6deg); }
+}
+.brand-title {
+  font-size: 32rpx;
+  font-weight: 900;
+  letter-spacing: 2rpx;
+  line-height: 1.1;
+  color: #2F3A26;
+  background: linear-gradient(180deg, #34600F 0%, #5AA454 55%, #8ED879 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ========== 3 张独立统计卡（底部分绿色下划线） ========== */
+.stats-row {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  gap: 10rpx;
+  padding: 0 4rpx;
+  box-sizing: border-box;
+}
+.stat-card {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rpx;
+  padding: 10rpx 6rpx 4rpx;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 18rpx;
+  box-shadow: 0 6rpx 14rpx rgba(80, 120, 45, 0.08),
+              inset 0 2rpx 0 rgba(255, 255, 255, 0.95);
   position: relative;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
-  transition:
-    transform 140ms var(--ease),
-    box-shadow var(--dur) var(--ease),
-    filter var(--dur) var(--ease);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  min-height: 88rpx;          /* v9 统一最小高度，便于点击 */
 }
-.start-btn.kawaii-btn.kawaii-btn-primary::after {
-  /* 顶部一条极细高光，比 kawaii 的彩虹描边更克制 */
+.stat-card-underline {
+  width: 60%;
+  height: 3rpx;
+  margin-top: 5rpx;
+  background: linear-gradient(90deg, rgba(126,198,106,0), rgba(126,198,106,0.85), rgba(126,198,106,0));
+  border-radius: 2rpx;
+}
+.sound-card-hover {
+  transform: scale(0.97);
+  box-shadow: 0 4rpx 10rpx rgba(80, 120, 45, 0.06);
+}
+.stat-card-num {
+  font-size: 26rpx;          /* v9 28→26 与面板其它字号节奏一致 */
+  font-weight: 900;
+  color: #2F3A26;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.stat-card-emoji {
+  font-size: 24rpx;
+  line-height: 1;
+  margin-bottom: 2rpx;
+}
+.stat-card-label {
+  font-size: 16rpx;
+  color: #657551;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.3rpx;
+}
+
+/* ========== 难度选择 胶囊 ========== */
+.diff-pills {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  padding: 0 4rpx;
+  box-sizing: border-box;
+}
+.diff-pill {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 12rpx 0;
+  min-height: 64rpx;          /* v9 触摸友好 */
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.9);
+  color: #5E6F48;
+  text-align: center;
+  font-size: 21rpx;
+  font-weight: 700;
+  letter-spacing: 1rpx;
+  box-shadow: 0 3rpx 8rpx rgba(80, 120, 45, 0.06);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 220ms cubic-bezier(.2,.8,.2,1);
+}
+.diff-pill-hover { transform: scale(0.97); }
+.diff-pill.active {
+  background: linear-gradient(135deg, #8FD27A 0%, #57AA4A 100%);
+  color: #FFFFFF;
+  box-shadow: 0 5rpx 14rpx rgba(71, 145, 60, 0.26),
+              inset 0 2rpx 0 rgba(255,255,255,0.4);
+}
+.diff-leaf {
+  font-size: 16rpx;
+  line-height: 1;
+  animation: popLeaf 340ms cubic-bezier(.2,.8,.2,1);
+}
+@keyframes popLeaf {
+  0%   { transform: scale(0.3) rotate(-30deg); opacity: 0; }
+  60%  { transform: scale(1.3) rotate(12deg);  opacity: 1; }
+  100% { transform: scale(1) rotate(0deg);     opacity: 1; }
+}
+
+/* ========== 玩法标题行（紧凑，只占一行高度） ========== */
+.howto-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4rpx;
+  box-sizing: border-box;
+}
+.howto-head-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+}
+.howto-bar {
+  display: inline-block;
+  width: 6rpx;
+  height: 22rpx;
+  border-radius: 3rpx;
+  background: linear-gradient(180deg, #7BC86A, #4D8E3F);
+  box-shadow: 0 2rpx 4rpx rgba(77, 142, 63, 0.2);
+}
+.howto-title {
+  font-size: 22rpx;
+  font-weight: 800;
+  color: #2F3A26;
+  letter-spacing: 0.5rpx;
+}
+.howto-head-more {
+  font-size: 18rpx;
+  font-weight: 600;
+  color: #5E8542;
+  padding: 6rpx 14rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 3rpx 8rpx rgba(80, 120, 45, 0.07);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.more-hover {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+/* ========== 玩法卡 网格（单行 4 列 — 原第二排重复卡片已移除） ========== */
+.howto-grid {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  column-gap: 10rpx;
+  padding: 0 4rpx;
+  box-sizing: border-box;
+}
+.howto-card {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 120rpx;
+  border-radius: 20rpx;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
+  padding: 10rpx 6rpx;
+  background: #FFFFFF;
+  box-shadow: inset 0 2rpx 0 rgba(255, 255, 255, 0.85),
+              0 4rpx 10rpx rgba(80, 120, 45, 0.06);
+  border: 2rpx solid rgba(255, 255, 255, 0.9);
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+}
+.howto-icon-box {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.05),
+              inset 0 2rpx 0 rgba(255,255,255,0.85);
+}
+.howto-card-icon {
+  font-size: 28rpx;
+  line-height: 1;
+}
+.howto-card-title {
+  font-size: 16rpx;
+  font-weight: 700;
+  color: #3A4C2A;
+  text-align: center;
+  line-height: 1.2;
+  letter-spacing: 0.2rpx;
+}
+
+/* ========== 横幅 Banner（v7 高度减半：紧凑单行布局，内容等比缩小重绘） ========== */
+.banner-hero {
+  flex: 0 0 auto;           /* 固定高度，不再弹性填充 */
+  height: 120rpx;           /* 原 ~240rpx 弹性 → 固定 120rpx（约一半） */
+  position: relative;
+  margin: 0 4rpx;
+  padding: 10rpx 16rpx;
+  border-radius: 22rpx;
+  background:
+    radial-gradient(90% 130% at 0% 0%, #FFF6B0 0%, rgba(255,246,176,0) 60%),
+    linear-gradient(125deg, #FFF39F 0%, #DCEE95 35%, #A3DD78 70%, #83CF5E 100%);
+  box-shadow:
+    0 8rpx 18rpx rgba(102, 148, 52, 0.22),
+    0 0 0 3rpx rgba(255,255,255,0.45),
+    inset 0 2rpx 0 rgba(255,255,255,0.85),
+    inset 0 -3rpx 0 rgba(97, 171, 69, 0.3);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+.banner-spot {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(2rpx);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.banner-spot-1 {
+  width: 110rpx; height: 110rpx;
+  left: -30rpx; top: -40rpx;
+  background: radial-gradient(circle, rgba(255,255,255,0.98), rgba(255,255,255,0) 65%);
+  animation: spotDrift 6s ease-in-out infinite;
+}
+.banner-spot-2 {
+  width: 100rpx; height: 100rpx;
+  right: -20rpx; bottom: -35rpx;
+  background: radial-gradient(circle, rgba(255, 220, 140, 0.7), rgba(255,255,255,0) 65%);
+  animation: spotDrift 7.2s ease-in-out infinite reverse;
+}
+@keyframes spotDrift {
+  0%, 100% { transform: translate(0,0) scale(1);    opacity: 0.55; }
+  50%      { transform: translate(12rpx,-10rpx) scale(1.08); opacity: 0.72; }
+}
+
+/* 左侧：角色 + 栅栏 + 花盆（等比缩至一半） */
+.banner-role-left {
+  position: relative;
+  flex-shrink: 0;
+  width: 92rpx;
+  height: 62rpx;
+}
+/* 栅栏：3 竖柱 + 2 横梁（等比缩半） */
+.fence {
+  position: absolute;
+  left: -3rpx;
+  bottom: 3rpx;
+  width: 38rpx;
+  height: 23rpx;
+  z-index: 1;
+}
+.fence-post {
+  position: absolute;
+  bottom: 0;
+  width: 4rpx;
+  height: 23rpx;
+  background: linear-gradient(180deg, #A16B3A 0%, #8B5A2B 100%);
+  border-radius: 2rpx 2rpx 0 0;
+  box-shadow: inset -1rpx 0 0 rgba(0,0,0,0.12);
+}
+.fence-post-1 { left: 1rpx;  height: 21rpx; }
+.fence-post-2 { left: 17rpx; height: 24rpx; }
+.fence-post-3 { left: 33rpx; height: 20rpx; }
+.fence-rail {
+  position: absolute;
+  left: 0;
+  width: 38rpx;
+  height: 3rpx;
+  background: linear-gradient(180deg, #B8814A 0%, #8B5A2B 100%);
+  border-radius: 2rpx;
+}
+.fence-rail-top    { top: 5rpx; }
+.fence-rail-bottom { top: 14rpx; }
+/* 花盆（等比缩半） */
+.pot {
+  position: absolute;
+  right: 1rpx;
+  bottom: 2rpx;
+  width: 26rpx;
+  height: 17rpx;
+  z-index: 1;
+}
+.pot-bowl {
+  position: absolute;
+  left: 0; bottom: 0;
+  width: 26rpx;
+  height: 15rpx;
+  background: linear-gradient(180deg, #E57373 0%, #C62828 100%);
+  border-radius: 2rpx 2rpx 5rpx 5rpx;
+  box-shadow: inset 0 1rpx 0 rgba(255,255,255,0.25),
+              inset 0 -1rpx 0 rgba(0,0,0,0.15);
+}
+.pot-bowl:after {
   content: "";
   position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 40%;
-  background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0));
-  pointer-events: none;
-  border-radius: var(--radius-pill) var(--radius-pill) 0 0;
+  top: -2rpx; left: -1rpx; right: -1rpx;
+  height: 4rpx;
+  background: linear-gradient(180deg, #EF5350 0%, #C62828 100%);
+  border-radius: 2rpx;
 }
-.start-btn.kawaii-btn.kawaii-btn-primary::before { display: none !important; }
-.start-btn.kawaii-btn.kawaii-btn-primary:active {
-  transform: scale(.98);
-  filter: brightness(.97);
-  box-shadow: 0 6rpx 18rpx rgba(201,123,151, .3);
+.pot-soil {
+  position: absolute;
+  left: 2rpx; top: 1rpx;
+  width: 22rpx;
+  height: 3rpx;
+  background: #5D4037;
+  border-radius: 2rpx;
 }
-.btn-icon {
-  margin-right: 6rpx;
-  font-size: 26rpx;
+/* 两个角色：等比缩半 */
+.role {
+  position: absolute;
+  filter: drop-shadow(0 3rpx 5rpx rgba(60, 120, 40, 0.28));
+  z-index: 2;
+}
+.role-bean {
+  width: 56rpx;
+  height: 56rpx;
+  left: 18rpx;
+  bottom: 2rpx;
+  animation: heroIdleMain 2.8s ease-in-out infinite;
+}
+.role-carrot {
+  width: 34rpx;
+  height: 34rpx;
+  left: 56rpx;
+  bottom: 9rpx;
+  z-index: 3;
+  animation: heroIdleSub 3.2s ease-in-out infinite reverse;
+}
+@keyframes heroIdleMain {
+  0%, 100% { transform: translateY(0) rotate(-2deg) scale(1); }
+  50%      { transform: translateY(-3rpx) rotate(3deg) scale(1.02); }
+}
+@keyframes heroIdleSub {
+  0%, 100% { transform: translateY(0) rotate(2deg); }
+  50%      { transform: translateY(-3rpx) rotate(-4deg); }
+}
+
+/* 右侧：文字区 + 开始冒险按钮（等比缩小） */
+.banner-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3rpx;
+  position: relative;
+  z-index: 1;
+  padding-left: 10rpx;
+}
+.banner-title {
+  font-size: 24rpx;
   font-weight: 900;
-  opacity: .95;
+  letter-spacing: 1rpx;
+  line-height: 1.1;
+  background: linear-gradient(180deg, #2F5312 0%, #4C8B2A 55%, #7BC86A 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2rpx 0 rgba(255,255,255,0.2);
+}
+.banner-sub {
+  font-size: 13rpx;
+  font-weight: 700;
+  color: #4B6A2D;
+  line-height: 1.25;
+  letter-spacing: 0.2rpx;
+}
+.banner-btn {
+  margin-top: 3rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6rpx 14rpx 6rpx 16rpx;
+  gap: 3rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #6FCF5E 0%, #3D8A32 100%);
+  color: #FFFFFF;
+  font-size: 16rpx;
+  font-weight: 900;
+  letter-spacing: 0.5rpx;
+  box-shadow:
+    0 4rpx 10rpx rgba(47, 83, 18, 0.35),
+    inset 0 2rpx 0 rgba(255,255,255,0.4),
+    inset 0 -2rpx 0 rgba(0,0,0,0.18);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease;
+  animation: bannerBtnPulse 2.8s ease-in-out infinite;
+}
+@keyframes bannerBtnPulse {
+  0%, 100% { box-shadow: 0 6rpx 14rpx rgba(47, 83, 18, 0.35),
+                      inset 0 2rpx 0 rgba(255,255,255,0.4),
+                      inset 0 -2rpx 0 rgba(0,0,0,0.18); }
+  50%      { box-shadow: 0 8rpx 18rpx rgba(47, 83, 18, 0.45),
+                      inset 0 2rpx 0 rgba(255,255,255,0.4),
+                      inset 0 -2rpx 0 rgba(0,0,0,0.18),
+                      0 0 0 4rpx rgba(255, 240, 150, 0.45); }
+}
+.banner-btn-hover {
+  transform: translateY(2rpx) scale(0.97);
+  filter: brightness(0.98);
+  box-shadow: 0 3rpx 8rpx rgba(47, 83, 18, 0.28),
+              inset 0 2rpx 0 rgba(255,255,255,0.3),
+              inset 0 -2rpx 0 rgba(0,0,0,0.15);
+}
+.banner-btn-arrow {
+  font-size: 24rpx;
+  font-weight: 900;
+  line-height: 1;
+  margin-top: -2rpx;
 }
 
-/* 单屏优化：tip margin 24→12rpx */
-.tip-text {
-  margin-top: var(--sp-1);
-  font-size: 20rpx;
-  color: var(--text-500);
-  font-weight: 500;
-  letter-spacing: .3rpx;
-  opacity: .9;
+/* ========== 固定底部 CTA：圆角矩形（参考图样式，非胶囊） ========== */
+.cta-bar {
+  flex-shrink: 0;
+  width: 100%;
+  padding: 6rpx 28rpx 10rpx;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, rgba(241,251,226,0) 0%, #E9F6CF 40%, #E2F3C1 100%);
+  box-shadow: 0 -4rpx 10rpx rgba(200, 228, 144, 0.16);
 }
-.tip-text text:first-child { opacity: .85; margin-right: 4rpx; }
-
-/* ---------- 10. 动画：保持 anim-wiggle 但更柔和，anim-float 已无节点所以不生效 ---------- */
-.hero .anim-wiggle { animation: heroSway 3.2s ease-in-out infinite; transform-origin: 50% 90%; }
-@keyframes heroSway {
-  0%,100% { transform: rotate(-4deg) translateY(0); }
-   50%     { transform: rotate( 4deg) translateY(-3rpx); }
+.start-main {
+  position: relative;
+  width: 100%;
+  padding: 16rpx 0;
+  border-radius: 40rpx;
+  border: none;
+  background: linear-gradient(180deg, #9BDF7F 0%, #6FCF5E 50%, #4EA944 100%);
+  color: #FFFFFF;
+  font-size: 28rpx;
+  font-weight: 900;
+  letter-spacing: 3rpx;
+  text-align: center;
+  line-height: 1.2;
+  box-shadow:
+    0 6rpx 0 #35742C,
+    0 10rpx 20rpx rgba(79, 155, 63, 0.3),
+    inset 0 2rpx 0 rgba(255,255,255,0.5);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 130ms ease, box-shadow 130ms ease, filter 130ms ease;
+  overflow: hidden;
+}
+.start-main:after { border: none; }
+.start-main-shine {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 45%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0));
+  pointer-events: none;
+  border-radius: 40rpx 40rpx 0 0;
+}
+.start-main-hover {
+  transform: translateY(5rpx) scale(0.99);
+  filter: brightness(0.98);
+  box-shadow:
+    0 2rpx 0 #35742C,
+    0 5rpx 12rpx rgba(79, 155, 63, 0.26),
+    inset 0 2rpx 0 rgba(255,255,255,0.45);
 }

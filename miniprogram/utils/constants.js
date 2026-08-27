@@ -42,60 +42,64 @@ const DIFFICULTY_CONFIG = {
 };
 
 // ============ 僵尸类型定义 ============
-// 四种类型：普通 / 快速 / 强壮 / 护甲，差异化属性与外观
+// 四种类型：铁桶 / 小鬼 / 橄榄球 / 舞王，差异化属性与外观
+// iconPath: 角色造型资源路径（相对于 miniprogram 根目录）
 const ZOMBIE_TYPES = {
-  normal: {
-    type: 'normal',
-    name: '普通僵尸',
-    color: '#9CCC65',          // 身体绿
-    accentColor: '#C5DD7A',
-    baseHealth: 2,             // v2 1→2，2 发豌豆击杀
+  bucket: {
+    type: 'bucket',
+    name: '铁桶僵尸',
+    color: '#7B8A6E',
+    accentColor: '#9EA38A',
+    baseHealth: 2,
     speedMultiplier: 1.0,
-    radius: 36,                // 渲染半径(rpx)
-    scoreReward: 100,          // 击杀奖励基础分
-    assetKey: 'zombie_normal'
+    radius: 36,
+    scoreReward: 100,
+    assetKey: 'zombie_bucket',
+    iconPath: '/icon/zombie_bucket.png'
   },
-  fast: {
-    type: 'fast',
-    name: '飞毛腿僵尸',
-    color: '#81D4FA',
-    accentColor: '#B3E5FC',
-    baseHealth: 1,             // 保持 1HP，1 发击杀但跑得快
+  imp: {
+    type: 'imp',
+    name: '小鬼僵尸',
+    color: '#9E8BB5',
+    accentColor: '#B39DCE',
+    baseHealth: 1,
     speedMultiplier: 1.7,
     radius: 30,
     scoreReward: 150,
-    assetKey: 'zombie_fast'
+    assetKey: 'zombie_imp',
+    iconPath: '/icon/zombie_imp.png'
   },
-  strong: {
-    type: 'strong',
-    name: '壮汉僵尸',
-    color: '#FF8A65',
-    accentColor: '#FFAB91',
-    baseHealth: 5,             // v2 3→5，需持续输出
+  football: {
+    type: 'football',
+    name: '橄榄球僵尸',
+    color: '#A0826D',
+    accentColor: '#B89B88',
+    baseHealth: 5,
     speedMultiplier: 0.65,
     radius: 44,
     scoreReward: 250,
-    assetKey: 'zombie_strong'
+    assetKey: 'zombie_football',
+    iconPath: '/icon/zombie_football.png'
   },
-  armored: {
-    type: 'armored',
-    name: '护甲僵尸',
-    color: '#90A4AE',          // 金属灰
-    accentColor: '#CFD8DC',
-    baseHealth: 6,             // 高 DPS 考验
+  dancer: {
+    type: 'dancer',
+    name: '舞王僵尸',
+    color: '#78909C',
+    accentColor: '#B0BEC5',
+    baseHealth: 6,
     speedMultiplier: 0.8,
     radius: 40,
     scoreReward: 300,
-    assetKey: 'zombie_armored'
+    assetKey: 'zombie_dancer',
+    iconPath: '/icon/zombie_dancer.png'
   }
 };
 
 // 不同难度下僵尸类型出现概率分布
-// armored 从 strong 中拆分，toughProbBonus 随关卡递增（由 ZombieSpawner.applyLevelRamp 动态调整）
 const ZOMBIE_TYPE_WEIGHTS = {
-  primary: { normal: 0.65, fast: 0.20, strong: 0.08, armored: 0.07 },
-  middle:  { normal: 0.50, fast: 0.28, strong: 0.12, armored: 0.10 },
-  college: { normal: 0.35, fast: 0.30, strong: 0.20, armored: 0.15 }
+  primary: { bucket: 0.65, imp: 0.20, football: 0.08, dancer: 0.07 },
+  middle:  { bucket: 0.50, imp: 0.28, football: 0.12, dancer: 0.10 },
+  college: { bucket: 0.35, imp: 0.30, football: 0.20, dancer: 0.15 }
 };
 
 // ============ 路径定义 ============
@@ -132,18 +136,8 @@ const LEVEL = {
   RAMP: {
     SPAWN_INTERVAL_MULT: 0.92, // 生成间隔 ×0.92/关
     SPEED_MULT: 1.08,          // 速度 ×1.08/关
-    TOUGH_PROB_BONUS: 0.05,    // strong+armored 概率 +5%/关
+    TOUGH_PROB_BONUS: 0.05,    // football+dancer 概率 +5%/关
   }
-};
-
-// ============ 基地植物（防线核心） ============
-// slot=4（最靠近房子侧）每条车道预置 1 朵心形花，被摧毁即该道防线突破
-const BASE_PLANT = {
-  TYPE: 'heart_base',
-  NAME: '心形花',
-  HEALTH: 5,                   // 需僵尸啃 5 次（COMBAT.ZOMBIE_ATTACK_DAMAGE=1）
-  SLOT: 4,                     // 最靠近房子侧的槽位
-  COLORS: { body: '#F48FB1', accent: '#EC407A', glow: '#F8BBD0' }
 };
 
 // ============ 移动轨迹算法 ============
@@ -169,7 +163,11 @@ const ASSET_KEYS = {
     CORRECT: 'correct',
     WRONG: 'wrong',
     KILL: 'kill',
-    GAME_OVER: 'game_over'
+    GAME_OVER: 'game_over',
+    WIN: 'win',             // 胜利结算
+    LEVEL_UP: 'level_up',
+    SUN: 'sun',             // 阳光收集音效
+    PLACE: 'place'          // 放置植物音效
   }
 };
 
@@ -181,10 +179,10 @@ const STORAGE_KEYS = {
 
 // ============ UI 尺寸 ============
 const UI = {
-  QUIZ_PANEL_HEIGHT_RATIO: 0.30,  // 答题区占屏高30%（给商店栏腾空间）
-  HUD_HEIGHT: 100,                // HUD高度(rpx) — 仅用于canvas fallback计算
-  SHOP_BAR_HEIGHT: 110,           // 植物商店栏高度(rpx)
-  CANVAS_PADDING: 24              // canvas边距
+  QUIZ_PANEL_HEIGHT_RATIO: 0.15,  // 已废弃：v10 起答题面板改为内容自适应高度，不再使用固定比例
+  HUD_HEIGHT: 86,                 // HUD 高度(rpx) — 仅用于 canvas fallback 估算
+  SHOP_BAR_HEIGHT: 96,            // 植物商店栏高度(rpx)
+  CANVAS_PADDING: 22              // canvas 边距
 };
 
 // ============ 网格配置 ============
@@ -202,58 +200,62 @@ const GRID = {
 // ============ 植物类型 ============
 // cost=阳光消耗; health=血量; damage=每次投射物伤害;
 // attackInterval=攻击间隔(ms); range=攻击范围
+// iconPath: 角色造型资源路径（相对于 miniprogram 根目录）
 const PLANT_TYPES = {
   shooter: {
     type: 'shooter', name: '豌豆射手', emoji: '🌱',
     cost: 50, health: 3, damage: 2,
     attackInterval: 1100, range: Infinity,
     color: '#7CB342',
+    iconPath: '/icon/plant_shooter.png',
     projectile: { type: 'normal', speed: 320, color: '#9CCC65', radius: 8 }
   },
   wall: {
-    type: 'wall', name: '坚果墙', emoji: '🥜',
+    type: 'wall', name: '坚果', emoji: '🥜',
     cost: 50, health: 8, damage: 0,
     attackInterval: 0, range: 0,
-    color: '#A1887F'
+    color: '#A1887F',
+    iconPath: '/icon/plant_wall.png'
   },
   freezer: {
     type: 'freezer', name: '寒冰射手', emoji: '❄️',
     cost: 75, health: 3, damage: 2,
     attackInterval: 1300, range: Infinity,
     color: '#4FC3F7',
+    iconPath: '/icon/plant_freezer.png',
     projectile: { type: 'ice', speed: 300, color: '#81D4FA', radius: 8,
                   slow: { factor: 0.5, duration: 2000 } }
   },
-  // v2 新增：樱桃炸弹 — 范围爆炸，放置后引信 2 秒引爆
   cherry: {
     type: 'cherry', name: '樱桃炸弹', emoji: '🍒',
     cost: 100, health: 1, damage: 10,
     attackInterval: 0, range: 0,
     isExplosive: true,
-    fuseTime: 2000,             // 引信 2 秒
-    blastRadius: 0.15,          // 爆炸范围（progress 单位，≈3 槽位）
-    color: '#E53935'
+    fuseTime: 2000,
+    blastRadius: 0.15,
+    color: '#E53935',
+    iconPath: '/icon/plant_cherry.png'
   },
-  // v2 新增：火焰射手 — 炮弹穿透多个僵尸
-  fire: {
-    type: 'fire', name: '火焰射手', emoji: '🔥',
-    cost: 175, health: 3, damage: 3,
-    attackInterval: 1500, range: Infinity,
-    color: '#FF7043',
-    projectile: { type: 'fire', speed: 280, color: '#FF5722', radius: 10,
-                  pierce: true, pierceMax: 3 }   // 穿透最多 3 个僵尸
+  chomper: {
+    type: 'chomper', name: '食人花', emoji: '🪴',
+    cost: 125, health: 4, damage: 8,
+    attackInterval: 2500, range: 0.08,
+    color: '#8E24AA',
+    iconPath: '/icon/plant_chomper.png',
+    isChomper: true,
+    swallowTime: 3000
   },
-  // 基地植物（不可购买、不可移动，防线核心）
-  heart_base: {
-    type: 'heart_base', name: '心形花', emoji: '🌸',
-    cost: 0, health: BASE_PLANT.HEALTH, damage: 0,
+  sunflower: {
+    type: 'sunflower', name: '向日葵', emoji: '🌻',
+    cost: 50, health: 2, damage: 0,
     attackInterval: 0, range: 0,
-    isBase: true,
-    color: BASE_PLANT.COLORS.body
+    sunInterval: 8000, sunProduce: 25,
+    color: '#FFC107',
+    iconPath: '/icon/plant_sunflower.png'
   }
 };
-// 商店栏展示顺序（不含 heart_base，基地植物不参与购买）
-const PLANT_ORDER = ['shooter', 'wall', 'freezer', 'cherry', 'fire'];
+// 商店栏展示顺序
+const PLANT_ORDER = ['sunflower', 'shooter', 'wall', 'freezer', 'cherry', 'chomper'];
 
 // ============ 阳光经济 ============
 const SUNLIGHT = {
@@ -294,7 +296,6 @@ module.exports = {
   SCORING,
   LIVES,
   LEVEL,
-  BASE_PLANT,
   MOVEMENT,
   PERFORMANCE,
   ASSET_KEYS,

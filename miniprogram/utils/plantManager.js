@@ -1,12 +1,16 @@
 // utils/plantManager.js - 植物武器系统管理器
 // 负责: 植物对象池、投射物对象池、网格放置、攻击/产阳光/投射物飞行与碰撞
-// 植物3种: shooter(豌豆射手) / wall(坚果墙) / freezer(寒冰射手)
+// 植物6种: sunflower(向日葵) / shooter(豌豆射手) / wall(坚果) / freezer(寒冰射手) / cherry(樱桃炸弹) / chomper(食人花)
 
-const { PLANT_TYPES, GRID, PROJECTILE, SUNLIGHT, BASE_PLANT } = require('./constants.js');
+const { PLANT_TYPES, GRID, PROJECTILE, SUNLIGHT } = require('./constants.js');
 const { pathManager } = require('./pathManager.js');
 
 let __plantIdSeed = 1;
 let __projIdSeed = 1;
+let __sunIdSeed = 1;  // 收集阳光对象 id 生成器
+const SUN_MAX_ACTIVE = 10;          // 同屏阳光上限，防止无限堆积
+const SUN_LIFETIME_MS = 10000;      // 阳光未被收集的寿命（10s）
+const SUN_COLLECT_WNDOW = 320;      // 收集动画持续时长(ms)
 
 /**
  * 植物管理器
@@ -16,6 +20,8 @@ class PlantManager {
   constructor() {
     this.plants = [];          // 活跃植物数组
     this.projectiles = [];     // 活跃投射物数组
+    this.suns = [];            // v3: 可收集阳光数组（向日葵产出）
+    this.version = 0;          // v3: suns 变更版本号，便于页面对比是否需要刷新
   }
 
   /**
@@ -24,37 +30,8 @@ class PlantManager {
   reset() {
     this.plants = [];
     this.projectiles = [];
-  }
-
-  /**
-   * v2 初始化基地植物（防线核心）
-   * 在每条车道的 slot=4（最靠近房子侧）预置 1 朵心形花
-   * 由 gameManager.initGame 调用
-   */
-  initBasePlants() {
-    for (let lane = 0; lane < GRID.ROWS; lane++) {
-      const pos = pathManager.getGridCellCenter(lane, BASE_PLANT.SLOT);
-      const def = PLANT_TYPES[BASE_PLANT.TYPE];
-      this.plants.push({
-        id: __plantIdSeed++,
-        type: BASE_PLANT.TYPE,
-        def: def,
-        isBase: true,           // 标记为基地植物
-        lane: lane,
-        slot: BASE_PLANT.SLOT,
-        x: pos.x,
-        y: pos.y,
-        health: BASE_PLANT.HEALTH,
-        maxHealth: BASE_PLANT.HEALTH,
-        attackCooldown: 0,
-        sunCooldown: 0,
-        state: 'idle',
-        stateTimer: 0,
-        hitFlash: 0,
-        wobble: Math.random() * Math.PI * 2,
-        active: true
-      });
-    }
+    this.suns = [];
+    this.version++;
   }
 
   /**
@@ -94,10 +71,6 @@ class PlantManager {
     if (lane < 0 || lane >= GRID.ROWS || slot < 0 || slot >= GRID.COLS) {
       return { ok: false, reason: '位置越界' };
     }
-    // v2: 基地植物槽位（slot=4）禁止玩家放置
-    if (slot === BASE_PLANT.SLOT) {
-      return { ok: false, reason: '该格为防线位置' };
-    }
     if (this.getPlantAt(lane, slot)) {
       return { ok: false, reason: '该格已有植物' };
     }
@@ -112,16 +85,21 @@ class PlantManager {
       y: pos.y,
       health: def.health,
       maxHealth: def.health,
-      attackCooldown: def.attackInterval ? def.attackInterval * 0.5 : 0, // 首发减半等待
+      attackCooldown: def.attackInterval ? def.attackInterval * 0.5 : 0,
       sunCooldown: def.sunInterval || 0,
       state: 'idle',          // idle / dead
       stateTimer: 0,
       hitFlash: 0,
       wobble: Math.random() * Math.PI * 2,
       active: true,
-      // v2 樱桃炸弹引信字段（仅 isExplosive 植物使用）
+      // 樱桃炸弹引信字段
       fuseTimer: def.isExplosive ? def.fuseTime : 0,
-      exploded: false
+      exploded: false,
+      // 食人花状态机：idle(待机) → snap(咬合攻击) → swallow(吞咽消化) → idle
+      chomperState: def.isChomper ? 'idle' : null,   // idle | snap | swallow
+      chomperTimer: 0,                                 // 当前状态剩余时长(ms)
+      chomperBiteProgress: 0,                          // 咬合动画进度 0~1(张口→咬合)
+      chomperSwallowProgress: 0                        // 吞咽鼓起进度 0~1
     };
     this.plants.push(plant);
     return { ok: true, plant: plant, cost: def.cost };
@@ -199,13 +177,47 @@ class PlantManager {
           }
         }
       }
-      // 产阳光植物（保留通用逻辑，当前无此类植物时不执行）
+
+      // 食人花：近战攻击（有范围近战，不发射投射物，需咀嚼CD）
+      if (def.isChomper) {
+        this._updateChomper(p, dt, ctx);
+      }
+
+      // 产阳光植物：按 sunInterval 间隔生成可收集阳光
       if (def.sunInterval > 0) {
         p.sunCooldown -= dt;
         if (p.sunCooldown <= 0) {
-          sunlightProduced += def.sunProduce;
+          // 同屏阳光上限保护：超过上限时改为直接入账（防止玩家不点收藏导致不产阳光）
+          const activeSuns = this.suns.filter(s => !s.collected).length;
+          if (activeSuns < SUN_MAX_ACTIVE) {
+            this._spawnSun(p.x, p.y - 20, def.sunProduce);
+          } else {
+            sunlightProduced += def.sunProduce;
+          }
           p.sunCooldown = def.sunInterval;
         }
+      }
+    }
+
+    // 1.5 更新可收集阳光（生命周期、飘动、自动消失）
+    for (let i = this.suns.length - 1; i >= 0; i--) {
+      const s = this.suns[i];
+      s.t += dt;
+      // 飘动：基于 sin 的上下浮动 + 轻微左右摆动
+      const u = s.t / 1000;
+      s.offsetX = Math.sin(u * 1.4 + s.phase) * 8;
+      s.offsetY = Math.sin(u * 2.1 + s.phase) * 6;
+      if (s.collected) {
+        // 已收集：飘入 HUD（向屏幕左上 0,0 方向靠拢），动画结束则删除
+        if (s.t >= s.collectAt + SUN_COLLECT_WNDOW) {
+          this.suns.splice(i, 1);
+          this.version++;
+        }
+      } else if (s.t >= SUN_LIFETIME_MS) {
+        // 超时未收集：直接入账并回收（避免损失阳光造成玩家挫败）
+        sunlightProduced += s.value;
+        this.suns.splice(i, 1);
+        this.version++;
       }
     }
 
@@ -289,6 +301,94 @@ class PlantManager {
   }
 
   /**
+   * 食人花状态机更新：待机 → 咬合 → 吞咽 → 待机
+   * 近战规则：当僵尸进入其前方 range 范围内，触发咬合；咬合完成后进入吞咽期
+   */
+  _updateChomper(p, dt, ctx) {
+    const def = p.def;
+    const SNAP_DURATION = 300;
+    const swallowTime = def.swallowTime || 3000;
+
+    if (p.chomperTimer > 0) p.chomperTimer -= dt;
+
+    switch (p.chomperState) {
+      case 'snap': {
+        const elapsed = SNAP_DURATION - Math.max(0, p.chomperTimer);
+        p.chomperBiteProgress = Math.min(1, elapsed / SNAP_DURATION);
+
+        if (!p._biteDealt && elapsed >= SNAP_DURATION * 0.55) {
+          p._biteDealt = true;
+          const target = this._findMeleeTarget(p, ctx.getZombiesInLane);
+          if (target && ctx.onChomperBite) {
+            ctx.onChomperBite(p, target, def.damage);
+          }
+        }
+
+        if (p.chomperTimer <= 0) {
+          p.chomperState = 'swallow';
+          p.chomperTimer = p._biteDealt ? swallowTime : 500;
+          p.chomperBiteProgress = 0;
+          p._biteDealt = false;
+          p.chomperSwallowProgress = 0;
+        }
+        break;
+      }
+
+      case 'swallow': {
+        const total = p._swallowTotal || swallowTime;
+        const elapsed = total - Math.max(0, p.chomperTimer);
+        const u = elapsed / total;
+        p.chomperSwallowProgress = Math.sin(Math.max(0, Math.min(1, u)) * Math.PI);
+
+        if (p.chomperTimer <= 0) {
+          p.chomperState = 'idle';
+          p.chomperSwallowProgress = 0;
+        }
+        break;
+      }
+
+      case 'idle':
+      default: {
+        p.attackCooldown -= dt;
+        if (p.attackCooldown <= 0) {
+          const target = this._findMeleeTarget(p, ctx.getZombiesInLane);
+          if (target) {
+            p.chomperState = 'snap';
+            p.chomperTimer = SNAP_DURATION;
+            p.chomperBiteProgress = 0;
+            p._biteDealt = false;
+            p._swallowTotal = swallowTime;
+          } else {
+            p.attackCooldown = 150;
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  /**
+   * 食人花近战目标查找：同车道内 progress 在植物「正前方」range 范围内
+   * 与射手不同：必须非常接近植物（diff <= range + 0.02 的缓冲区）
+   */
+  _findMeleeTarget(plant, getZombiesInLane) {
+    const def = plant.def;
+    const range = def.range || 0.08;
+    const plantProgress = PlantManager.slotToProgress(plant.slot);
+    const zombies = getZombiesInLane(plant.lane);
+    let target = null;
+    for (const z of zombies) {
+      const diff = plantProgress - z.progress;
+      if (diff >= -0.01 && diff <= range + 0.02) {
+        if (!target || z.progress > target.progress) {
+          target = z;
+        }
+      }
+    }
+    return target;
+  }
+
+  /**
    * 生成投射物
    * v2: 携带 def 信息以支持火焰穿透
    */
@@ -327,11 +427,64 @@ class PlantManager {
   }
 
   /**
+   * v3: 生成可收集阳光（向日葵产阳光调用）
+   * 从植物上方浮现一小段初速度后自由飘动
+   */
+  _spawnSun(x, y, value) {
+    this.suns.push({
+      id: __sunIdSeed++,
+      x: x,                     // canvas 内像素 X（绝对）
+      y: y,                     // canvas 内像素 Y（绝对）
+      originY: y,
+      value: value || 25,
+      t: 0,                     // 生命时长(ms)
+      phase: Math.random() * Math.PI * 2,  // 飘动随机相位
+      offsetX: 0,
+      offsetY: 0,
+      collected: false,
+      collectAt: 0,
+      spawnVersion: this.version
+    });
+    this.version++;
+  }
+
+  /**
+   * v3: 获取所有可收集阳光（用于页面展示与点击收集）
+   */
+  getSuns() {
+    return this.suns;
+  }
+
+  /**
+   * v3: 版本号，用于页面判断是否需要 setData 刷新
+   */
+  getSunVersion() {
+    return this.version;
+  }
+
+  /**
+   * v3: 玩家点击收集阳光
+   * @param {number} id
+   * @returns {{ok: boolean, value: number, sun: Object | null}}
+   */
+  collectSun(id) {
+    const s = this.suns.find(x => x.id === id && !x.collected);
+    if (!s) return { ok: false, value: 0, sun: null };
+    s.collected = true;
+    s.collectAt = s.t;
+    // 回收保证：若超过 2× 动画仍在数组中（异常），下次 update 强制删
+    this.version++;
+    return { ok: true, value: s.value, sun: s };
+  }
+
+  /**
    * 清理
    */
   clear() {
     this.plants = [];
     this.projectiles = [];
+    this.suns = [];
+    this.version++;
   }
 }
 

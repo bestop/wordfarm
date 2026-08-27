@@ -15,105 +15,165 @@
   background: #FFF5F8;
   overflow: hidden;
   box-sizing: border-box;
+  position: relative;
 }
 
 /* ============ HUD ============ */
 .hud {
   flex-shrink: 0;
   background: linear-gradient(180deg, #FFE5EC 0%, #FFD1DC 50%, #D4C5F9 100%);
-  border-bottom: 4rpx solid rgba(255,255,255,0.85);
-  box-shadow: 0 6rpx 16rpx rgba(243,139,168,0.18);
-  padding: 8rpx 24rpx 16rpx;
+  border-bottom: 3rpx solid rgba(255,255,255,0.85);
+  box-shadow: 0 4rpx 12rpx rgba(243,139,168,0.16);
+  padding: 6rpx 20rpx 10rpx;
 }
 .hud-row {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: 12rpx;
 }
 .hud-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 0;              /* 允许 flex 子项收缩，防止大数字撑破 HUD 导致底部被裁 */
+  min-width: 0;
   overflow: hidden;
-  padding: 6rpx 16rpx;
-  border-radius: 18rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 16rpx;
   background: rgba(255,255,255,0.65);
-  border: 3rpx solid rgba(255,255,255,0.9);
+  border: 2rpx solid rgba(255,255,255,0.9);
   box-shadow: inset 0 1rpx 0 rgba(255,255,255,0.95);
 }
 .hud-label {
-  font-size: 18rpx;
+  font-size: 16rpx;
   color: #8D6E63;
   font-weight: 700;
   line-height: 1;
-  margin-bottom: 4rpx;
+  margin-bottom: 3rpx;
 }
 .hud-value {
-  font-size: 32rpx;
+  font-size: 28rpx;
   font-weight: 900;
   color: #5D4037;
   line-height: 1.1;
-  white-space: nowrap;       /* 数字/阳光值不换行，避免 HUD 撑高挤占底部答题区 */
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
 }
 .hud-score { flex: 1.2; }
 .hud-lives { flex: 1.4; }
+.hud-defense { flex: 1.4; }
 .hud-combo { flex: 1; }
 .hud-sunlight { flex: 1.1; }
 .hud-sunlight .hud-value {
   display: flex;
   align-items: center;
-  gap: 4rpx;
+  gap: 3rpx;
   color: #F9A825;
 }
-.sun-icon { font-size: 28rpx; }
+.sun-icon { font-size: 24rpx; }
 .hud-combo.combo-active {
   background: linear-gradient(145deg, #FFF3B0, #FFD1DC);
   border-color: #F48FB1;
 }
-.combo-fire { font-size: 24rpx; }
+.combo-fire { font-size: 22rpx; }
 
-.lives-row { display: flex; gap: 6rpx; }
-.heart { font-size: 28rpx; line-height: 1; transition: transform 0.2s; }
-.heart.on { filter: none; }
-.heart.off { filter: grayscale(1) opacity(0.35); }
+.lives-row { display: flex; gap: 5rpx; }
+.flower { font-size: 26rpx; line-height: 1; transition: transform 0.2s; }
+.flower.on { filter: none; }
+.flower.off { filter: grayscale(1) opacity(0.35); }
 
 .hud-pause {
-  padding: 6rpx;
+  padding: 4rpx;
   background: transparent;
   border: none;
   box-shadow: none;
 }
 .pause-btn {
-  width: 72rpx;
-  height: 72rpx;
+  width: 60rpx;
+  height: 60rpx;
   border-radius: 50%;
   background: linear-gradient(145deg, #FFFFFF, #FFE5EC);
-  border: 4rpx solid #FFFFFF;
+  border: 3rpx solid #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32rpx;
+  font-size: 28rpx;
   color: #F48FB1;
   font-weight: 900;
-  box-shadow: 0 4rpx 12rpx rgba(243,139,168,0.25);
+  box-shadow: 0 4rpx 10rpx rgba(243,139,168,0.22);
 }
 
 /* ============ Canvas 区 ============ */
-/* flex:1 让 canvas-wrap 自动吸收 hud/shop-bar/quiz-wrap 之外的剩余空间，
-   避免手动计算 canvasH 因 HUD 实际高度与常量不符而溢出裁切底部答题面板 */
+/* v13 关键：flex-shrink 大值让 canvas 在空间不足时优先自我收缩，
+   保护 quiz-wrap（flex-shrink:0）永远完整显示所有答案选项。
+   min-height 保底防止 canvas 被压缩到不可用。 */
 .canvas-wrap {
-  flex: 1;
-  min-height: 0;
+  flex: 1 1 0;
+  flex-shrink: 10000;     /* v13 空间不足时优先牺牲 canvas */
+  min-height: 300rpx;    /* v13 保底：游戏区最低可用高度 */
   position: relative;
   background: linear-gradient(180deg, #FFF0F5, #E7DCFF);
   width: 100%;
 }
 .game-canvas {
   display: block;
+}
+
+/* ============ 可收集阳光 DOM 层（v3） ============ */
+.suns-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+}
+.sun-coin {
+  position: absolute;
+  width: 88rpx;
+  height: 88rpx;
+  pointer-events: auto;
+  will-change: transform, opacity, left, top;
+}
+.sun-coin-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #FFF6C7 0%, #FFD95A 55%, #F0A830 100%);
+  box-shadow: 0 6rpx 14rpx rgba(230, 160, 40, 0.35), inset 0 -4rpx 10rpx rgba(180, 110, 10, 0.3), inset 0 4rpx 10rpx rgba(255,255,255,0.55);
+  border: 2rpx solid rgba(255, 255, 255, 0.8);
+}
+.sun-emoji {
+  font-size: 44rpx;
+  line-height: 1;
+  filter: drop-shadow(0 2rpx 2rpx rgba(160, 90, 10, 0.25));
+}
+.sun-value-label {
+  position: absolute;
+  top: -26rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #B97918;
+  text-shadow: 0 2rpx 0 rgba(255,255,255,0.6);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.sun-coin-collected {
+  transition: none; /* 动画由 setData 的 style 控制每帧插值 */
+  pointer-events: none;
+}
+/* 基础呼吸/飘动：在 setData 每帧刷新位置的基础上再叠加微小柔和颤动 */
+.sun-coin:not(.sun-coin-collected) {
+  animation: sun-float 1.8s ease-in-out infinite;
+}
+@keyframes sun-float {
+  0%, 100% { filter: drop-shadow(0 2rpx 3rpx rgba(230, 160, 40, 0.35)); }
+  50%      { filter: drop-shadow(0 6rpx 10rpx rgba(245, 190, 60, 0.6)); }
 }
 
 /* ============ 暂停遮罩 ============ */
@@ -153,42 +213,54 @@
   padding: 20rpx 0;
 }
 
-/* ============ 答题面板 ============ */
+/* ============ 答题面板（v14 结构性修复） ============ */
+/* position:fixed 钉死在视口底部，脱离文档流：
+   无论上方 HUD/商店栏/Canvas 发生任何布局异常，
+   4 个答案选项都完整可见——这是物理保证，不依赖 flex 链路。 */
 .quiz-wrap {
-  flex-shrink: 0;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
-  /* border-box 保证 padding-bottom(safeBottom) 计入设定高度内，
-     不额外增加 quiz-wrap 总高度，避免溢出 */
   box-sizing: border-box;
+  z-index: 50;
+  background: #FFF5F8;   /* 兜底底色，防止透出 canvas */
+}
+
+/* 占位元素：高度由 JS 实测面板高度填充，为 fixed 面板腾出文档流空间 */
+.quiz-spacer {
+  flex: 0 0 auto;
+  width: 100%;
 }
 
 /* ============ 植物商店栏 ============ */
 .shop-bar {
   flex-shrink: 0;
-  height: 110rpx;
+  height: 96rpx;
   background: linear-gradient(180deg, rgba(255,243,224,0.95) 0%, rgba(255,224,178,0.95) 100%);
-  border-top: 3rpx solid rgba(255,255,255,0.85);
-  border-bottom: 3rpx solid rgba(243,139,168,0.25);
-  padding: 8rpx 12rpx 4rpx;
+  border-top: 2rpx solid rgba(255,255,255,0.85);
+  border-bottom: 2rpx solid rgba(243,139,168,0.25);
+  padding: 6rpx 10rpx 4rpx;
   box-sizing: border-box;
   position: relative;
 }
 .shop-scroll {
   white-space: nowrap;
-  height: 84rpx;
+  height: 72rpx;
 }
 .shop-item {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 140rpx;
-  height: 84rpx;
-  margin-right: 10rpx;
-  border-radius: 18rpx;
+  width: 128rpx;
+  height: 72rpx;
+  margin-right: 8rpx;
+  border-radius: 16rpx;
   background: linear-gradient(145deg, #FFFFFF, #FFF8E1);
-  border: 3rpx solid #FFE0B2;
-  box-shadow: 0 3rpx 0 rgba(243,139,168,0.15);
+  border: 2rpx solid #FFE0B2;
+  box-shadow: 0 2rpx 0 rgba(243,139,168,0.15);
   vertical-align: top;
   transition: transform 0.12s ease, border-color 0.15s ease;
 }
@@ -212,20 +284,18 @@
 /* ---- 1. 共用头部（与 Canvas head ellipse 同色板） ---- */
 .shop-avatar {
   position: relative;
-  width: 56rpx;
-  height: 56rpx;
+  width: 40rpx;
+  height: 40rpx;
   margin: 0 auto;
-  /* 与 Canvas 头比例严格 1:1 的设计，不主动缩放，选中态再变换 */
 }
 .shop-avatar .sa-head {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: #7CB342;  /* SHOOTER stem/主色 base，type 类覆盖 */
-  border: 3rpx solid #FFFFFF;   /* v3 加粗：2.5 → 3rpx（56rpx 下轮廓更锐利） */
-  /* 统一立体感：右下暗部内阴影略加深（小尺寸对比更强） */
-  box-shadow: inset -10rpx -10rpx 0 rgba(0,0,0,0.10),
-              0 2rpx 6rpx rgba(124,179,66,0.40);
+  background: #7CB342;
+  border: 2rpx solid #FFFFFF;
+  box-shadow: inset -7rpx -7rpx 0 rgba(0,0,0,0.10),
+              0 2rpx 4rpx rgba(124,179,66,0.40);
 }
 /* 统一高光：左上 45°，与 Canvas HEAD.HLIGHT_X/Y/W/H/ROT 精确对应（比例相同） */
 .shop-avatar .sa-head::after {
@@ -435,8 +505,9 @@
 }
 
 /* 寒冰 freezer - 色板取自 T.COLORS.F_*
-   v3 简化：删除雪花/柔光；保留"发射口椭圆 + 顶菱形冰晶 + 冰晶十字纹"三件套识别 */
-.shop-avatar.shop-avatar-freezer .sa-head { background: #4FC3F7; box-shadow: inset -8rpx -8rpx 0 rgba(0,0,0,0.06),0 2rpx 6rpx rgba(79,195,247,0.35); }
+   v3 简化：删除雪花/柔光；保留"发射口椭圆 + 顶菱形冰晶 + 冰晶十字纹"三件套识别
+   v3 阵营区分：clip-path 六边形头部（与 Canvas 冰晶头一致，区别于射手圆头） */
+.shop-avatar.shop-avatar-freezer .sa-head { background: #4FC3F7; box-shadow: inset -8rpx -8rpx 0 rgba(0,0,0,0.06),0 2rpx 6rpx rgba(79,195,247,0.35); border-radius: 38%; }
 .shop-avatar.shop-avatar-freezer .sa-deco-left,
 .shop-avatar.shop-avatar-freezer .sa-deco-right { background: #80DEEA; }  /* F_LEAF_MID */
 .shop-avatar.shop-avatar-freezer .sa-deco-top {
@@ -597,82 +668,145 @@
   background: rgba(244,143,177,0.82);   /* BLUSH_RICH */
 }
 
-/* 火焰射手 fire - 色板取自 T.COLORS.FIRE_*
-   核心识别：橙红头 + 火焰冠 + 深色枪口 */
-.shop-avatar.shop-avatar-fire .sa-head {
-  background: #FF7043;                  /* FIRE_BODY */
-  box-shadow: inset -8rpx -8rpx 0 rgba(0,0,0,0.08),0 2rpx 6rpx rgba(255,112,67,0.35);
+/* 向日葵 sunflower - 核心识别：棕色花盘 + 周身金黄色花瓣
+   色板：花盘 #8D6E63（棕），花瓣 #FFD54F（金黄），内心 #FFF8E1（亮黄） */
+.shop-avatar.shop-avatar-sunflower .sa-head {
+  background: #FFD54F;                   /* 花瓣主色：金黄圆头 */
+  box-shadow: inset -6rpx -6rpx 0 rgba(230,150,0,0.22),0 2rpx 6rpx rgba(255,213,79,0.45);
 }
-.shop-avatar.shop-avatar-fire .sa-deco-left,
-.shop-avatar.shop-avatar-fire .sa-deco-right {
-  background: #66BB6A;                  /* C_LEAF（暖色叶） */
-}
-/* 火焰发射口（深色枪口，比 pea shooter 更粗壮） */
-.shop-avatar.shop-avatar-fire .sa-deco-top {
-  background: #BF360C;                  /* FIRE_MUZZLE */
-  width: 62%;
-  height: 26%;
-  top: -10%;
-  border-width: 2.5rpx;
-}
-/* 枪口内火芯（亮黄蓄能感） */
-.shop-avatar.shop-avatar-fire .sa-deco-top::after {
+/* 花盘：中央大棕色圆（种子区），占据头部中心 */
+.shop-avatar.shop-avatar-sunflower .sa-head::before {
   content: '';
   position: absolute;
-  left: 50%;
-  top: 20%;
-  transform: translateX(-50%);
-  width: 46%;
-  height: 36%;
+  left: 18%; right: 18%;
+  top: 18%; bottom: 18%;
   border-radius: 50%;
-  background: #FFEB3B;                  /* FIRE_CORE */
-  border: none;
+  background: radial-gradient(circle at 38% 32%, #A1887F 0%, #8D6E63 70%);
+  z-index: 0;
 }
-/* 头顶火焰冠（3 簇火苗，box-shadow 模拟左右火焰 + 内核亮黄） */
-.shop-avatar.shop-avatar-fire .sa-deco-top::before {
+/* 顶部装饰改为花芯小圆（亮黄点缀，替代豌豆的发射口） */
+.shop-avatar.shop-avatar-sunflower .sa-deco-top {
+  background: #FFB300;                   /* 花芯亮橙 */
+  width: 34%;
+  height: 34%;
+  top: -16%;
+  border-radius: 50%;
+  border: 2.5rpx solid #FFFFFF;
+}
+.shop-avatar.shop-avatar-sunflower .sa-deco-top::after { display: none; }
+.shop-avatar.shop-avatar-sunflower .sa-deco-top::before { display: none; }
+/* 侧叶改为小花瓣（金黄，比射手叶子更圆润上翘） */
+.shop-avatar.shop-avatar-sunflower .sa-deco-left,
+.shop-avatar.shop-avatar-sunflower .sa-deco-right {
+  background: #FFCA28;                  /* 花瓣层次色 */
+  width: 50%;
+  height: 34%;
+  bottom: -10%;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+}
+.shop-avatar.shop-avatar-sunflower .sa-deco-left  { transform: rotate(-38deg); }
+.shop-avatar.shop-avatar-sunflower .sa-deco-right { transform: rotate(38deg); }
+/* 眼睛/瞳孔/高光浮于花盘之上 */
+.shop-avatar.shop-avatar-sunflower .sa-eye,
+.shop-avatar.shop-avatar-sunflower .sa-pupil,
+.shop-avatar.shop-avatar-sunflower .sa-shine,
+.shop-avatar.shop-avatar-sunflower .sa-blush,
+.shop-avatar.shop-avatar-sunflower .sa-mouth { z-index: 2; }
+/* 腮红偏橙（暖色系，匹配花盘） */
+.shop-avatar.shop-avatar-sunflower .sa-blush-l,
+.shop-avatar.shop-avatar-sunflower .sa-blush-r {
+  background: rgba(255,152,90,0.55);
+}
+/* 微笑小嘴（弧线，暖棕） */
+.shop-avatar.shop-avatar-sunflower .sa-mouth {
+  border-color: #6D4C41;
+}
+
+/* 食人花 chomper - 核心识别：紫色大圆头 + 尖刺 + 张嘴獠牙
+   色板：头 #AB47BC（紫），内唇 #6A1B9A（深紫），獠牙 #FFFFFF */
+.shop-avatar.shop-avatar-chomper .sa-head {
+  background: #AB47BC;                   /* 紫色大圆头 */
+  box-shadow: inset -8rpx -8rpx 0 rgba(74,20,110,0.30),0 2rpx 6rpx rgba(171,71,188,0.40);
+}
+/* 头顶尖刺：用顶部装饰改造成 3 根三角刺（clip-path 锥形） */
+.shop-avatar.shop-avatar-chomper .sa-deco-top {
+  background: #7B1FA2;                   /* 深紫刺 */
+  width: 20%;
+  height: 34%;
+  top: -30%;
+  border-radius: 0;
+  border: none;
+  transform: translateX(-50%);
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+.shop-avatar.shop-avatar-chomper .sa-deco-top::after { display: none; }
+.shop-avatar.shop-avatar-chomper .sa-deco-top::before { display: none; }
+/* 侧叶：深绿（食人花带毒的深色叶片，比射手叶子下垂尖锐） */
+.shop-avatar.shop-avatar-chomper .sa-deco-left,
+.shop-avatar.shop-avatar-chomper .sa-deco-right {
+  background: #558B2F;                   /* 深绿叶 */
+  width: 44%;
+  height: 30%;
+  bottom: -8%;
+  border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%;
+}
+.shop-avatar.shop-avatar-chomper .sa-deco-left  { transform: rotate(-16deg); }
+.shop-avatar.shop-avatar-chomper .sa-deco-right { transform: rotate(16deg); }
+/* 邪魅眯眯眼（瞳孔缩小，显得凶狠） */
+.shop-avatar.shop-avatar-chomper .sa-pupil {
+  width: 46%;
+  height: 46%;
+}
+/* 凶狠眉毛：用眼睛上方的细条模拟（深紫） */
+.shop-avatar.shop-avatar-chomper .sa-eye::before {
+  content: '';
+  position: absolute;
+  left: -10%;
+  top: -30%;
+  width: 120%;
+  height: 34%;
+  border-radius: 4rpx;
+  background: #4A148C;                   /* 深紫眉 */
+  transform: rotate(-8deg);
+}
+.shop-avatar.shop-avatar-chomper .sa-eye-r::before { transform: rotate(8deg); }
+/* 张嘴獠牙：大嘴（深紫口腔）+ 上下白獠牙 */
+.shop-avatar.shop-avatar-chomper .sa-mouth {
+  width: 42%;
+  height: 22%;
+  background: #6A1B9A;                   /* 深紫口腔 */
+  border: 2.5rpx solid #FFFFFF;
+  border-radius: 20% 20% 45% 45% / 20% 20% 80% 80%;
+  bottom: 14%;
+}
+/* 上獠牙（2颗三角尖牙，倒置向下） */
+.shop-avatar.shop-avatar-chomper .sa-mouth::after {
+  content: '';
+  position: absolute;
+  left: 12%; right: 12%;
+  top: -1rpx;
+  height: 46%;
+  background:
+    radial-gradient(circle at 22% 100%, #FFFFFF 0 32%, transparent 34%),
+    radial-gradient(circle at 78% 100%, #FFFFFF 0 32%, transparent 34%);
+  z-index: 1;
+}
+/* 下獠牙（1颗大尖牙，向上） */
+.shop-avatar.shop-avatar-chomper .sa-mouth::before {
   content: '';
   position: absolute;
   left: 50%;
-  top: -120%;
-  transform: translateX(-50%);
-  width: 52%;
-  height: 140%;
-  background: #FFB300;                  /* FIRE_FLAME */
-  border-radius: 50% 50% 20% 20%;
-  border: 2.5rpx solid #FFFFFF;
-  box-shadow:
-    -18rpx -8rpx 0 -4rpx #FFB300,
-    18rpx -8rpx 0 -4rpx #FFB300,
-    inset 0 0 0 3rpx #FFE082;         /* FIRE_FLAME_LIGHT 内核高亮 */
-  z-index: 1;
-  animation: fire-flicker 0.6s ease-in-out infinite alternate;
-}
-@keyframes fire-flicker {
-  0% { transform: translateX(-50%) scaleY(0.92); }
-  100% { transform: translateX(-50%) scaleY(1.08); }
-}
-/* 火焰射手自信 grin + 暖橙腮红 */
-.shop-avatar.shop-avatar-fire .sa-mouth {
-  width: 32%;
-  height: 16%;
-  background: #E91E63;
-  border: 2.8rpx solid #FFFFFF;
-  border-radius: 0 0 50% 50% / 0 0 100% 100%;
-  bottom: 16%;
-}
-.shop-avatar.shop-avatar-fire .sa-mouth::after {
-  content: '';
-  position: absolute;
-  left: 20%;
-  top: -2rpx;
-  width: 60%;
-  height: 38%;
+  bottom: -1rpx;
+  width: 26%;
+  height: 40%;
   background: #FFFFFF;
-  border-radius: 0 0 50% 50%;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+  z-index: 1;
 }
-.shop-avatar.shop-avatar-fire .sa-blush-l,
-.shop-avatar.shop-avatar-fire .sa-blush-r {
-  background: rgba(255,167,38,0.68);    /* FIRE_BLUSH */
+/* 无腮红（食人花凶狠，不需要可爱腮红） */
+.shop-avatar.shop-avatar-chomper .sa-blush-l,
+.shop-avatar.shop-avatar-chomper .sa-blush-r {
+  display: none;
 }
 
 /* 选中/禁用 状态（与 Tokens 联动） */
@@ -684,34 +818,277 @@
 }
 
 .shop-emoji {
-  font-size: 34rpx;
+  font-size: 28rpx;
   line-height: 1;
 }
 .shop-name {
-  font-size: 18rpx;
+  font-size: 14rpx;
   color: #6D4C41;
   font-weight: 700;
   line-height: 1.1;
-  margin-top: 2rpx;
+  margin-top: 1rpx;
 }
 .shop-cost {
   display: flex;
   align-items: center;
   gap: 2rpx;
-  font-size: 18rpx;
+  font-size: 13rpx;
   color: #F9A825;
   font-weight: 800;
   line-height: 1;
-  margin-top: 2rpx;
+  margin-top: 1rpx;
 }
-.shop-cost-icon { font-size: 18rpx; }
-.shop-tip {
+.shop-cost-icon { font-size: 14rpx; }
+/* 植物选择提示浮层：柔和低饱和风格，悬浮于 canvas 顶部居中，不占布局空间 */
+.plant-tip-toast {
   position: absolute;
-  bottom: 2rpx;
-  left: 0;
-  right: 0;
+  left: 50%;
+  top: 18rpx;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  padding: 14rpx 30rpx;
+  max-width: 80%;
+  font-size: 25rpx;
+  font-weight: 500;
+  color: #3E4A3F;
   text-align: center;
+  letter-spacing: 0.6rpx;
+  line-height: 1.35;
+  background-color: rgba(232, 237, 228, 0.92);
+  border: 1rpx solid rgba(145, 153, 130, 0.30);
+  border-radius: 40rpx;
+  box-shadow: 0 4rpx 14rpx rgba(63, 71, 55, 0.12),
+              0 1rpx 2rpx rgba(255, 255, 255, 0.45) inset;
+  backdrop-filter: blur(12rpx);
+  -webkit-backdrop-filter: blur(12rpx);
+  animation: tipFadeIn 220ms ease-out both;
+  z-index: 20;
+  pointer-events: none;
+}
+.plant-tip-emoji {
+  font-size: 26rpx;
+  opacity: 0.82;
+  filter: saturate(0.85);
+}
+@keyframes tipFadeIn {
+  0%   { opacity: 0; transform: translate(-50%, -10rpx); }
+  100% { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ============ 游戏结束结算浮层（一屏 100%，居中卡片，禁止滚动） ============ */
+.gameover-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.48);
+  backdrop-filter: blur(3rpx);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx 28rpx;
+  box-sizing: border-box;
+  z-index: 90;   /* v14 高于 fixed 答题面板(50)，结算时完全覆盖 */
+  animation: fadeIn 0.32s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.gameover-card {
+  width: 100%;
+  max-width: 640rpx;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 28rpx 28rpx 24rpx;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,248,250,0.98) 100%);
+  border-radius: 40rpx;
+  border: 5rpx solid rgba(255,255,255,0.98);
+  box-shadow:
+    0 20rpx 48rpx rgba(243,139,168,0.28),
+    inset 0 3rpx 0 rgba(255,255,255,0.95);
+  animation: cardPop 0.42s cubic-bezier(.2,.9,.2,1.15);
+}
+@keyframes cardPop {
+  0%   { opacity: 0; transform: scale(0.72) translateY(20rpx); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* 头部：emoji + 标题 + 破纪录徽章 */
+.go-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  flex-shrink: 0;
+}
+.go-emoji {
+  font-size: 82rpx;
+  line-height: 1;
+  animation: goTrophy 2.6s ease-in-out infinite;
+}
+@keyframes goTrophy {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  50%      { transform: translateY(-8rpx) rotate(5deg); }
+}
+.go-title {
+  font-size: 38rpx;
+  font-weight: 900;
+  color: #5D4037;
+  letter-spacing: 2rpx;
+  line-height: 1.2;
+}
+.go-record {
+  margin-top: 4rpx;
+  padding: 6rpx 20rpx;
+  background: linear-gradient(135deg, #FFE082, #FFB300);
+  color: #5D4037;
+  font-size: 20rpx;
+  font-weight: 800;
+  border-radius: 999rpx;
+  box-shadow: 0 4rpx 10rpx rgba(255,179,0,0.35),
+              inset 0 2rpx 0 rgba(255,255,255,0.7);
+}
+
+/* 星级 */
+.go-stars {
+  flex-shrink: 0;
+  display: flex;
+  gap: 10rpx;
+  margin: 10rpx 0 4rpx;
+}
+.go-star {
+  font-size: 48rpx;
+  line-height: 1;
+  transition: all 0.3s ease;
+}
+.go-star.on {
+  color: #FFB300;
+  text-shadow: 0 2rpx 6rpx rgba(255,179,0,0.5);
+  animation: starPop 0.6s cubic-bezier(.2,.9,.2,1.3);
+}
+.go-star.off {
+  color: rgba(141,110,99,0.28);
+}
+@keyframes starPop {
+  0%   { transform: scale(0.3) rotate(-30deg); opacity: 0; }
+  60%  { transform: scale(1.25) rotate(10deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* 得分区 */
+.go-score-row {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 4rpx 0 10rpx;
+}
+.go-score-label {
   font-size: 18rpx;
-  color: #F48FB1;
+  color: #8D6E63;
   font-weight: 700;
+  letter-spacing: 1rpx;
+}
+.go-score-value {
+  font-size: 66rpx;
+  font-weight: 900;
+  line-height: 1.05;
+  background: linear-gradient(180deg, #2F5312 0%, #4C8B2A 55%, #7BC86A 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 4 项统计 2×2 */
+.go-stats {
+  width: 100%;
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: space-between;
+  align-content: stretch;
+  row-gap: 8rpx;
+  column-gap: 8rpx;
+  padding: 0 4rpx;
+  box-sizing: border-box;
+  margin-bottom: 8rpx;
+}
+.go-stat {
+  width: calc((100% - 8rpx) / 2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12rpx 6rpx;
+  background: linear-gradient(180deg, #FFFFFF, #FFF7FA);
+  border-radius: 18rpx;
+  border: 2rpx solid #FFE5EC;
+  box-shadow: inset 0 2rpx 0 rgba(255,255,255,0.95),
+              0 3rpx 6rpx rgba(243,139,168,0.08);
+  box-sizing: border-box;
+}
+.go-stat-num {
+  font-size: 28rpx;
+  font-weight: 900;
+  color: #5D4037;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+.go-stat-label {
+  margin-top: 2rpx;
+  font-size: 16rpx;
+  color: #A1887F;
+  font-weight: 600;
+  letter-spacing: 0.5rpx;
+  line-height: 1.2;
+}
+
+/* 底部提示 */
+.go-tip {
+  flex-shrink: 0;
+  font-size: 18rpx;
+  color: #8D6E63;
+  line-height: 1.4;
+  text-align: center;
+  padding: 4rpx 12rpx 8rpx;
+}
+
+/* 操作按钮：两列并排 */
+.go-actions {
+  flex-shrink: 0;
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 14rpx;
+  margin-top: 4rpx;
+}
+.go-actions .kawaii-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 16rpx 10rpx;
+  font-size: 26rpx;
+  border-width: 3rpx;
+  box-shadow: none;
+}
+.go-actions .kawaii-btn-mint {
+  box-shadow: 0 6rpx 0 #5FA886, 0 10rpx 20rpx rgba(123, 201, 166, 0.3),
+              inset 0 2rpx 0 rgba(255, 255, 255, 0.7);
+}
+.go-actions .kawaii-btn-ghost {
+  border-width: 3rpx;
+  color: #C2185B;
+  border-color: #F48FB1;
+  background: #FFFFFF;
+  box-shadow: 0 4rpx 0 rgba(244, 143, 177, 0.35), 0 8rpx 16rpx rgba(243, 139, 168, 0.15);
 }

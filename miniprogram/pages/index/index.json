@@ -1,8 +1,7 @@
 {
-  "navigationBarTitleText": "单词农场",
-  "navigationBarBackgroundColor": "#FFD1DC",
+  "navigationStyle": "custom",
   "navigationBarTextStyle": "black",
-  "backgroundColor": "#FFF5F8",
+  "backgroundColor": "#F1FBE6",
   "usingComponents": {},
   "disableScroll": true
 }

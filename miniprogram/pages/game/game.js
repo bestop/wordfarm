@@ -10,6 +10,9 @@ const storageManager = require('../../utils/storageManager.js');
 const { WORD_BANK } = require('../../data/words.js');
 const { applyLayout } = require('../../utils/layoutUtil.js');
 
+// 植物选择提示浮层的自动隐藏计时器（跨回调共享）
+let _plantTipTimer = null;
+
 /**
  * 构建商店栏数据
  * @param {number} sunlight - 当前阳光
@@ -43,20 +46,28 @@ Page({
     // 阳光经济 / 植物
     sunlight: SUNLIGHT.INITIAL,
     selectedPlant: null,
+    selectedPlantName: '',
+    plantTipVisible: false,
     shopItems: buildShopItems(SUNLIGHT.INITIAL),
     // 题目
     currentQuestion: null,
     feedback: 'idle',         // 'idle' | 'correct' | 'wrong'
     quizDisabled: false,
     // 布局
-    quizPanelH: 0,            // 答题面板高度(rpx)
     safeTop: 0,
     safeBottom: 0,
     // 自适应布局
     pageHeight: 1334,
     safeBottomRpx: 0,
+    quizSpacerH: 340,      // v14: fixed 面板占位高度（实测后更新，默认 340 兜底）
     // 初始化标记
-    ready: false
+    ready: false,
+    // v3: 可收集阳光视图数组（DOM层可点击☀️图标）
+    sunsView: [],
+    // 游戏结束结算浮层（一屏显示，禁止滚动）
+    gameOverVisible: false,
+    gameOverSummary: null,
+    gameOverIsRecord: false
   },
 
   onLoad(options) {
@@ -87,8 +98,40 @@ Page({
     gameManager.onLevelChange = (lv) => this.setData({ level: lv });
     gameManager.onComboChange = (c) => this.setData({ combo: c });
     gameManager.onSunlightChange = (sunlight) => this._onSunlightChange(sunlight);
-    gameManager.onShopSelect = (type) => this.setData({ selectedPlant: type });
+    gameManager.onShopSelect = (type) => this._onPlantSelectionChanged(type);
     gameManager.onGameOver = (summary) => this._onGameOver(summary);
+    gameManager.onSunsChange = (view) => this.setData({ sunsView: view });
+  },
+
+  /**
+   * 植物选中状态变化回调：
+   * - 翻译 type → 中文名
+   * - 选中时弹出柔和提示，并在 2600ms 后自动隐藏（避免持续干扰主操作）
+   * - 取消选中时立即隐藏提示
+   */
+  _onPlantSelectionChanged(type) {
+    if (_plantTipTimer) {
+      clearTimeout(_plantTipTimer);
+      _plantTipTimer = null;
+    }
+    const name = (type && PLANT_TYPES[type]) ? PLANT_TYPES[type].name : '';
+    if (type) {
+      this.setData({
+        selectedPlant: type,
+        selectedPlantName: name,
+        plantTipVisible: true
+      });
+      _plantTipTimer = setTimeout(() => {
+        this.setData({ plantTipVisible: false });
+        _plantTipTimer = null;
+      }, 2600);
+    } else {
+      this.setData({
+        selectedPlant: null,
+        selectedPlantName: '',
+        plantTipVisible: false
+      });
+    }
   },
 
   /**
@@ -123,31 +166,17 @@ Page({
   /**
    * 初始化 Canvas
    * 布局策略：canvas-wrap 采用 flex:1 自动填充剩余空间，
-   * 因此 canvas 实际尺寸需在 DOM 渲染后通过 SelectorQuery 实测获取，
-   * 而非手动用 windowHeight 减去各区域高度（HUD 实际高度与常量不符会累积误差）。
-   * 关键：必须在 quizPanelH 应用到 WXML 并完成布局后再实测 canvas 尺寸，
-   * 否则 canvas 缓冲尺寸与实际 CSS 尺寸不一致会导致绘制错位与点击放置偏移。
+   * quiz-wrap 采用内容自适应高度（v10：题目+4选项完整显示后剩余归 canvas），
+   * canvas 实际尺寸在 DOM 渲染后通过 SelectorQuery 实测获取。
    */
   _initCanvas() {
     try {
       const sys = app.globalData.systemInfo;
       const dpr = sys.pixelRatio || 1;
-      const screenW = sys.windowWidth;
-      const screenH = sys.windowHeight;
 
-      // px → rpx 转换因子: 750rpx = 屏幕宽度
-      const pxToRpx = (px) => px * 750 / screenW;
-
-      // 答题面板占屏幕高度 30%（quiz-wrap 高度，box-sizing:border-box 含 safeBottom）
-      const quizPanelRatio = UI.QUIZ_PANEL_HEIGHT_RATIO;
-      const quizPanelHpx = screenH * quizPanelRatio;
-
-      // 在 setData 回调（视图层已应用 quizPanelH 并完成布局）后再实测 canvas 尺寸
-      this.setData({
-        quizPanelH: pxToRpx(quizPanelHpx),
-        ready: true
-      }, () => {
+      this.setData({ ready: true }, () => {
         this._tryInitCanvasNode(dpr, 0);
+        this._measureQuizPanel(false);   // v14: 实测面板高度 → 更新 spacer
       });
     } catch (err) {
       console.error('[Game] _initCanvas 失败:', err);
@@ -156,12 +185,34 @@ Page({
   },
 
   /**
-   * 尝试获取 canvas 节点并初始化（带重试）
-   * 首次 onReady 后 wxml 可能未渲染完成，需延迟重试；
-   * flex:1 布局下 canvas 实际宽高由 SelectorQuery 实测得到。
-   * @param {number} dpr - 设备像素比
-   * @param {number} attempt - 当前尝试次数
+   * v14: 实测 fixed 答题面板的实际渲染高度，同步更新文档流占位 spacer。
+   * 保证 canvas（flex 弹性区）计算出的可用空间 = 视口 - HUD - 商店栏 - 面板实际高度，
+   * 面板则始终钉在视口底部完整显示 4 个答案选项。
    */
+  _measureQuizPanel(retry) {
+    const query = wx.createSelectorQuery();
+    query.select('#quizPanelHost')
+      .boundingClientRect()
+      .exec((res) => {
+        try {
+          const rect = res && res[0];
+          if (rect && rect.height > 0) {
+            const sys = app.globalData.systemInfo;
+            const pxToRpx = (px) => px * 750 / (sys.windowWidth || 375);
+            const h = Math.ceil(pxToRpx(rect.height));
+            if (h > 0 && Math.abs(h - this.data.quizSpacerH) > 2) {
+              this.setData({ quizSpacerH: h });
+            }
+          } else if (!retry) {
+            // 首次测量失败：300ms 后重试一次（面板渲染可能有延迟）
+            setTimeout(() => this._measureQuizPanel(true), 300);
+          }
+        } catch (err) {
+          console.warn('[Game] 面板高度测量异常:', err);
+        }
+      });
+  },
+
   _tryInitCanvasNode(dpr, attempt) {
     const MAX_ATTEMPTS = 5;
     const query = wx.createSelectorQuery();
@@ -190,10 +241,11 @@ Page({
           const screenH = sys.windowHeight;
           if (canvasWpx <= 0) canvasWpx = screenW;
           if (canvasHpx <= 0) {
+            // 兜底估算：屏高 - HUD - 商店栏 - 答题面板(自适应≈题目70rpx+选项120rpx+padding)
             const rpxToPx = (rpx) => rpx * screenW / 750;
             const hudHpx = rpxToPx(UI.HUD_HEIGHT);
             const shopBarHpx = rpxToPx(UI.SHOP_BAR_HEIGHT);
-            const quizPanelHpx = screenH * UI.QUIZ_PANEL_HEIGHT_RATIO;
+            const quizPanelHpx = rpxToPx(200);
             canvasHpx = Math.max(200, screenH - hudHpx - shopBarHpx - quizPanelHpx);
           }
           const ctx = canvas.getContext('2d');
@@ -253,6 +305,9 @@ Page({
       currentQuestion: q,
       feedback: 'idle',
       quizDisabled: false
+    }, () => {
+      // v14: 题目文案长度变化会改变换行数 → 面板高度变化，需重测并同步 spacer
+      this._measureQuizPanel(false);
     });
   },
 
@@ -324,14 +379,25 @@ Page({
         if (res.reason && res.reason !== '未选择植物') {
           wx.showToast({ title: res.reason, icon: 'none', duration: 800 });
         }
-      } else {
-        if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
+      } else if (res.ok) {
+        // 放置成功：立即收起选择提示，避免持续遮挡游戏画面
+        if (_plantTipTimer) { clearTimeout(_plantTipTimer); _plantTipTimer = null; }
+        this.setData({ plantTipVisible: false });
       }
     }).exec();
   },
 
   /**
-   * 游戏结束
+   * v3: 玩家点击收集 Canvas 上浮动的阳光
+   */
+  onSunTap(e) {
+    const id = Number(e.currentTarget.dataset.id);
+    if (!id && id !== 0) return;
+    gameManager.collectSun(id);
+  },
+
+  /**
+   * 游戏结束：弹出一屏结算浮层（替代跳转不存在的 result 页，保证单屏完整显示）
    */
   _onGameOver(summary) {
     // 保存结算
@@ -339,16 +405,72 @@ Page({
     // 更新最高分
     const isRecord = app.updateHighestScore(summary.score);
     app.incrementGameCount();
-    // 延迟跳转结果页（让玩家看到最后画面）
+    // 清理遗留的阳光视图 / 答题面板状态
+    this.setData({
+      sunsView: [],
+      quizDisabled: true,
+      feedback: 'idle'
+    });
+    // 暂停游戏循环（结束后不再推进）
+    if (gameManager.state.phase === 'victory' || gameManager.state.phase === 'gameover') {
+      gameManager.pause();
+    }
+    // 稍等最后一帧渲染后再弹出浮层（让玩家看到最后结果画面）
     setTimeout(() => {
-      wx.redirectTo({
-        url: '/pages/result/result?isRecord=' + (isRecord ? 1 : 0),
-        fail: (err) => {
-          console.error('[Game] 跳转结果页失败:', err);
-          wx.showToast({ title: '结算加载失败', icon: 'none' });
-        }
+      this.setData({
+        gameOverVisible: true,
+        gameOverSummary: summary,
+        gameOverIsRecord: isRecord
       });
-    }, 1200);
+    }, 900);
+  },
+
+  /**
+   * 结算页：再来一局（重新初始化本局）
+   */
+  onGameOverRestart() {
+    const difficulty = this.data.difficulty;
+    // 重置结束浮层
+    this.setData({
+      gameOverVisible: false,
+      gameOverSummary: null,
+      gameOverIsRecord: false,
+      score: 0,
+      defenseLines: 3,
+      level: 1,
+      combo: 0,
+      maxCombo: 0,
+      sunlight: SUNLIGHT.INITIAL,
+      selectedPlant: null,
+      selectedPlantName: '',
+      plantTipVisible: false,
+      shopItems: buildShopItems(SUNLIGHT.INITIAL),
+      currentQuestion: null,
+      feedback: 'idle',
+      quizDisabled: false,
+      paused: false,
+      sunsView: []
+    });
+    // 重新初始化游戏管理器
+    gameManager.initGame(difficulty, WORD_BANK);
+    gameManager.resume();
+  },
+
+  /**
+   * 结算页：返回首页
+   */
+  onGameOverHome() {
+    // 先关闭浮层，避免返回后还残留展示
+    this.setData({
+      gameOverVisible: false,
+      gameOverSummary: null
+    });
+    wx.navigateBack({
+      fail: () => {
+        // navigateBack 失败（比如首页 directTo 过来没有栈）则 reLaunch
+        wx.reLaunch({ url: '/pages/index/index' });
+      }
+    });
   },
 
   /**

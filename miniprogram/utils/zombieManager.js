@@ -15,7 +15,7 @@ let __zombieIdSeed = 1;
  * @returns {Object} 僵尸对象
  */
 function createZombie(type, pathIndex, baseSpeed) {
-  const def = ZOMBIE_TYPES[type] || ZOMBIE_TYPES.normal;
+  const def = ZOMBIE_TYPES[type] || ZOMBIE_TYPES.bucket;
   const pathLen = pathManager.getPathLength(pathIndex) || 1;
   return {
     id: __zombieIdSeed++,
@@ -67,7 +67,7 @@ class ZombiePool {
 
   _makeBlank() {
     return {
-      id: 0, type: 'normal', name: '', color: '', accentColor: '',
+      id: 0, type: 'bucket', name: '', color: '', accentColor: '',
       radius: 0, pathIndex: 0, progress: 0, speed: 0, health: 0,
       maxHealth: 0, scoreReward: 0, state: 'walking', stateTimer: 0,
       hitFlash: 0, wobble: 0, spawnTime: 0, slowFactor: 1, slowTimer: 0,
@@ -77,6 +77,7 @@ class ZombiePool {
 
   /**
    * 从池中获取对象（按指定配置初始化）
+   * 修复：当池耗尽+达到上限时，主动回收最早僵尸强制释放，保证僵尸生成永远不中断
    */
   acquire(config) {
     let z;
@@ -85,7 +86,14 @@ class ZombiePool {
     } else if (this.active.size < PERFORMANCE.POOL_MAX) {
       z = this._makeBlank();
     } else {
-      return null;  // 池上限，拒绝创建
+      // 兜底：强制释放一个最早加入 active 的僵尸对象，避免生成永久停滞
+      const first = this.active.values().next().value;
+      if (first) {
+        this.release(first);
+        z = this.pool.pop() || this._makeBlank();
+      } else {
+        return null;
+      }
     }
     Object.assign(z, config, { active: true });
     z.id = __zombieIdSeed++;
@@ -146,6 +154,10 @@ class ZombieSpawner {
     this._baseBaseSpeed = 38;
     this._baseTypeWeights = ZOMBIE_TYPE_WEIGHTS.middle;
     this._currentLevel = 1;
+    // v4: 僵尸生成健康监测
+    this._lastSpawnTime = 0;       // 上次成功生成时间戳(ms)
+    this._totalSpawned = 0;        // 累计生成数
+    this._spawnFailCount = 0;      // 连续生成失败计数（acquire返回null）
   }
 
   /**
@@ -166,6 +178,10 @@ class ZombieSpawner {
     this._baseBaseSpeed = cfg.baseSpeed;
     this._baseTypeWeights = { ...this.typeWeights };
     this._currentLevel = 1;
+    // v4: 健康监测重置
+    this._lastSpawnTime = Date.now();
+    this._totalSpawned = 0;
+    this._spawnFailCount = 0;
   }
 
   /**
@@ -183,58 +199,91 @@ class ZombieSpawner {
     // 速度递增
     const speedMult = Math.pow(r.SPEED_MULT, lv - 1);
     this.baseSpeed = this._baseBaseSpeed * speedMult;
-    // strong+armored 概率递增（从 normal 中转移）
+    // football+dancer 概率递增（从 bucket 中转移）
     const bonus = Math.min(0.30, r.TOUGH_PROB_BONUS * (lv - 1));  // 上限 30%
     this.typeWeights = this._adjustWeights(this._baseTypeWeights, bonus);
   }
 
   /**
-   * 调整类型权重：从 normal 中转移概率给 strong+armored
+   * 调整类型权重：从 bucket 中转移概率给 football+dancer
    * @param {Object} base - 基础权重
    * @param {number} bonus - 转移量
    * @returns {Object} 调整后的权重
    */
   _adjustWeights(base, bonus) {
     const w = { ...base };
-    w.normal = Math.max(0.10, (w.normal || 0) - bonus);  // normal 至少保留 10%
-    // strong 和 armored 各分一半 bonus
-    w.strong = (w.strong || 0) + bonus * 0.5;
-    w.armored = (w.armored || 0) + bonus * 0.5;
+    w.bucket = Math.max(0.10, (w.bucket || 0) - bonus);  // bucket 至少保留 10%
+    // football 和 dancer 各分一半 bonus
+    w.football = (w.football || 0) + bonus * 0.5;
+    w.dancer = (w.dancer || 0) + bonus * 0.5;
     return w;
   }
 
   /**
-   * 抽取僵尸类型（按权重）
+   * 抽取僵尸类型（按权重），带权重归一化容错：如果累计概率<1则补bucket兜底
    */
   _rollType() {
+    const entries = Object.entries(this.typeWeights);
+    const totalW = entries.reduce((s, [, w]) => s + (w || 0), 0);
+    if (!totalW) return 'bucket';
     const r = Math.random();
     let acc = 0;
-    for (const [type, w] of Object.entries(this.typeWeights)) {
-      acc += w;
+    for (const [type, w] of entries) {
+      acc += (w || 0) / totalW;  // 归一化，避免权重>1或<1
       if (r <= acc) return type;
     }
-    return 'normal';
+    // 最后兜底：返回权重最高者
+    let best = 'bucket';
+    let bestW = 0;
+    for (const [t, w] of entries) {
+      if ((w || 0) > bestW) { bestW = w; best = t; }
+    }
+    return best;
   }
 
   /**
    * 每帧更新：决定是否生成新僵尸
+   * 加固措施（v4）：
+   *   1. 超过 2.5×interval 未生成时强制触发（防暂停后停摆）
+   *   2. 超过 15s 无任何僵尸生成 → 强制清除最早僵尸释放名额（防止全部卡 eating）
+   *   3. 暂停恢复后 elapsed 时间跳变修正（gameStartTime 平移）
    * @param {number} dt - 帧间隔(ms)
    * @param {number} activeCount - 当前活跃数
    * @returns {Object|null} 新僵尸配置 {type, pathIndex, baseSpeed} or null
    */
   update(dt, activeCount) {
     this.spawnTimer += dt;
-    // 速度随时间递增（降低生成间隔）
-    const elapsed = (Date.now() - this.gameStartTime) / 1000;
+    const now = Date.now();
+    const elapsed = (now - this.gameStartTime) / 1000;
     const interval = Math.max(1200, this.spawnInterval * (1 - this.speedRamp * Math.min(elapsed / 60, 1)));
-    if (this.spawnTimer >= interval && activeCount < this.maxZombies) {
-      this.spawnTimer = 0;
+
+    // 常规生成 + 超时强制
+    const overshoot = this.spawnTimer >= interval * 2.5;
+    const canSpawn = activeCount < this.maxZombies;
+
+    // v4: 心跳检测 — 超过 15s 未生成任何僵尸（含 acquire 失败），强制清理一个最早僵尸释放名额
+    const noSpawnDuration = now - this._lastSpawnTime;
+    const heartbeatStall = noSpawnDuration > 15000 && activeCount >= this.maxZombies;
+
+    if ((this.spawnTimer >= interval || overshoot) && canSpawn) {
+      this.spawnTimer = overshoot ? 0 : (this.spawnTimer - interval);
       const type = this._rollType();
       const pathIndex = Math.floor(Math.random() * pathManager.getPathCount());
-      // 当前速度（随时间递增 + 关卡递增已含在 this.baseSpeed 中）
       const speedMult = 1 + this.speedRamp * Math.min(elapsed / 60, 1) * 2;
+      this._lastSpawnTime = now;
+      this._totalSpawned++;
       return { type, pathIndex, baseSpeed: this.baseSpeed * speedMult };
     }
+
+    // v4: 心跳强制释放 — 名额满且长时间未生成，强制回收最早僵尸
+    if (heartbeatStall) {
+      console.warn('[ZombieSpawner] 心跳检测：15s 无新僵尸生成，强制释放名额. activeCount=' + activeCount +
+        ', maxZombies=' + this.maxZombies + ', totalSpawned=' + this._totalSpawned +
+        ', failCount=' + this._spawnFailCount);
+      this._lastSpawnTime = now;  // 重置心跳，避免重复触发
+      return { _forceRelease: true };  // 特殊标记，由 ZombieManager.update 处理
+    }
+
     return null;
   }
 }
@@ -274,10 +323,32 @@ class ZombieManager {
     // 1. 尝试生成
     const spawnCfg = this.spawner.update(dt, this.zombies.length);
     if (spawnCfg) {
-      const z = this.pool.acquire(createZombie(
-        spawnCfg.type, spawnCfg.pathIndex, spawnCfg.baseSpeed
-      ));
-      if (z) this.zombies.push(z);
+      if (spawnCfg._forceRelease) {
+        // v4: 心跳强制释放 — 清除最早僵尸释放名额，下一帧自动尝试生成
+        if (this.zombies.length > 0) {
+          const victim = this.zombies[0];
+          console.warn('[ZombieManager] 心跳强制回收僵尸 id=' + victim.id +
+            ' type=' + victim.type + ' state=' + victim.state +
+            ' progress=' + victim.progress.toFixed(3));
+          this.pool.release(victim);
+          this.zombies.shift();
+        }
+      } else {
+        const z = this.pool.acquire(createZombie(
+          spawnCfg.type, spawnCfg.pathIndex, spawnCfg.baseSpeed
+        ));
+        if (z) {
+          this.zombies.push(z);
+          this.spawner._spawnFailCount = 0;  // 成功，重置失败计数
+        } else {
+          // v4: acquire 返回 null — 记录失败，spawner 心跳机制会兜底
+          this.spawner._spawnFailCount++;
+          console.error('[ZombieManager] pool.acquire 返回 null！生成失败.' +
+            ' failCount=' + this.spawner._spawnFailCount +
+            ' poolSize=' + this.pool.pool.length +
+            ' activeSize=' + this.pool.active.size);
+        }
+      }
     }
 
     // 2. 更新每个僵尸

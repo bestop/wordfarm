@@ -22,6 +22,8 @@ Page({
     difficultyName: '中学',
     safeTop: 0,
     safeBottom: 0,
+    // v2: 胜利/失败标识
+    result: 'lose',
     // 星星动画
     starAnim: [false, false, false],
     // 自适应布局
@@ -58,6 +60,7 @@ Page({
       gameTime: Math.round((result.gameTime || 0) / 1000),
       difficulty: result.difficulty || 'middle',
       difficultyName: diffMap[result.difficulty] || '中学',
+      result: result.result || 'lose',
       safeTop: app.globalData.safeAreaInset.top,
       safeBottom: app.globalData.safeAreaInset.bottom
     });
@@ -65,8 +68,14 @@ Page({
     // 应用自适应布局
     applyLayout(this);
 
-    // 播放音效
-    setTimeout(() => audioManager.play(ASSET_KEYS.AUDIO.GAME_OVER), 300);
+    // 播放音效（胜利用 WIN 音效，否则 GAME_OVER）
+    setTimeout(() => {
+      if (this.data.result === 'win' && ASSET_KEYS.AUDIO.WIN) {
+        audioManager.play(ASSET_KEYS.AUDIO.WIN);
+      } else {
+        audioManager.play(ASSET_KEYS.AUDIO.GAME_OVER);
+      }
+    }, 300);
 
     // 星星依次点亮动画
     const stars = result.stars || 0;

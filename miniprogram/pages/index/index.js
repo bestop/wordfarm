@@ -1,97 +1,161 @@
-// pages/index/index.js - 欢迎页：难度选择 + 开始游戏
+// pages/index/index.js - 欢迎页（v3 layout 清新农场风）：自定义导航栏 + 统计卡 + 难度胶囊 + 玩法网格 + Banner + 开始
 
 const app = getApp();
 const { applyLayout } = require('../../utils/layoutUtil.js');
+const audioManager = require('../../utils/audioManager.js');
+const storageManager = require('../../utils/storageManager.js');
+const { ASSET_KEYS } = require('../../utils/constants.js');
 
 Page({
   data: {
-    difficulty: 'middle',          // 当前选中难度（小学/中学/大学）
-    difficulties: [
-      { key: 'primary', name: '小学', desc: '基础词汇 · 慢速僵尸', emoji: '🌱', color: '#B5EAD7' },
-      { key: 'middle',  name: '中学', desc: '进阶词汇 · 标准节奏', emoji: '🌿', color: '#FFD1DC' },
-      { key: 'college', name: '大学', desc: '高阶词汇 · 高速强敌', emoji: '🎓', color: '#FFDAC1' }
-    ],
+    // 游戏数据
+    difficulty: 'middle',
     soundEnabled: true,
     highestScore: 0,
     totalGames: 0,
+
+    // 自定义导航栏（与 capsule 按钮对齐）
+    statusBarHeight: 20,
+    navBarHeight: 44,          // 44px 为 iOS 标准导航条
+    navBarInnerHeight: 44,     // 胶囊按钮 32px 高，两侧留 6px 共 44px
+    capsuleRight: 12,          // 胶囊右侧距边
+    showBack: false,           // 首页无上级，不显示返回按钮
+
+    // 自适应
     safeTop: 0,
     safeBottom: 0,
-    bannerAnim: true,
-    // 自适应布局
-    pageHeight: 1334,              // 页面可用高度(rpx)，onLoad 中由 layoutUtil 计算
+    pageHeight: 1334,
     safeTopRpx: 0,
-    safeBottomRpx: 0
+    safeBottomRpx: 0,
+
+    // 难度列表
+    difficulties: [
+      { key: 'primary', name: '小学' },
+      { key: 'middle',  name: '中学' },
+      { key: 'college', name: '大学' }
+    ],
+
+    // 玩法卡（单行 4 列，展示游戏核心循环 — 原第二排重复内容已移除）
+    howtoList: [
+      { id: 'a1', icon: '✅', title: '答对消除', bg: '#E9F8EA' },
+      { id: 'a2', icon: '⚡',  title: '答错加速', bg: '#FFF6E0' },
+      { id: 'a3', icon: '🔥',  title: '连击翻倍', bg: '#FFECEC' },
+      { id: 'a4', icon: '🛡️', title: '防线守卫', bg: '#EAF0FF' }
+    ]
   },
 
   onLoad() {
-    // 同步全局配置到本页
     const g = app.globalData;
+    // 设备胶囊信息 + 状态栏高度（自定义导航栏必备）
+    let statusBar = 20;
+    let navBarInner = 44;
+    let capsuleRight = 12;
+    try {
+      const sys = wx.getSystemInfoSync();
+      statusBar = sys.statusBarHeight || 20;
+      const m = wx.getMenuButtonBoundingClientRect && wx.getMenuButtonBoundingClientRect();
+      if (m) {
+        // 导航条高度 = 胶囊顶到状态栏的距离 * 2 + 胶囊高度
+        const topGap = m.top - statusBar;
+        navBarInner = topGap * 2 + m.height;
+        capsuleRight = sys.windowWidth - m.right;
+      }
+    } catch (e) { /* ignore */ }
+
     this.setData({
       difficulty: g.difficulty,
       soundEnabled: g.soundEnabled,
       highestScore: g.highestScore,
       totalGames: g.totalGames,
       safeTop: g.safeAreaInset.top,
-      safeBottom: g.safeAreaInset.bottom
+      safeBottom: g.safeAreaInset.bottom,
+      statusBarHeight: statusBar,
+      navBarHeight: navBarInner,
+      navBarInnerHeight: navBarInner,
+      capsuleRight: Math.max(12, capsuleRight)
     });
-    // 应用自适应布局（计算 pageHeight / safeTopRpx / safeBottomRpx）
-    applyLayout(this);
-  },
-
-  /**
-   * 横竖屏切换 / 窗口尺寸变化时重新计算布局
-   * 由 app.js 的 wx.onWindowResize 回调触发
-   */
-  onAdaptiveResize() {
     applyLayout(this);
   },
 
   onShow() {
-    // 重新进入时刷新最高分
-    this.setData({ highestScore: app.globalData.highestScore });
+    this.setData({
+      highestScore: app.globalData.highestScore,
+      totalGames: app.globalData.totalGames
+    });
   },
 
-  /**
-   * 选择难度
-   */
+  onAdaptiveResize() {
+    applyLayout(this);
+  },
+
+  /* ============ 事件 ============ */
+
+  onBack() {
+    // 首页无上一页，轻弹提示
+    wx.showToast({ title: '已经是首页啦', icon: 'none', duration: 800 });
+  },
+
+  onTapSettings() {
+    const cur = !this.data.soundEnabled;
+    this.setData({ soundEnabled: cur });
+    app.globalData.soundEnabled = cur;
+    audioManager.setEnabled(cur);
+    storageManager.saveUserData({
+      highestScore: app.globalData.highestScore,
+      totalGames: app.globalData.totalGames,
+      difficulty: app.globalData.difficulty,
+      soundEnabled: cur
+    });
+    wx.showToast({ title: cur ? '音效已开启' : '音效已关闭', icon: 'none', duration: 800 });
+    if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
+  },
+
   onSelectDifficulty(e) {
     const key = e.currentTarget.dataset.key;
+    if (!key) return;
     this.setData({ difficulty: key });
     app.globalData.difficulty = key;
-    // 持久化
-    require('../../utils/storageManager.js').saveUserData({
+    storageManager.saveUserData({
       highestScore: app.globalData.highestScore,
       totalGames: app.globalData.totalGames,
       difficulty: key,
       soundEnabled: app.globalData.soundEnabled
     });
-    // 轻反馈
     if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
   },
 
-  /**
-   * 切换音效开关
-   */
   onToggleSound() {
     const next = !this.data.soundEnabled;
     this.setData({ soundEnabled: next });
     app.globalData.soundEnabled = next;
-    const audio = require('../../utils/audioManager.js');
-    audio.setEnabled(next);
-    require('../../utils/storageManager.js').saveUserData({
+    audioManager.setEnabled(next);
+    storageManager.saveUserData({
       highestScore: app.globalData.highestScore,
       totalGames: app.globalData.totalGames,
       difficulty: app.globalData.difficulty,
       soundEnabled: next
     });
+    if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
   },
 
-  /**
-   * 开始游戏
-   */
+  onKnowMore() {
+    wx.showModal({
+      title: '怎么玩？一条告诉你 🌱',
+      content:
+        '【1】答对题：植物发射豌豆打僵尸，得阳光+分数\n' +
+        '【2】答错题：僵尸会跑得更快，要集中精神哦\n' +
+        '【3】连续答对：触发连击！分数翻倍涨\n' +
+        '【4】向日葵会掉阳光☀️，点一点就能收集，用它种更多植物\n' +
+        '【5】有 3 条防线，都被僵尸突破就算失败啦\n' +
+        '【6】撑到最后一波，把僵尸全部清理干净就通关胜利！',
+      showCancel: false,
+      confirmText: '我知道啦',
+      confirmColor: '#5AA454'
+    });
+  },
+
   onStart() {
-    const audio = require('../../utils/audioManager.js');
-    audio.play(require('../../utils/constants.js').ASSET_KEYS.AUDIO.START);
+    audioManager.play(ASSET_KEYS.AUDIO.START);
     wx.navigateTo({
       url: '/pages/game/game?difficulty=' + this.data.difficulty,
       fail: (err) => {
@@ -101,9 +165,10 @@ Page({
     });
   },
 
-  /**
-   * 分享给好友
-   */
+  onBannerStart() {
+    this.onStart();
+  },
+
   onShareAppMessage() {
     return {
       title: '单词农场 - 边玩边背单词，保卫你的小庄园！',
