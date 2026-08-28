@@ -28,13 +28,20 @@ function applyLayout(pageInstance) {
     try {
       const sys = wx.getSystemInfoSync();
       const rpxRatio = 750 / (sys.windowWidth || 375);
-      const safeArea = sys.safeArea || {};
+      // D5: 同步 app.js D1 修复：区分 safeArea 完全缺失 vs bottom===0
+      const safeArea = (sys.safeArea && typeof sys.safeArea.bottom === 'number') ? sys.safeArea : null;
+      let safeTopPx, safeBottomPx;
+      if (safeArea) {
+        safeTopPx = safeArea.top || 0;
+        safeBottomPx = Math.max(0, (sys.screenHeight || sys.windowHeight) - safeArea.bottom);
+      } else {
+        safeTopPx = sys.statusBarHeight || (sys.platform === 'android' ? 24 : 20);
+        safeBottomPx = 0;
+      }
       layout = {
         windowHeightRpx: Math.floor((sys.windowHeight || 667) * rpxRatio),
-        safeTopRpx: Math.floor((safeArea.top || 0) * rpxRatio),
-        safeBottomRpx: Math.floor(
-          Math.max(0, (sys.screenHeight || sys.windowHeight) - (safeArea.bottom || sys.windowHeight)) * rpxRatio
-        )
+        safeTopRpx: Math.floor(safeTopPx * rpxRatio),
+        safeBottomRpx: Math.floor(safeBottomPx * rpxRatio)
       };
     } catch (e) {
       layout = { windowHeightRpx: 1334, safeTopRpx: 0, safeBottomRpx: 0 };
@@ -61,18 +68,27 @@ function getLayout() {
   try {
     const sys = wx.getSystemInfoSync();
     const rpxRatio = 750 / (sys.windowWidth || 375);
-    const safeArea = sys.safeArea || {};
+    // D5: 同步 app.js D1 修复：区分 safeArea 完全缺失 vs bottom===0
+    const safeArea = (sys.safeArea && typeof sys.safeArea.bottom === 'number') ? sys.safeArea : null;
+    let safeTopPx, safeBottomPx;
+    if (safeArea) {
+      safeTopPx = safeArea.top || 0;
+      safeBottomPx = Math.max(0, (sys.screenHeight || sys.windowHeight) - safeArea.bottom);
+    } else {
+      safeTopPx = sys.statusBarHeight || (sys.platform === 'android' ? 24 : 20);
+      safeBottomPx = 0;
+    }
     return {
       windowWidth: sys.windowWidth || 375,
       windowHeight: sys.windowHeight || 667,
       windowHeightRpx: Math.floor((sys.windowHeight || 667) * rpxRatio),
       rpxRatio: rpxRatio,
-      safeTopPx: safeArea.top || 0,
-      safeBottomPx: Math.max(0, (sys.screenHeight || sys.windowHeight) - (safeArea.bottom || sys.windowHeight)),
-      safeTopRpx: Math.floor((safeArea.top || 0) * rpxRatio),
-      safeBottomRpx: Math.floor(
-        Math.max(0, (sys.screenHeight || sys.windowHeight) - (safeArea.bottom || sys.windowHeight)) * rpxRatio
-      )
+      safeTopPx: safeTopPx,
+      safeBottomPx: safeBottomPx,
+      safeTopRpx: Math.floor(safeTopPx * rpxRatio),
+      safeBottomRpx: Math.floor(safeBottomPx * rpxRatio),
+      statusBarHeight: sys.statusBarHeight || (sys.platform === 'android' ? 24 : 20),
+      platform: sys.platform || 'unknown'
     };
   } catch (e) {
     return {
@@ -89,7 +105,9 @@ function getLayout() {
  */
 function rpxToPx(rpx) {
   const layout = getLayout();
-  return rpx * layout.windowWidth / 750;
+  // v6 修复 (Task 11 F27): windowWidth=0/undefined 防御（避免 NaN 污染下游）
+  const w = layout.windowWidth || 375;
+  return rpx * w / 750;
 }
 
 /**
@@ -99,7 +117,9 @@ function rpxToPx(rpx) {
  */
 function pxToRpx(px) {
   const layout = getLayout();
-  return px * 750 / layout.windowWidth;
+  // v6 修复 (Task 11 F27): windowWidth=0 防御（避免 Infinity 污染下游）
+  const w = layout.windowWidth || 375;
+  return px * 750 / w;
 }
 
 module.exports = {

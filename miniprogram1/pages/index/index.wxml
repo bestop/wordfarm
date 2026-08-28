@@ -1,0 +1,160 @@
+<!-- pages/index/index.wxml — v5 严格按 layout.png 像素级还原（一屏自适应）
+  布局结构（与参考图 1:1 对齐）：
+    .page (flex column, 高度 {{pageHeight}}rpx, overflow:hidden)
+      ├── nav-bar            自定义导航栏（< 返回 / 单词农场 / ...和⚙设置）
+      ├── .main-view         纯 flex 主体，禁止滚动
+      │   ├── brand-hero     🌱 单词农场 LOGO 胶囊 + 左太阳🌞 + 左右枝叶🌿 + 顶左小花🌼
+      │   ├── stats-row      3 张卡片：最高分 / 游戏次数 / 音效开
+      │   ├── diff-pills     小学 / 中学（选中） / 大学
+      │   ├── howto-head     左：游戏玩法（带 🌱 绿色竖条）· 右：立即了解胶囊
+      │   ├── howto-grid     2×4 卡片：答对消除 答错加速 连击翻倍 防线守卫 × 2行
+      │   └── banner-hero    左：两个可爱卡通角色 + 栅栏+花盆 · 右：标题/副标题/「开始冒险」按钮
+      └── cta-bar            底部绿色圆角矩形「开始游戏」按钮（非胶囊）
+-->
+<view class="page" style="height: {{pageHeight}}rpx;">
+
+  <!-- ============ 自定义导航栏 ============ -->
+  <view
+    class="nav-bar"
+    style="padding-top: {{statusBarHeight}}px; height: calc({{statusBarHeight}}px + {{navBarHeight}}px);"
+  >
+    <view class="nav-bar-inner" style="height: {{navBarHeight}}px; padding-left: 20rpx;">
+      <view
+        class="nav-btn"
+        style="width: {{navBarHeight - 6}}px; height: {{navBarHeight - 6}}px;"
+        bindtap="onBack"
+        hover-class="nav-btn-hover"
+      >
+        <text class="nav-icon">‹</text>
+      </view>
+      <view class="nav-title">单词农场</view>
+    </view>
+  </view>
+
+  <!-- ============ 纯 flex 主体（严格一屏，禁止滚动） ============ -->
+  <view class="main-view">
+
+    <!-- 1. 品牌 LOGO 胶囊（居中，太阳在左上方，枝叶在两侧，小花点缀） -->
+    <view class="brand-hero">
+      <view class="decor decor-sun">🌞</view>
+      <view class="decor decor-flower">🌼</view>
+      <view class="decor decor-leaf-l">🌿</view>
+      <view class="decor decor-leaf-r">🌿</view>
+      <view class="brand-chip">
+        <view class="brand-logo-bg">
+          <text class="brand-logo-emoji">🌱</text>
+        </view>
+        <text class="brand-title">单词农场</text>
+      </view>
+    </view>
+
+    <!-- 2. 三张统计卡片：最高分 / 游戏次数 / 音效开 -->
+    <view class="stats-row">
+      <view class="stat-card">
+        <view class="stat-card-num">{{highestScore}}</view>
+        <view class="stat-card-label">最高分</view>
+        <view class="stat-card-underline"></view>
+      </view>
+      <view class="stat-card">
+        <view class="stat-card-num">{{totalGames}}</view>
+        <view class="stat-card-label">游戏次数</view>
+        <view class="stat-card-underline"></view>
+      </view>
+      <view class="stat-card sound-card" bindtap="onToggleSound" hover-class="sound-card-hover">
+        <view class="stat-card-emoji">{{soundEnabled ? '🔊' : '🔇'}}</view>
+        <view class="stat-card-label">音效{{soundEnabled ? '开' : '关'}}</view>
+        <view class="stat-card-underline"></view>
+      </view>
+    </view>
+
+    <!-- 3. 难度选择（胶囊：小学 / 中学选中·带🍃 / 大学） -->
+    <view class="diff-pills">
+      <block wx:for="{{difficulties}}" wx:key="key">
+        <view
+          class="diff-pill {{difficulty === item.key ? 'active' : ''}}"
+          data-key="{{item.key}}"
+          bindtap="onSelectDifficulty"
+          hover-class="diff-pill-hover"
+        >
+          {{item.name}}
+          <text wx:if="{{difficulty === item.key}}" class="diff-leaf">🍃</text>
+        </view>
+      </block>
+    </view>
+
+    <!-- 4. 玩法标题行（左：🌱 绿色竖条 + "游戏玩法" · 右："立即了解"圆角胶囊） -->
+    <view class="howto-head">
+      <view class="howto-head-title">
+        <text class="howto-bar"></text>
+        <text class="howto-title">游戏玩法</text>
+      </view>
+      <view class="howto-head-more" bindtap="onKnowMore" hover-class="more-hover">立即了解</view>
+    </view>
+
+    <!-- 5. 玩法卡 2×4 网格（第一行图标为对号/闪电/火焰/盾牌） -->
+    <view class="howto-grid">
+      <view
+        wx:for="{{howtoList}}"
+        wx:key="id"
+        class="howto-card"
+        style="background: {{item.bg}};"
+      >
+        <view class="howto-icon-box">
+          <text class="howto-card-icon">{{item.icon}}</text>
+        </view>
+        <view class="howto-card-title">{{item.title}}</view>
+      </view>
+    </view>
+
+    <!-- 6. 横幅 Banner（左：双角色 + 栅栏 + 花盆 · 右：标题/副标题/开始冒险按钮） -->
+    <view class="banner-hero">
+      <view class="banner-spot banner-spot-1"></view>
+      <view class="banner-spot banner-spot-2"></view>
+
+      <!-- 左侧：可爱卡通角色群（参考图：植物豆苗 + 橙色小萝卜 + 栅栏 + 花盆） -->
+      <view class="banner-role-left">
+        <view class="fence">
+          <view class="fence-post fence-post-1"></view>
+          <view class="fence-post fence-post-2"></view>
+          <view class="fence-post fence-post-3"></view>
+          <view class="fence-rail fence-rail-top"></view>
+          <view class="fence-rail fence-rail-bottom"></view>
+        </view>
+        <view class="pot">
+          <view class="pot-bowl"></view>
+          <view class="pot-soil"></view>
+        </view>
+        <image class="role role-bean" src="/icon/plant_sunflower.png" mode="aspectFit" lazy-load="true"></image>
+        <image class="role role-carrot" src="/icon/plant_shooter.png" mode="aspectFit" lazy-load="true"></image>
+      </view>
+
+      <!-- 右侧：文字区 + 开始冒险按钮 -->
+      <view class="banner-main">
+        <view class="banner-title">单词农场大冒险</view>
+        <view class="banner-sub">背单词、养植物、闯关拿奖励</view>
+        <view
+          class="banner-btn"
+          bindtap="onBannerStart"
+          hover-class="banner-btn-hover"
+        >
+          开始冒险
+          <text class="banner-btn-arrow">›</text>
+        </view>
+      </view>
+    </view>
+
+  </view>
+
+  <!-- ============ 固定底部：开始游戏（圆角矩形绿色渐变按钮，非胶囊） ============ -->
+  <view class="cta-bar" style="padding-bottom: calc(12rpx + {{safeBottomRpx}}rpx);">
+    <button
+      class="start-main"
+      bindtap="onStart"
+      hover-class="start-main-hover"
+    >
+      <text class="start-main-shine"></text>
+      开始游戏
+    </button>
+  </view>
+
+</view>

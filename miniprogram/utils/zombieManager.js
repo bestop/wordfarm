@@ -53,6 +53,9 @@ class ZombiePool {
   constructor() {
     this.pool = [];      // 待用对象
     this.active = new Set();  // 活跃对象引用集合（仅用于统计）
+    // v6 修复 (Task 9 F2): 强制释放前回调，让持有者同步从 zombies 数组移除，
+    //  避免同一对象在数组中两个索引位置（每帧被处理 2 次）
+    this.onForceRelease = null;
     this.prealloc(PERFORMANCE.POOL_PREALLOC);
   }
 
@@ -87,8 +90,11 @@ class ZombiePool {
       z = this._makeBlank();
     } else {
       // 兜底：强制释放一个最早加入 active 的僵尸对象，避免生成永久停滞
+      // v6 修复 (Task 9 F2): 强制释放前先通知持有者从外部数组移除，
+      //  否则 release 把对象重新塞回 pool 后再 acquire，会在 zombies 数组中产生两个索引
       const first = this.active.values().next().value;
       if (first) {
+        if (this.onForceRelease) this.onForceRelease(first);
         this.release(first);
         z = this.pool.pop() || this._makeBlank();
       } else {
@@ -124,12 +130,16 @@ class ZombiePool {
 
   /**
    * 清空所有活跃对象（重开游戏用）
+   * v6 修复 (Task 9 F4): 与 release 一致，加 POOL_MAX 上限检查，
+   *  防止重开游戏时 pool 临时超过 30（重复重开后无限增长）
    */
   clearAll() {
     for (const z of this.active) {
       z.active = false;
       z.blockedBy = null;
-      this.pool.push(z);
+      if (this.pool.length < PERFORMANCE.POOL_MAX) {
+        this.pool.push(z);
+      }
     }
     this.active.clear();
   }
@@ -296,6 +306,12 @@ class ZombieManager {
     this.pool = new ZombiePool();
     this.spawner = new ZombieSpawner();
     this.zombies = [];   // 当前活跃僵尸数组（用于渲染/逻辑）
+    // v6 修复 (Task 9 F2): pool 兜底强制释放时同步从 zombies 数组移除，
+    //  避免同一对象在数组中两个索引位置（每帧被处理 2 次）
+    this.pool.onForceRelease = (z) => {
+      const idx = this.zombies.indexOf(z);
+      if (idx >= 0) this.zombies.splice(idx, 1);
+    };
   }
 
   /**
@@ -412,12 +428,7 @@ class ZombieManager {
     return this.zombies;
   }
 
-  /**
-   * 按 id 查找僵尸
-   */
-  findById(id) {
-    return this.zombies.find(z => z.id === id);
-  }
+  // v6 修复 (Task 11 F8): 删除零调用 findById 方法
 
   /**
    * 获取指定车道内可被攻击的僵尸（walking/eating 状态）
@@ -470,18 +481,7 @@ class ZombieManager {
     }
   }
 
-  /**
-   * 击杀僵尸（强制死亡，用于特殊技能/结算）
-   * @param {Object} zombie
-   * @returns {number} 击杀奖励分
-   */
-  kill(zombie) {
-    if (!zombie) return 0;
-    zombie.state = 'dying';
-    zombie.stateTimer = 0;
-    zombie.blockedBy = null;
-    return zombie.scoreReward;
-  }
+  // v6 修复 (Task 11 F8): 删除零调用 kill 方法（kill 仍是半成品 API，调用方从未存在）
 
   /**
    * 清理所有

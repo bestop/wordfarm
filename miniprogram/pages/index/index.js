@@ -2,6 +2,10 @@
 
 const app = getApp();
 const { applyLayout } = require('../../utils/layoutUtil.js');
+// D4: 模块期同步读 app.globalData.layout，避免首帧 1334rpx 硬编码闪烁
+const _initLayout = (app.globalData && app.globalData.layout) || {};
+const _initPageHeight = _initLayout.windowHeightRpx || 1334;
+const _initSafeBottomRpx = _initLayout.safeBottomRpx || 0;
 const audioManager = require('../../utils/audioManager.js');
 const storageManager = require('../../utils/storageManager.js');
 const { ASSET_KEYS } = require('../../utils/constants.js');
@@ -17,16 +21,13 @@ Page({
     // 自定义导航栏（与 capsule 按钮对齐）
     statusBarHeight: 20,
     navBarHeight: 44,          // 44px 为 iOS 标准导航条
-    navBarInnerHeight: 44,     // 胶囊按钮 32px 高，两侧留 6px 共 44px
     capsuleRight: 12,          // 胶囊右侧距边
-    showBack: false,           // 首页无上级，不显示返回按钮
 
     // 自适应
     safeTop: 0,
     safeBottom: 0,
-    pageHeight: 1334,
-    safeTopRpx: 0,
-    safeBottomRpx: 0,
+    pageHeight: _initPageHeight,
+    safeBottomRpx: _initSafeBottomRpx,
 
     // 难度列表
     difficulties: [
@@ -71,7 +72,6 @@ Page({
       safeBottom: g.safeAreaInset.bottom,
       statusBarHeight: statusBar,
       navBarHeight: navBarInner,
-      navBarInnerHeight: navBarInner,
       capsuleRight: Math.max(12, capsuleRight)
     });
     applyLayout(this);
@@ -93,21 +93,6 @@ Page({
   onBack() {
     // 首页无上一页，轻弹提示
     wx.showToast({ title: '已经是首页啦', icon: 'none', duration: 800 });
-  },
-
-  onTapSettings() {
-    const cur = !this.data.soundEnabled;
-    this.setData({ soundEnabled: cur });
-    app.globalData.soundEnabled = cur;
-    audioManager.setEnabled(cur);
-    storageManager.saveUserData({
-      highestScore: app.globalData.highestScore,
-      totalGames: app.globalData.totalGames,
-      difficulty: app.globalData.difficulty,
-      soundEnabled: cur
-    });
-    wx.showToast({ title: cur ? '音效已开启' : '音效已关闭', icon: 'none', duration: 800 });
-    if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
   },
 
   onSelectDifficulty(e) {

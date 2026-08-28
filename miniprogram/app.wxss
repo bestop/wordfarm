@@ -40,16 +40,7 @@ page {
 /* ============ 通用类 ============ */
 view, text { box-sizing: border-box; }
 
-.flex { display: flex; }
-.flex-col { display: flex; flex-direction: column; }
-.flex-center { display: flex; align-items: center; justify-content: center; }
-.flex-between { display: flex; align-items: center; justify-content: space-between; }
-.flex-around { display: flex; align-items: center; justify-content: space-around; }
-.flex-1 { flex: 1; }
-
-.text-center { text-align: center; }
-.text-bold { font-weight: 700; }
-.text-black { font-weight: 900; }
+/* v6 修复 (Task 11 F19): 删除 9 个无引用的 flex/text utility 类，项目已用具体类如 .hud-row .stats-row 替代 */
 
 /* ============ 萌系按钮 ============ */
 .kawaii-btn {
@@ -115,14 +106,7 @@ view, text { box-sizing: border-box; }
 }
 
 /* ============ 动画 ============ */
-@keyframes float-slow {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12rpx); }
-}
-@keyframes wiggle {
-  0%, 100% { transform: rotate(-4deg); }
-  50% { transform: rotate(4deg); }
-}
+/* v6 修复 (Task 11 F18): 删除 float-slow / wiggle @keyframes + .anim-float / .anim-wiggle 工具类（全部零引用） */
 @keyframes pulse-soft {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.06); }
@@ -140,8 +124,6 @@ view, text { box-sizing: border-box; }
   80% { transform: translateX(8rpx); }
 }
 
-.anim-float { animation: float-slow 3s ease-in-out infinite; }
-.anim-wiggle { animation: wiggle 2s ease-in-out infinite; }
 .anim-pulse { animation: pulse-soft 1.4s ease-in-out infinite; }
 .anim-pop { animation: pop-in 0.4s ease-out; }
 .anim-shake { animation: shake 0.5s ease; }

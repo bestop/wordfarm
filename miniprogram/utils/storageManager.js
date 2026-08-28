@@ -7,8 +7,8 @@ const DEFAULT_USER_DATA = {
   highestScore: 0,
   totalGames: 0,
   difficulty: 'middle',
-  soundEnabled: true,
-  lastPlayedAt: 0
+  soundEnabled: true
+  // v6 修复 (Task 11 F25): 删除 lastPlayedAt 字段（除 README 外零读取站点）
 };
 
 /**
@@ -34,7 +34,7 @@ function loadUserData() {
 function saveUserData(payload) {
   try {
     const current = loadUserData();
-    const merged = { ...current, ...payload, lastPlayedAt: Date.now() };
+    const merged = { ...current, ...payload };
     wx.setStorageSync(STORAGE_KEYS.USER_DATA, merged);
     return true;
   } catch (err) {

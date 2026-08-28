@@ -20,7 +20,7 @@
           <text>{{score}}</text>
         </view>
       </view>
-      <!-- 防线（v2 替代生命：3 道基地植物防线） -->
+      <!-- 防线（v2 替代生命：防线数，僵尸突破终点扣减） -->
       <view class="hud-item hud-defense">
         <view class="hud-label">防线</view>
         <view class="lives-row">
@@ -80,7 +80,7 @@
     </view>
 
   <!-- ============ Canvas 游戏区（flex:1 自适应剩余空间） ============ -->
-  <view class="canvas-wrap" bindtouchend="onCanvasTap">
+  <view class="canvas-wrap" bindtap="onCanvasTap">
     <!-- 植物选择提示浮层（悬浮于 canvas 顶部，柔和低饱和配色，不占用布局空间、不拦截点击） -->
     <view wx:if="{{plantTipVisible}}" class="plant-tip-toast">
       <text class="plant-tip-emoji">👆</text>

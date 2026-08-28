@@ -1,0 +1,183 @@
+/* app.wxss - 全局样式：马卡龙萌系主题 */
+
+/* ============ 颜色变量（马卡龙色系） ============ */
+page {
+  --color-bg: #FFF5F8;
+  --color-card: #FFFFFF;
+  --color-pink: #FFD1DC;
+  --color-pink-deep: #F48FB1;
+  --color-mint: #B5EAD7;
+  --color-mint-deep: #7BC9A6;
+  --color-sky: #C7E9FF;
+  --color-sky-deep: #6EC1E4;
+  --color-lemon: #FFF3B0;
+  --color-lemon-deep: #F5C43C;
+  --color-lavender: #D4C5F9;
+  --color-lavender-deep: #B39DDB;
+  --color-peach: #FFDAC1;
+  --color-peach-deep: #F4A582;
+  --color-text: #5D4037;
+  --color-text-muted: #8D6E63;
+  --color-text-light: #BCAAA4;
+  --color-border: #FFE5EC;
+  --color-danger: #EF5350;
+  --color-success: #66BB6A;
+  --shadow-soft: 0 8rpx 24rpx rgba(243, 139, 168, 0.18);
+  --shadow-card: 0 12rpx 32rpx rgba(122, 92, 78, 0.10);
+  --radius-sm: 12rpx;
+  --radius-md: 20rpx;
+  --radius-lg: 32rpx;
+  --radius-xl: 48rpx;
+
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  font-size: 28rpx;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============ 通用类 ============ */
+view, text { box-sizing: border-box; }
+
+.flex { display: flex; }
+.flex-col { display: flex; flex-direction: column; }
+.flex-center { display: flex; align-items: center; justify-content: center; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+.flex-around { display: flex; align-items: center; justify-content: space-around; }
+.flex-1 { flex: 1; }
+
+.text-center { text-align: center; }
+.text-bold { font-weight: 700; }
+.text-black { font-weight: 900; }
+
+/* ============ 萌系按钮 ============ */
+.kawaii-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24rpx 56rpx;
+  border-radius: 999rpx;
+  font-size: 34rpx;
+  font-weight: 800;
+  color: #FFFFFF;
+  background: linear-gradient(145deg, #FFB4C8, #F48FB1);
+  border: 6rpx solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10rpx 0 #D88AA0, 0 16rpx 32rpx rgba(243, 139, 168, 0.35),
+              inset 0 3rpx 0 rgba(255, 255, 255, 0.7);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  line-height: 1.2;
+}
+.kawaii-btn:active {
+  transform: translateY(6rpx) scale(0.98);
+  box-shadow: 0 4rpx 0 #D88AA0, 0 8rpx 16rpx rgba(243, 139, 168, 0.3),
+              inset 0 3rpx 0 rgba(255, 255, 255, 0.7);
+}
+.kawaii-btn-primary {
+  background: linear-gradient(145deg, #FFD1DC, #F48FB1);
+  color: #5D2A4A;
+}
+.kawaii-btn-mint {
+  background: linear-gradient(145deg, #C7F0DD, #7BC9A6);
+  color: #1F4A3A;
+  box-shadow: 0 10rpx 0 #5FA886, 0 16rpx 32rpx rgba(123, 201, 166, 0.35),
+              inset 0 3rpx 0 rgba(255, 255, 255, 0.7);
+}
+.kawaii-btn-sky {
+  background: linear-gradient(145deg, #D8F0FF, #6EC1E4);
+  color: #1A3F5A;
+  box-shadow: 0 10rpx 0 #57A8C9, 0 16rpx 32rpx rgba(110, 193, 228, 0.35),
+              inset 0 3rpx 0 rgba(255, 255, 255, 0.7);
+}
+.kawaii-btn-ghost {
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--color-pink-deep);
+  border: 4rpx solid var(--color-pink);
+  box-shadow: 0 6rpx 0 rgba(244, 143, 177, 0.3), 0 10rpx 20rpx rgba(243, 139, 168, 0.15);
+}
+
+/* ============ 萌系卡片 ============ */
+.kawaii-card {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: var(--radius-lg);
+  border: 4rpx solid rgba(255, 255, 255, 0.95);
+  box-shadow: var(--shadow-card), inset 0 2rpx 0 rgba(255, 255, 255, 0.95);
+  padding: 32rpx;
+}
+
+/* ============ 渐变文字 ============ */
+.kawaii-gradient-text {
+  background: linear-gradient(120deg, #F48FB1, #F5C43C 40%, #7BC9A6 70%, #B39DDB);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ============ 动画 ============ */
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12rpx); }
+}
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+@keyframes pulse-soft {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+@keyframes pop-in {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-10rpx); }
+  40% { transform: translateX(10rpx); }
+  60% { transform: translateX(-8rpx); }
+  80% { transform: translateX(8rpx); }
+}
+
+.anim-float { animation: float-slow 3s ease-in-out infinite; }
+.anim-wiggle { animation: wiggle 2s ease-in-out infinite; }
+.anim-pulse { animation: pulse-soft 1.4s ease-in-out infinite; }
+.anim-pop { animation: pop-in 0.4s ease-out; }
+.anim-shake { animation: shake 0.5s ease; }
+
+/* ============ 安全区域 ============ */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* ============ 自适应布局基础 ============ */
+/*
+ * 微信小程序中 100vh 包含导航栏高度，比可见区域大，
+ * 导致底部内容被截断。此处不使用 100vh，改由 JS 计算
+ * windowHeightRpx 并通过内联 style 设置容器高度。
+ * page 设为 height:100% 作为 CSS 降级方案。
+ */
+page {
+  height: 100%;
+}
+
+/* 自适应页面容器: 配合 JS 设置 style="height: {{pageHeight}}rpx" */
+.adaptive-page {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 可滚动内容区: 在 flex 容器中自动占据剩余空间 */
+.adaptive-scroll {
+  flex: 1;
+  min-height: 0;  /* 关键: 允许 flex 子项收缩，使 scroll-view 正确滚动 */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 固定区域: 不收缩 */
+.adaptive-fixed {
+  flex-shrink: 0;
+}

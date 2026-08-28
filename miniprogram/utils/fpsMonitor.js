@@ -6,7 +6,8 @@ const { PERFORMANCE } = require('./constants.js');
 class FpsMonitor {
   constructor() {
     this.frames = 0;
-    this.lastSampleTime = 0;
+    // v6 修复 (Task 11 F22): lastSampleTime 初始化为 Date.now()，避免 reset() 之前 tick 时首采样 elapsed 巨大导致 bogus 降级
+    this.lastSampleTime = Date.now();
     this.fps = 60;
     this.history = [];          // 最近N次采样
     this.historyMax = 10;
@@ -22,7 +23,8 @@ class FpsMonitor {
     const now = Date.now();
     if (now - this.lastSampleTime >= 500) {
       const elapsed = (now - this.lastSampleTime) / 1000;
-      this.fps = Math.round(this.frames / elapsed);
+      // v6 修复 (Task 11 F23): elapsed > 0 防御，避免时钟回拨或并行 tick 时 NaN 污染 history 数组
+      this.fps = elapsed > 0 ? Math.round(this.frames / elapsed) : 0;
       this.history.push(this.fps);
       if (this.history.length > this.historyMax) this.history.shift();
       this.frames = 0;

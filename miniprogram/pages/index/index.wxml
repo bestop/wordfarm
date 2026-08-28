@@ -1,14 +1,14 @@
-<!-- pages/index/index.wxml — v5 严格按 layout.png 像素级还原（一屏自适应）
-  布局结构（与参考图 1:1 对齐）：
+<!-- pages/index/index.wxml — v6 优化布局 + 纯 CSS Banner 重绘（一屏自适应）
+  布局结构：
     .page (flex column, 高度 {{pageHeight}}rpx, overflow:hidden)
       ├── nav-bar            自定义导航栏（< 返回 / 单词农场 / ...和⚙设置）
-      ├── .main-view         纯 flex 主体，禁止滚动
+      ├── .main-view         纯 flex 主体，禁止滚动，节奏更舒展
       │   ├── brand-hero     🌱 单词农场 LOGO 胶囊 + 左太阳🌞 + 左右枝叶🌿 + 顶左小花🌼
       │   ├── stats-row      3 张卡片：最高分 / 游戏次数 / 音效开
       │   ├── diff-pills     小学 / 中学（选中） / 大学
       │   ├── howto-head     左：游戏玩法（带 🌱 绿色竖条）· 右：立即了解胶囊
-      │   ├── howto-grid     2×4 卡片：答对消除 答错加速 连击翻倍 防线守卫 × 2行
-      │   └── banner-hero    左：两个可爱卡通角色 + 栅栏+花盆 · 右：标题/副标题/「开始冒险」按钮
+      │   ├── howto-grid     1×4 玩法卡：答对消除 / 答错加速 / 连击翻倍 / 防线守卫
+      │   └── banner-hero    纯 CSS 农场场景（太阳+云+向日葵+豌豆射手+栅栏+草+花）· 右标题/副标题/开始冒险
       └── cta-bar            底部绿色圆角矩形「开始游戏」按钮（非胶囊）
 -->
 <view class="page" style="height: {{pageHeight}}rpx;">
@@ -18,7 +18,7 @@
     class="nav-bar"
     style="padding-top: {{statusBarHeight}}px; height: calc({{statusBarHeight}}px + {{navBarHeight}}px);"
   >
-    <view class="nav-bar-inner" style="height: {{navBarHeight}}px; padding-left: 20rpx;">
+    <view class="nav-bar-inner" style="height: {{navBarHeight}}px; padding-left: 20rpx; padding-right: {{capsuleRight + 12}}px;">
       <view
         class="nav-btn"
         style="width: {{navBarHeight - 6}}px; height: {{navBarHeight - 6}}px;"
@@ -106,30 +106,88 @@
       </view>
     </view>
 
-    <!-- 6. 横幅 Banner（左：双角色 + 栅栏 + 花盆 · 右：标题/副标题/开始冒险按钮） -->
+    <!-- 6. 横幅 Banner（纯 CSS 农场插画：左太阳+云朵+向日葵+豌豆射手+栅栏+草地 · 右标题/副标题/开始冒险按钮） -->
     <view class="banner-hero">
+      <!-- 装饰光斑 -->
       <view class="banner-spot banner-spot-1"></view>
       <view class="banner-spot banner-spot-2"></view>
 
-      <!-- 左侧：可爱卡通角色群（参考图：植物豆苗 + 橙色小萝卜 + 栅栏 + 花盆） -->
-      <view class="banner-role-left">
-        <view class="fence">
+      <!-- 左侧：纯 CSS 农场场景 -->
+      <view class="banner-scene">
+        <!-- 天空（渐变叠加层） -->
+        <view class="scene-sky"></view>
+        <!-- 太阳：脉动光晕 + 旋转射线 -->
+        <view class="scene-sun">
+          <view class="sun-core"></view>
+          <view class="sun-ray sun-ray-1"></view>
+          <view class="sun-ray sun-ray-2"></view>
+          <view class="sun-ray sun-ray-3"></view>
+          <view class="sun-ray sun-ray-4"></view>
+        </view>
+        <!-- 云朵 1 + 云朵 2 -->
+        <view class="scene-cloud scene-cloud-1">
+          <view class="cloud-puff cloud-puff-a"></view>
+          <view class="cloud-puff cloud-puff-b"></view>
+          <view class="cloud-puff cloud-puff-c"></view>
+        </view>
+        <view class="scene-cloud scene-cloud-2">
+          <view class="cloud-puff cloud-puff-a"></view>
+          <view class="cloud-puff cloud-puff-b"></view>
+          <view class="cloud-puff cloud-puff-c"></view>
+        </view>
+        <!-- 草地：双层绿色波浪 -->
+        <view class="scene-ground"></view>
+        <view class="scene-grass scene-grass-back"></view>
+        <view class="scene-grass scene-grass-front"></view>
+        <!-- 向日葵 -->
+        <view class="scene-sunflower">
+          <view class="sf-stem"></view>
+          <view class="sf-leaf sf-leaf-l"></view>
+          <view class="sf-leaf sf-leaf-r"></view>
+          <view class="sf-head">
+            <view class="sf-petal sf-petal-1"></view>
+            <view class="sf-petal sf-petal-2"></view>
+            <view class="sf-petal sf-petal-3"></view>
+            <view class="sf-petal sf-petal-4"></view>
+            <view class="sf-petal sf-petal-5"></view>
+            <view class="sf-petal sf-petal-6"></view>
+            <view class="sf-petal sf-petal-7"></view>
+            <view class="sf-petal sf-petal-8"></view>
+            <view class="sf-face"></view>
+            <view class="sf-eye sf-eye-l"></view>
+            <view class="sf-eye sf-eye-r"></view>
+            <view class="sf-mouth"></view>
+          </view>
+        </view>
+        <!-- 豌豆射手 -->
+        <view class="scene-shooter">
+          <view class="ps-stem"></view>
+          <view class="ps-leaf ps-leaf-l"></view>
+          <view class="ps-leaf ps-leaf-r"></view>
+          <view class="ps-head">
+            <view class="ps-face"></view>
+            <view class="ps-eye"></view>
+            <view class="ps-mouth"></view>
+            <view class="ps-shadow"></view>
+          </view>
+        </view>
+        <!-- 栅栏 -->
+        <view class="scene-fence">
           <view class="fence-post fence-post-1"></view>
           <view class="fence-post fence-post-2"></view>
           <view class="fence-post fence-post-3"></view>
           <view class="fence-rail fence-rail-top"></view>
           <view class="fence-rail fence-rail-bottom"></view>
         </view>
-        <view class="pot">
-          <view class="pot-bowl"></view>
-          <view class="pot-soil"></view>
-        </view>
-        <image class="role role-bean" src="/icon/plant_sunflower.png" mode="aspectFit" lazy-load="true"></image>
-        <image class="role role-carrot" src="/icon/plant_shooter.png" mode="aspectFit" lazy-load="true"></image>
+        <!-- 小花点缀 -->
+        <view class="scene-bloom scene-bloom-1"></view>
+        <view class="scene-bloom scene-bloom-2"></view>
+        <view class="scene-bloom scene-bloom-3"></view>
       </view>
 
       <!-- 右侧：文字区 + 开始冒险按钮 -->
       <view class="banner-main">
+        <view class="banner-eyebrow">🌱 限定关卡</view>
         <view class="banner-title">单词农场大冒险</view>
         <view class="banner-sub">背单词、养植物、闯关拿奖励</view>
         <view

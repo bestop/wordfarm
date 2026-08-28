@@ -4,6 +4,8 @@
 
 const { ZOMBIE_TYPES, PLANT_TYPES } = require('./constants.js');
 const { pathManager } = require('./pathManager.js');
+// v6 修复 (Task 7-B F3): 引入 fpsMonitor，让 _drawParticles 接入 shouldSkipDetails 动态降级
+const { fpsMonitor } = require('./fpsMonitor.js');
 
 /**
  * roundRect polyfill
@@ -105,6 +107,15 @@ const RENDER_TOKENS = {
     C_FUSE:       '#7CB342',
     C_SPARK:      '#FFEB3B',
     C_SHINE:      '#FFCDD2',
+    // 火焰射手 Fire（包含投射物火焰球可复用色彩）
+    FIRE_FLAME:     '#FF8A65',  // 火焰中层橙（与 constants.js plant_fire projectile.color 一致）
+    FIRE_BODY_DARK: '#E64A19',  // 火焰外层深橙红
+    FIRE_CORE:      '#FFEB3B',  // 火焰内核亮黄
+    FIRE_LEAF_DARK: '#A1887F',  // 焦土色叶（外层）
+    FIRE_LEAF_MID:  '#D7CCC8',  // 焦土色叶（内层）
+    FIRE_STEM:      '#5D4037',  // 焦糖色茎
+    FIRE_MOUTH_OUT: '#3E2723',  // 火焰口外圈（深棕）
+    FIRE_MOUTH_IN:  '#1B0F0A',  // 火焰口内黑
     // 通用
     SHADOW:       'rgba(0,0,0,0.14)',   // 阴影地面椭圆
     HIGHLIGHT_BASE: 'rgba(255,255,255,',  // 高光拼接用：+ "0.35)"
@@ -217,6 +228,7 @@ const RENDER_TOKENS = {
 class Renderer {
   constructor() {
     this.ctx = null;          // 主 canvas 上下文
+    this.canvas = null;      // v6 修复 (Task 7-B F2): 主 canvas 节点引用，供 _preloadImages 调 canvas.createImage()
     this.dpr = 1;             // 设备像素比
     this.width = 0;           // CSS 像素宽
     this.height = 0;          // CSS 像素高
@@ -236,20 +248,52 @@ class Renderer {
    * @param {number} width - CSS宽
    * @param {number} height - CSS高
    * @param {number} dpr - 设备像素比
+   * @param {Object} [canvasNode] - v6 修复 (Task 7-B F2): canvas 节点引用，供 _preloadImages 调 createImage()
    */
-  attach(ctx, width, height, dpr) {
+  attach(ctx, width, height, dpr, canvasNode) {
     this.ctx = ctx;
+    this.canvas = canvasNode || null;
     this.width = width;
     this.height = height;
     this.dpr = dpr || 1;
     pathManager.setCanvasSize(width, height);
-    // 离屏缓存构建失败不应阻断游戏启动，try-catch 保护
+    // v6 修复 (Task 7-B F7)：离屏缓存 与 图片预加载 分开独立 try-catch，
+    //   避免单个子系统失败时擦掉另一个已成功的缓存
     try {
       this._buildOffscreenCache();
-      this._preloadImages();
     } catch (err) {
       console.error('[Renderer] 离屏缓存构建失败，降级为实时渲染:', err);
       this.offscreenCache = {};
+    }
+    try {
+      this._preloadImages();
+    } catch (err) {
+      console.error('[Renderer] 图片预加载失败：', err);
+      // imageCache 保持为 {} ，渲染时党底矢量插画
+    }
+  }
+
+  /**
+   * v6 修复 (Task 7-B F8): 画布尺寸变化时重新同步内部尺寸状态
+   * 仅更新 this.width/height/dpr + 重建背景离屏缓存（尺寸敏感）。
+   * 僵尸离屏缓存按固定 r 半径渲染，与画布尺寸无关，无需重建。
+   * 由 game.js onAdaptiveResize -> _resizeCanvas 调用。
+   * @param {number} width
+   * @param {number} height
+   * @param {number} dpr
+   */
+  onResize(width, height, dpr) {
+    if (!width || !height) return;
+    this.width = width;
+    this.height = height;
+    this.dpr = dpr || this.dpr || 1;
+    pathManager.setCanvasSize(width, height);
+    // 重建背景离屏缓存（尺寸敏感）
+    try {
+      this.offscreenCache.background = this._renderBackgroundToOffscreen();
+    } catch (err) {
+      console.warn('[Renderer] 背景离屏缓存重建失败，降级实时渲染:', err);
+      this.offscreenCache.background = null;
     }
   }
 
@@ -325,7 +369,7 @@ class Renderer {
    * 离屏渲染：背景（天空+草地+路径）
    */
   _renderBackgroundToOffscreen() {
-    const size = Math.max(this.width, this.height);
+    // v6 修复 (Task 11 F28): 删除死变量 size（函数体全程用 this.width/this.height）
     const canvas = wx.createOffscreenCanvas ? wx.createOffscreenCanvas({
       type: '2d',
       width: this.width * this.dpr,
@@ -865,8 +909,9 @@ class Renderer {
    * @param {Array} zombies - 僵尸数组
    * @param {Array} [plants] - 植物数组
    * @param {Array} [projectiles] - 投射物数组
+   * @param {number} [dt] - v6 修复 (Task 7-B F4): 帧间隔 ms，供 _drawParticles 用动态 dt
    */
-  render(gameState, zombies, plants, projectiles) {
+  render(gameState, zombies, plants, projectiles, dt) {
     if (!this.ctx) return;
     const ctx = this.ctx;
     // 整帧渲染保护：单帧出错不应崩溃整个游戏
@@ -905,19 +950,10 @@ class Renderer {
         }
       }
 
-      // 5. 粒子效果
-      this._drawParticles(ctx);
-
-      // 6. 暂停遮罩
-      if (gameState && gameState.paused) {
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.fillRect(0, 0, this.width, this.height);
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = 'bold 24px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('已暂停', this.width / 2, this.height / 2);
-      }
+      // 5. 粒子效果（v6 修复 Task 7-B F4: 传动态 dt 替代硬编码 16）
+      this._drawParticles(ctx, dt);
       // 渲染成功，重置错误计数
+      // v6 修复 (Task 7-B F5): 删除暂停遮罩分支 — pause() 后 _cancelRaf 停循环，render 不再被调用，遮罩不可达；暂停 UI 已由 WXML pause-mask 实现
       this.renderErrorCount = 0;
     } catch (err) {
       this.renderErrorCount++;
@@ -1061,6 +1097,7 @@ class Renderer {
         case 'cherry':     this._drawCherry(ctx, r, def, plant); break;
         case 'chomper':    this._drawChomper(ctx, r, def, plant); break;
         case 'sunflower':  this._drawSunflower(ctx, r, def, plant.wobble); break;
+        case 'fire':       this._drawFire(ctx, r, def, plant.wobble); break;
         default:           this._drawWall(ctx, r, def, plant.wobble); break;
       }
     }
@@ -1077,7 +1114,7 @@ class Renderer {
       ctx.fillRect(-barW / 2, barY, barW * (plant.health / plant.maxHealth), barH);
     }
     ctx.restore();
-    ctx.globalAlpha = 1;
+    // v6 修复 (Task 11 F15): 删除后置 globalAlpha=1（restore 已恢复 alpha）
   }
 
   /**
@@ -1187,8 +1224,7 @@ class Renderer {
       ctx.fillStyle = T.COLORS.STROKE;  // 白牙齿
       safeRoundRect(ctx, -r * 0.15, mouthY - r * 0.02, r * 0.3, r * 0.1, r * 0.03);
       ctx.fill();
-      this._setStroke(ctx, T.COLORS.STROKE, this._strokeW(T.STROKE.LIP));
-      ctx.stroke();
+      // v6 修复 (Task 11 F16): 删除白色 stroke 白色 fill 的无效描边（stroke 不可见）
     } else {
       // 微笑弧线
       this._setStroke(ctx, T.COLORS.INK, this._strokeW(T.STROKE.INK));
@@ -1209,7 +1245,7 @@ class Renderer {
     const H = T.HEAD;
     const headR = r * 1.0;
     const headY = -r * 0.25;
-    const swThin = this._strokeW(T.STROKE.THIN);
+    // v6 清理 (Task 7-B F13)：删除死代码 swThin 声明（与 void swThin; 占位一并清理）
 
     // 两片叶（v3 简化：删除正下方第三片 DARK_LIGHT；保留左右两侧 LEAF_DARK/LEAF_MID 2 档更干净）
     ctx.fillStyle = C.S_LEAF_DARK;
@@ -1259,8 +1295,80 @@ class Renderer {
     this._drawCuteFace(ctx, headR, headY + headR * H.SHOOTER_EYE_Y, {
       mouth: 'grin', wobblePhase: wobblePhase
     });
-    // 消除 lint 提示（swThin 保留给后续细节扩展）
-    void swThin;
+    // v6 清理 (Task 7-B F13)：删除 void swThin; 占位符
+  }
+
+  /**
+   * 火焰射手 Fire（Tokens v2）：焦土色叶 + 火焰头 + 三层火苗预览
+   * 设计原理：头部用 def.color（橙 #FF6E40）拉开视觉辨识度；
+   * 顶部三层火苗与 _drawProjectile 火焰弹视觉完全一致，玩家可关联植物与投射物。
+   */
+  _drawFire(ctx, r, def, wobblePhase) {
+    const T = this.T;
+    const C = T.COLORS;
+    const H = T.HEAD;
+    const headR = r * 1.0;
+    const headY = -r * 0.25;
+
+    // 两片焦土色叶（外深内浅，区别于苏綠色植物）
+    ctx.fillStyle = C.FIRE_LEAF_DARK;
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.7, r * 0.55, r * 0.46, r * 0.22, -0.55, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = T.SIMPLIFY.LEAF_TIERS >= 2 ? C.FIRE_LEAF_MID : C.FIRE_LEAF_DARK;
+    ctx.beginPath();
+    ctx.ellipse( r * 0.7, r * 0.55, r * 0.46, r * 0.22,  0.55, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 焦糖色茎
+    ctx.fillStyle = C.FIRE_STEM;
+    ctx.beginPath();
+    safeRoundRect(ctx, -r * 0.16, r * 0.1, r * 0.32, r * 0.52, r * 0.13);
+    ctx.fill(); ctx.stroke();
+    // 头（橙色，用 def.color 保证与商店栏 emoji“🔥”同色系）
+    ctx.fillStyle = def.color;
+    ctx.beginPath();
+    ctx.ellipse(0, headY, headR * 1.0, headR * 0.95, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 统一高光位：左上 45°
+    ctx.fillStyle = 'rgba(255,255,255,' + H.HLIGHT_ALPHA + ')';
+    ctx.beginPath();
+    ctx.ellipse(headR * H.HLIGHT_X, headY + headR * H.HLIGHT_Y,
+                headR * H.HLIGHT_W, headR * H.HLIGHT_H,
+                H.HLIGHT_ROT, 0, Math.PI * 2);
+    ctx.fill();
+    // 火焰口（比臃豆口更大、更深，内黑极深）
+    ctx.fillStyle = C.FIRE_MOUTH_OUT;
+    ctx.beginPath();
+    ctx.ellipse(0, headY - headR * 0.5, headR * 0.44, headR * 0.24, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C.FIRE_MOUTH_IN;
+    ctx.beginPath();
+    ctx.ellipse(0, headY - headR * 0.5, headR * 0.30, headR * 0.14, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // 顶部三层火苗预览（与 _drawProjectile 火焰弹视觉完全一致）
+    const flameX = 0;
+    const flameY = headY - headR * 0.85;
+    // 火苗用 wobblePhase 嚬动，可视化“燃烧”动效
+    const sway = Math.sin(wobblePhase * 2.0) * headR * 0.06;
+    // 外层深橙红
+    ctx.fillStyle = C.FIRE_BODY_DARK;
+    ctx.beginPath();
+    ctx.ellipse(flameX + sway, flameY, headR * 0.30, headR * 0.50, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 中层橙
+    ctx.fillStyle = C.FIRE_FLAME;
+    ctx.beginPath();
+    ctx.ellipse(flameX + sway * 0.6, flameY - headR * 0.04, headR * 0.22, headR * 0.40, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // 内核亮黄
+    ctx.fillStyle = C.FIRE_CORE;
+    ctx.beginPath();
+    ctx.ellipse(flameX + sway * 0.3, flameY - headR * 0.08, headR * 0.12, headR * 0.24, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // 表情：坏笑 + 粉腮红，保留萌系调性
+    this._drawCuteFace(ctx, headR, headY + headR * H.SHOOTER_EYE_Y, {
+      mouth: 'grin', wobblePhase: wobblePhase
+    });
   }
 
   /**
@@ -1524,7 +1632,8 @@ class Renderer {
     ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#8E24AA';
     safeRoundRect(ctx, -r * 0.14, r * 0.05, r * 0.28, r * 0.55, r * 0.12);
-    ctx.beginPath(); ctx.fill(); ctx.stroke();
+    // v6 修复 (Task 7-B F1)：删除这里的 ctx.beginPath() —— 它会清空 safeRoundRect 刚刚添加的茎路径，导致 fill/stroke 空操作，茎永远不显示
+    ctx.fill(); ctx.stroke();
 
     // 头（大嘴）：咬合时有轻微前冲位移
     const snapLungeX = Math.sin(biteP * Math.PI) * r * 0.10;
@@ -1613,7 +1722,8 @@ class Renderer {
     ctx.fill();
 
     // 表情：吞咽期眼睛眯成半月（满足）
-    const mouthForFace = (chompState === 'swallow') ? 'happy' : 'grin';
+    // v6 修复 (Task 11 F14): 'happy' 改为 'smile'（_drawCuteFace 不识别 happy，原走 default 分支）
+    const mouthForFace = (chompState === 'swallow') ? 'smile' : 'grin';
     this._drawCuteFace(ctx, headR, headY + headR * H.SHOOTER_EYE_Y, {
       mouth: mouthForFace, wobblePhase: wobblePhase, blushColor: 'rgba(180,130,220,0.5)'
     });
@@ -1683,12 +1793,12 @@ class Renderer {
     if (proj.type === 'fire') {
       // 火焰弹：3 层渐变火焰球（外橙红 → 中橙 → 内黄白火芯）+ 拖尾火苗
       const x = proj.x, y = proj.y, R = proj.radius;
-      // 拖尾火苗（向后偏移，随速度拉长）
-      const trailOff = -proj.vy * 0.025;
+      // v6 修复 (Task 7-B F6)：植物水平射击，vy=0，应用 vx 计算拖尾偏移
+      const trailOff = -proj.vx * 0.025;
       ctx.globalAlpha = 0.45;
       ctx.fillStyle = this.T.COLORS.FIRE_FLAME;
       ctx.beginPath();
-      ctx.ellipse(x, y + trailOff, R * 1.0, R * 1.4, 0, 0, Math.PI * 2);
+      ctx.ellipse(x + trailOff, y, R * 1.4, R * 1.0, 0, 0, Math.PI * 2);
       ctx.fill();
       // 外层火焰球
       ctx.globalAlpha = 1;
@@ -1710,11 +1820,11 @@ class Renderer {
       return;
     }
     // 普通弹 / 冰弹：实心圆 + 拖尾
-    // 拖尾
+    // 拖尾 (v6 修复 Task 7-B F6：用 vx 计算偏移)
     ctx.globalAlpha = 0.35;
     ctx.fillStyle = proj.color;
     ctx.beginPath();
-    ctx.arc(proj.x, proj.y - proj.vy * 0.02, proj.radius * 0.8, 0, Math.PI * 2);
+    ctx.arc(proj.x - proj.vx * 0.02, proj.y, proj.radius * 0.8, 0, Math.PI * 2);
     ctx.fill();
     // 主体
     ctx.globalAlpha = 1;
@@ -1751,19 +1861,25 @@ class Renderer {
 
   /**
    * 绘制并更新粒子
+   * v6 修复 (Task 7-B F4): 接收 dt 替代硬编码 16，高帧率设备粒子动画不再 2x 速
+   * v6 修复 (Task 7-B F3): 接入 fpsMonitor.shouldSkipDetails —— 低端机连续低 FPS 时跳过粒子绘制（生命仍更新+splice 防止 addBurst 数组无限增长）
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {number} [dt] - 帧间隔 ms，未传则兜底 16
    */
-  _drawParticles(ctx) {
-    const dt = 16;
+  _drawParticles(ctx, dt) {
+    const dtClamped = dt || 16;
+    const skipDraw = fpsMonitor.shouldSkipDetails();
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
-      p.life -= dt;
+      p.life -= dtClamped;
       if (p.life <= 0) {
         this.particles.splice(i, 1);
         continue;
       }
-      p.x += p.vx * dt / 1000;
-      p.y += p.vy * dt / 1000;
-      p.vy += 200 * dt / 1000;  // 重力
+      p.x += p.vx * dtClamped / 1000;
+      p.y += p.vy * dtClamped / 1000;
+      p.vy += 200 * dtClamped / 1000;  // 重力
+      if (skipDraw) continue;  // 低端机：仅更新生命+位置，跳过绘制
       const alpha = p.life / p.maxLife;
       ctx.globalAlpha = alpha;
       ctx.fillStyle = p.color;

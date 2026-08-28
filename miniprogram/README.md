@@ -261,7 +261,7 @@ miniprogram/
 
 | 键 | 内容 |
 |---|---|
-| `word_farm_user_data` | `{highestScore, totalGames, difficulty, soundEnabled, lastPlayedAt}` |
+| `word_farm_user_data` | `{highestScore, totalGames, difficulty, soundEnabled}` |
 | `word_farm_last_result` | 最近一局结算（用于结果页展示） |
 
 ---

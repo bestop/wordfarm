@@ -122,9 +122,9 @@ const SCORING = {
 };
 
 // ============ 生命值 / 防线 ============
-// v2 重构：lives 改为 defenseLines（3 道基地植物防线）
+// v2 重构：lives 改为 defenseLines（防线数，僵尸突破终点扣减）
 const LIVES = {
-  INITIAL: 3,                  // 防线数（3 道基地植物，全部被摧毁才失败）
+  INITIAL: 3,                  // 防线数（僵尸突破终点扣减，全部被突破才失败）
   MAX: 3
 };
 
@@ -252,10 +252,21 @@ const PLANT_TYPES = {
     sunInterval: 8000, sunProduce: 25,
     color: '#FFC107',
     iconPath: '/icon/plant_sunflower.png'
+  },
+  fire: {
+    type: 'fire', name: '火焰射手', emoji: '🔥',
+    cost: 175, health: 3, damage: 1,
+    attackInterval: 1300, range: Infinity,
+    color: '#FF6E40',
+    iconPath: '/icon/plant_fire.png',
+    // v2 火焰穿透：命中后不消失，最多穿透 pierceMax 个僵尸
+    // 激活 plantManager.update 中的 isPierce / hitTargets / pierceCount 死代码路径
+    projectile: { type: 'fire', speed: 320, color: '#FF8A65', radius: 9,
+                  pierce: true, pierceMax: 3 }
   }
 };
 // 商店栏展示顺序
-const PLANT_ORDER = ['sunflower', 'shooter', 'wall', 'freezer', 'cherry', 'chomper'];
+const PLANT_ORDER = ['sunflower', 'shooter', 'wall', 'freezer', 'cherry', 'chomper', 'fire'];
 
 // ============ 阳光经济 ============
 const SUNLIGHT = {

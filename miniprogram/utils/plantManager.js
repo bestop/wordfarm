@@ -54,9 +54,7 @@ class PlantManager {
       p.state !== 'dead') || null;
   }
 
-  getPlantById(id) {
-    return this.plants.find(p => p.id === id) || null;
-  }
+  // v6 修复 (Task 11 F9): 删除零调用 getPlantById 方法
 
   /**
    * 放置植物
@@ -109,19 +107,19 @@ class PlantManager {
    * 植物受击（被僵尸啃）
    * @param {Object} plant
    * @param {number} amount
-   * @returns {Object} {died: boolean, isBase: boolean, lane: number}
-   *   v2: 返回对象而非布尔值，携带基地植物被毁信息
+   * @returns {Object} {died: boolean, lane: number}
+   *   v2: 返回对象而非布尔值，携带 lane 信息
    */
   takeDamage(plant, amount) {
-    if (!plant || plant.state === 'dead') return { died: false, isBase: false, lane: -1 };
+    if (!plant || plant.state === 'dead') return { died: false, lane: -1 };
     plant.health -= amount;
     plant.hitFlash = 180;
     if (plant.health <= 0) {
       plant.health = 0;
       plant.state = 'dead';
-      return { died: true, isBase: !!plant.isBase, lane: plant.lane };
+      return { died: true, lane: plant.lane };
     }
-    return { died: false, isBase: false, lane: -1 };
+    return { died: false, lane: -1 };
   }
 
   /**
@@ -244,7 +242,8 @@ class PlantManager {
       let hit = false;
       for (const z of laneZombies) {
         // 跳过已命中过的僵尸（穿透模式）
-        if (isPierce && pr.hitTargets && pr.hitTargets.includes(z.id)) continue;
+        // v6 修复 (Task 11 F10): hitTargets 永远是数组（_spawnProjectile 初始化），删防御性 &&
+        if (isPierce && pr.hitTargets.includes(z.id)) continue;
         const zpos = pathManager.getPosition(z.pathIndex, z.progress);
         const dx = pr.x - zpos.x;
         const dy = pr.y - zpos.y;
@@ -253,7 +252,6 @@ class PlantManager {
           if (ctx.onHitZombie) ctx.onHitZombie(z, pr);
           if (isPierce) {
             // 穿透：记录命中目标，减少剩余穿透次数
-            if (!pr.hitTargets) pr.hitTargets = [];
             pr.hitTargets.push(z.id);
             pr.pierceCount = (pr.pierceCount || 0) + 1;
             if (pr.pierceCount >= (projDef.pierceMax || 3)) {

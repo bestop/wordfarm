@@ -7,7 +7,6 @@ const { ASSET_KEYS } = require('./constants.js');
 
 let soundEnabled = true;
 let audioContext = null;
-let audioPool = {};      // 音频上下文缓存
 
 /**
  * 初始化音频系统
@@ -30,9 +29,25 @@ function init(enabled) {
 
 /**
  * 设置音效开关
+ * v6 修复 (Task 7-B F9): 关音效时 suspend audioContext 省电，开音效时 resume
+ *  此前只改 soundEnabled flag，audioContext 仍运行（电池消耗）
+ * @param {boolean} enabled
  */
 function setEnabled(enabled) {
+  const prev = soundEnabled;
   soundEnabled = !!enabled;
+  if (!soundEnabled && prev) {
+    // 开→关：suspend audioContext
+    pause();
+  } else if (soundEnabled && !prev) {
+    // 关→开：resume audioContext
+    // v6 修复 (Task 11 F30): audioContext 懒重建 — init 期 wx.createWebAudioContext 可能不可用，
+    //  此时再尝试一次（用户主动开音效是合适时机）
+    if (!audioContext && typeof wx.createWebAudioContext === 'function') {
+      try { audioContext = wx.createWebAudioContext(); } catch (e) {}
+    }
+    resume();
+  }
 }
 
 /**
@@ -60,7 +75,8 @@ function playSynth(type, options = {}) {
     osc.start(now);
     osc.stop(now + (options.duration || 0.2) + 0.05);
   } catch (err) {
-    // 静默失败：合成失败不影响游戏
+    // v6 修复 (Task 11 F12): 静默失败加日志，开发期可诊断音效合成问题
+    console.warn('[Audio] playSynth 失败:', err);
   }
 }
 
@@ -115,6 +131,32 @@ function play(key) {
       setTimeout(() => playSynth('over', { freq: 261, duration: 0.40, wave: 'triangle', volume: 0.20 }), 440);
       haptic('heavy');
       break;
+    case ASSET_KEYS.AUDIO.WIN:
+      // 胜利华彩：上行五音琶音 + 高八度收尾，情绪明显区别于 GAME_OVER 的下行哀鸣
+      playSynth('win', { freq: 523, duration: 0.16, wave: 'triangle', volume: 0.22 });
+      setTimeout(() => playSynth('win', { freq: 659, duration: 0.16, wave: 'triangle', volume: 0.22 }), 140);
+      setTimeout(() => playSynth('win', { freq: 784, duration: 0.16, wave: 'triangle', volume: 0.22 }), 280);
+      setTimeout(() => playSynth('win', { freq: 1047, duration: 0.20, wave: 'triangle', volume: 0.22 }), 420);
+      setTimeout(() => playSynth('win', { freq: 1568, duration: 0.36, wave: 'sine', volume: 0.20 }), 600);
+      haptic('medium');
+      break;
+    case ASSET_KEYS.AUDIO.LEVEL_UP:
+      // 关卡推进：清亮双音 ping（高→更高），与胜利华彩区分（更短、更轻）
+      playSynth('levelup', { freq: 880, duration: 0.12, wave: 'triangle', volume: 0.20 });
+      setTimeout(() => playSynth('levelup', { freq: 1319, duration: 0.16, wave: 'triangle', volume: 0.20 }), 110);
+      haptic('light');
+      break;
+    case ASSET_KEYS.AUDIO.SUN:
+      // 阳光收集：高频亮闪（铃铛感），与答题 CORRECT 的中频琶音区分
+      playSynth('sun', { freq: 1319, duration: 0.10, wave: 'sine', volume: 0.18 });
+      setTimeout(() => playSynth('sun', { freq: 1760, duration: 0.12, wave: 'sine', volume: 0.16 }), 70);
+      haptic('light');
+      break;
+    case ASSET_KEYS.AUDIO.PLACE:
+      // 植物放置：低频闷响（土落感），与 KILL 的爆破音区分（更柔、更短）
+      playSynth('place', { freq: 196, freqEnd: 130, duration: 0.14, wave: 'sine', volume: 0.20 });
+      haptic('medium');
+      break;
     default:
       break;
   }
@@ -138,10 +180,24 @@ function resume() {
   }
 }
 
+// v6 新增 (Task 7-B F9)：释放 WebAudio 上下文，避免永不释放
+function destroy() {
+  try {
+    if (audioContext && typeof audioContext.close === 'function') {
+      audioContext.close();
+    }
+  } catch (err) {
+    console.warn('[Audio] destroy close failed:', err);
+  }
+  audioContext = null;
+  soundEnabled = false;
+}
+
 module.exports = {
   init,
   setEnabled,
   play,
   pause,
-  resume
+  resume,
+  destroy           // v6 新增 (Task 7-B F9)
 };

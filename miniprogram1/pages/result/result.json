@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "游戏结束",
+  "navigationBarBackgroundColor": "#FFD1DC",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#FFF5F8",
+  "usingComponents": {},
+  "disableScroll": true
+}

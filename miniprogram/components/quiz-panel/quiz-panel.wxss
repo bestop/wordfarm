@@ -144,7 +144,7 @@
   font-weight: 900;
   color: #FFFFFF;
   pointer-events: none;
-  animation: pop-in 0.4s ease-out;
+  animation: pop-in-centered 0.4s ease-out;
   z-index: 10;
 }
 .feedback.correct {
@@ -156,7 +156,8 @@
   box-shadow: 0 8rpx 24rpx rgba(239,83,80,0.4);
 }
 
-@keyframes pop-in {
+/* v6 修复 (Task 11 F20): 改名为 pop-in-centered，避免与 app.wxss 全局 pop-in 同名冲突 */
+@keyframes pop-in-centered {
   0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
   60% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
   100% { transform: translate(-50%, -50%) scale(1); }

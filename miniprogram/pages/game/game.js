@@ -2,6 +2,10 @@
 
 const app = getApp();
 const { gameManager, PHASE } = require('../../utils/gameManager.js');
+// D4: 模块期同步读 app.globalData.layout，避免首帧 1334rpx 硬编码闪烁
+const _initLayout = (app.globalData && app.globalData.layout) || {};
+const _initPageHeight = _initLayout.windowHeightRpx || 1334;
+const _initSafeBottomRpx = _initLayout.safeBottomRpx || 0;
 const { renderer } = require('../../utils/renderer.js');
 const { pathManager } = require('../../utils/pathManager.js');
 const { DIFFICULTY_CONFIG, UI, ASSET_KEYS, PLANT_TYPES, PLANT_ORDER, SUNLIGHT } = require('../../utils/constants.js');
@@ -40,8 +44,6 @@ Page({
     level: 1,                 // v2: 当前关卡
     combo: 0,
     comboMult: 1,
-    maxCombo: 0,
-    fps: 60,
     paused: false,
     // 阳光经济 / 植物
     sunlight: SUNLIGHT.INITIAL,
@@ -54,14 +56,10 @@ Page({
     feedback: 'idle',         // 'idle' | 'correct' | 'wrong'
     quizDisabled: false,
     // 布局
-    safeTop: 0,
-    safeBottom: 0,
     // 自适应布局
-    pageHeight: 1334,
-    safeBottomRpx: 0,
+    pageHeight: _initPageHeight,
+    safeBottomRpx: _initSafeBottomRpx,
     quizSpacerH: 340,      // v14: fixed 面板占位高度（实测后更新，默认 340 兜底）
-    // 初始化标记
-    ready: false,
     // v3: 可收集阳光视图数组（DOM层可点击☀️图标）
     sunsView: [],
     // 游戏结束结算浮层（一屏显示，禁止滚动）
@@ -74,8 +72,6 @@ Page({
     const difficulty = options.difficulty || app.globalData.difficulty || 'middle';
     this.setData({
       difficulty,
-      safeTop: app.globalData.safeAreaInset.top,
-      safeBottom: app.globalData.safeAreaInset.bottom,
       defenseLines: 3,
       level: 1
     });
@@ -136,10 +132,47 @@ Page({
 
   /**
    * 横竖屏切换 / 窗口尺寸变化时重新计算布局
-   * 游戏中通常锁定竖屏，此回调主要用于页面初始化阶段的尺寸更新
+   * v6 修复 (Task 7-B F8): 同步通知 renderer / pathManager 重新同步内部尺寸状态，
+   *  避免旋转/分屏后画面错位（背景离屏缓存过期、路径采样过期）
    */
   onAdaptiveResize() {
     applyLayout(this);
+    this._resizeCanvas();
+  },
+
+  /**
+   * v6 修复 (Task 7-B F8): 画布尺寸变化时重新测量 + 通知 renderer / pathManager
+   * 与 _initCanvas 不同：不重新 attach、不重启游戏循环，只更新尺寸相关状态
+   * 适用场景：wx.onWindowResize 触发的旋转/分屏
+   */
+  _resizeCanvas() {
+    try {
+      const query = wx.createSelectorQuery();
+      query.select('#gameCanvas')
+        .fields({ node: true, size: true })
+        .exec((res) => {
+          try {
+            if (!res || !res[0] || !res[0].node) return;
+            const canvas = res[0].node;
+            const w = res[0].width || 0;
+            const h = res[0].height || 0;
+            if (w <= 0 || h <= 0) return;
+            const sys = app.globalData.systemInfo;
+            const dpr = sys.pixelRatio || 1;
+            canvas.width = w * dpr;
+            canvas.height = h * dpr;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            renderer.onResize(w, h, dpr);
+            pathManager.setCanvasSize(w, h);
+            pathManager.init();
+          } catch (err) {
+            console.warn('[Game] _resizeCanvas 异步回调异常:', err);
+          }
+        });
+    } catch (err) {
+      console.warn('[Game] _resizeCanvas 失败:', err);
+    }
   },
 
   onReady() {
@@ -160,6 +193,8 @@ Page({
   },
 
   onUnload() {
+    // v6 修复 (Task 7-C F4)：清理植物提示 timer，防止页面卸载后 setData-on-destroyed 警告
+    if (_plantTipTimer) { clearTimeout(_plantTipTimer); _plantTipTimer = null; }
     gameManager.destroy();
   },
 
@@ -174,7 +209,12 @@ Page({
       const sys = app.globalData.systemInfo;
       const dpr = sys.pixelRatio || 1;
 
-      this.setData({ ready: true }, () => {
+      // v6 修复 (Task 11 F15): 删除 ready 字段后用 wx.nextTick 触发调度
+      //  wx.nextTick 是微任务（基础库 2.7.0+ 全可用），降级 setTimeout(0) 保证不静默失败
+      const _scheduleAfterRender = wx.nextTick
+        ? (cb) => wx.nextTick(cb)
+        : (cb) => setTimeout(cb, 0);
+      _scheduleAfterRender(() => {
         this._tryInitCanvasNode(dpr, 0);
         this._measureQuizPanel(false);   // v14: 实测面板高度 → 更新 spacer
       });
@@ -255,7 +295,9 @@ Page({
           ctx.scale(dpr, dpr);
 
           // 绑定渲染器（内部含离屏缓存错误保护）
-          renderer.attach(ctx, canvasWpx, canvasHpx, dpr);
+          // v6 修复 (Task 7-B F2): 传 canvas 节点供 _preloadImages 调 canvas.createImage()，
+          //  激活此前一直走矢量兜底的图片加载路径
+          renderer.attach(ctx, canvasWpx, canvasHpx, dpr, canvas);
           pathManager.setCanvasSize(canvasWpx, canvasHpx);
           pathManager.init();
 
@@ -363,17 +405,30 @@ Page({
   /**
    * Canvas 点击放置植物
    * 用 boundingClientRect 将 clientX/Y 转为 canvas 内像素坐标
+   * v6 修复 (Task 7-C F2/F3)：父层 bindtouchend 改为 bindtap，使子元素 catchtap 能正确阻止冒泡。
+   *   tap 事件 e.detail.x/y 等价于 e.changedTouches[0].clientX/clientY（同视口坐标系）。
    */
   onCanvasTap(e) {
     if (!this.data.selectedPlant) return;
-    const touch = (e.changedTouches && e.changedTouches[0]) ||
-                  (e.touches && e.touches[0]);
-    if (!touch) return;
+    // v6 修复 (Task 7-C F3)：暂停状态不响应 canvas 点击，避免误触 toast
+    if (this.data.paused) return;
+    // tap 事件优先用 e.detail.x/y；兼容老式 touch 事件
+    let clientX, clientY;
+    if (e.detail && typeof e.detail.x === 'number') {
+      clientX = e.detail.x;
+      clientY = e.detail.y;
+    } else {
+      const touch = (e.changedTouches && e.changedTouches[0]) ||
+                    (e.touches && e.touches[0]);
+      if (!touch) return;
+      clientX = touch.clientX;
+      clientY = touch.clientY;
+    }
     const query = wx.createSelectorQuery();
     query.select('#gameCanvas').boundingClientRect((rect) => {
       if (!rect) return;
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
       const res = gameManager.tryPlacePlantAt(x, y);
       if (!res.ok) {
         if (res.reason && res.reason !== '未选择植物') {
@@ -411,10 +466,9 @@ Page({
       quizDisabled: true,
       feedback: 'idle'
     });
-    // 暂停游戏循环（结束后不再推进）
-    if (gameManager.state.phase === 'victory' || gameManager.state.phase === 'gameover') {
-      gameManager.pause();
-    }
+    // v6 修复 (Task 7-C F22 + F4)：_gameOver 内部已 _cancelRaf + 设 phase=VICTORY/GAME_OVER，
+    //   再调 pause() 会被 phase 守卫拒绝并打印 warn。改为直接清理 plantTip timer。
+    if (_plantTipTimer) { clearTimeout(_plantTipTimer); _plantTipTimer = null; }
     // 稍等最后一帧渲染后再弹出浮层（让玩家看到最后结果画面）
     setTimeout(() => {
       this.setData({
@@ -427,9 +481,13 @@ Page({
 
   /**
    * 结算页：再来一局（重新初始化本局）
+   * v6 修复 (Task 7-C F1)：原调 gameManager.resume() 会被 phase 守卫拒绝（initGame 后 phase=READY），
+   *   导致循环不启动 + 题目永久卡住。改为 start()：内部 transition 到 PLAYING + 生成首题 + 启动 _loop。
    */
   onGameOverRestart() {
     const difficulty = this.data.difficulty;
+    // v6 修复 (Task 7-C F4)：清理植物提示 timer，防止跨局泄漏
+    if (_plantTipTimer) { clearTimeout(_plantTipTimer); _plantTipTimer = null; }
     // 重置结束浮层
     this.setData({
       gameOverVisible: false,
@@ -439,7 +497,6 @@ Page({
       defenseLines: 3,
       level: 1,
       combo: 0,
-      maxCombo: 0,
       sunlight: SUNLIGHT.INITIAL,
       selectedPlant: null,
       selectedPlantName: '',
@@ -453,7 +510,7 @@ Page({
     });
     // 重新初始化游戏管理器
     gameManager.initGame(difficulty, WORD_BANK);
-    gameManager.resume();
+    gameManager.start();   // v6 修复：start() 内部会 transition 到 PLAYING 并启动 _loop
   },
 
   /**
@@ -508,6 +565,8 @@ Page({
       confirmColor: '#EF5350',
       success: (res) => {
         if (res.confirm) {
+          // v6 修复 (Task 7-C F4)：清理植物提示 timer
+          if (_plantTipTimer) { clearTimeout(_plantTipTimer); _plantTipTimer = null; }
           gameManager.destroy();
           wx.redirectTo({ url: '/pages/index/index' });
         }

@@ -1,0 +1,110 @@
+======================================================================
+  单词农场 WordFarm — 微信小程序源码包
+======================================================================
+
+打包时间 (Packaged) : 2026-08-28 08:26:38 
+版本标识 (Build)    : wf-wordfarm-20260828-0826
+归档文件 (Archive)  : wf-wordfarm-20260828-0826.zip
+归档大小 (Zip size) : 132.7 KB
+原始大小 (Raw size) : 431.2 KB
+文件总数 (Files)    : 36
+
+----------------------------------------------------------------------
+  目录结构 (Directory Structure)
+----------------------------------------------------------------------
+
+  wf-wordfarm/
+  ├── app.js              小程序入口
+  ├── app.json            小程序配置 (页面路由、tabBar)
+  ├── app.wxss            全局样式
+  ├── sitemap.json        搜索索引配置
+  ├── project.config.json  项目配置 (AppID、编译选项)
+  ├── project.private.config.json  本地私有配置
+  ├── README.md           项目说明
+  ├── TEST_REPORT.md       测试报告
+  ├── data/
+  │   └── words.js        单词数据 (~2500 词)
+  ├── utils/
+  │   ├── constants.js     全局常量
+  │   ├── gameManager.js   游戏总控
+  │   ├── plantManager.js  植物管理
+  │   ├── zombieManager.js 僵尸管理
+  │   ├── renderer.js      Canvas 渲染引擎
+  │   ├── audioManager.js  音频管理
+  │   ├── quizManager.js  答题管理
+  │   ├── pathManager.js   路径管理
+  │   ├── layoutUtil.js    布局工具
+  │   ├── storageManager.js 存档管理
+  │   └── fpsMonitor.js    帧率监控
+  ├── components/
+  │   └── quiz-panel/      答题面板组件
+  └── pages/
+      ├── index/           首页 (含 banner 矢量插画)
+      ├── game/            游戏页
+      └── result/          结算页
+
+----------------------------------------------------------------------
+  代码文件清单 (Code Files)
+----------------------------------------------------------------------
+
+  Path                                                   Size  SHA-256 (前12位)
+  ----------------------------------------------------------------------------
+  app.js                                               8.2 KB  f4285563951b
+  app.json                                            799.0 B  2322fc69ccdd
+  app.wxss                                             5.3 KB  6bb971db7812
+  components/quiz-panel/quiz-panel.js                  1.0 KB  01d50a87d8ac
+  components/quiz-panel/quiz-panel.json                53.0 B  a86141b3fc90
+  components/quiz-panel/quiz-panel.wxml                1.5 KB  9072aad732cb
+  components/quiz-panel/quiz-panel.wxss                4.5 KB  f8d442a8ac81
+  data/words.js                                       95.0 KB  47a970e9ec29
+  pages/game/game.js                                  19.9 KB  1db3cff292e7
+  pages/game/game.json                                275.0 B  e83dceb2c4fe
+  pages/game/game.wxml                                 8.9 KB  a07af6624fb1
+  pages/game/game.wxss                                34.5 KB  32f68ee0d289
+  pages/index/index.js                                 5.2 KB  2fb4b6018356
+  pages/index/index.json                              153.0 B  13a428a321ad
+  pages/index/index.wxml                               8.9 KB  67719c14ea4f
+  pages/index/index.wxss                              27.6 KB  5001554d4b80
+  pages/result/result.js                               3.8 KB  19d070cac755
+  pages/result/result.json                            219.0 B  8173c5e1ab85
+  pages/result/result.wxml                             3.8 KB  df53513f6593
+  pages/result/result.wxss                             3.7 KB  8556f44b192e
+  project.config.json                                  1.6 KB  2c8f2f895a18
+  project.private.config.json                         614.0 B  438397d41edf
+  sitemap.json                                        203.0 B  15c336e3bcf5
+  utils/audioManager.js                                7.5 KB  9a7b560b89ea
+  utils/constants.js                                  10.9 KB  fb9b3d9d1716
+  utils/fpsMonitor.js                                  2.7 KB  a303dd3ba2b3
+  utils/gameManager.js                                26.2 KB  4d78214620a3
+  utils/layoutUtil.js                                  4.4 KB  806dd1da1a47
+  utils/pathManager.js                                 3.5 KB  75dbe25da696
+  utils/plantManager.js                               15.7 KB  c4c630ac6772
+  utils/quizManager.js                                 8.2 KB  d1f2bd0c0a4d
+  utils/renderer.js                                   75.6 KB  66e780226120
+  utils/storageManager.js                              2.2 KB  1a2dcf9feeed
+  utils/zombieManager.js                              17.0 KB  0ee76a0bbb53
+
+----------------------------------------------------------------------
+  文档文件清单 (Documentation Files)
+----------------------------------------------------------------------
+
+  README.md                                           12.4 KB  78dfa3fe9fda
+  TEST_REPORT.md                                       9.4 KB  62abc5257462
+
+----------------------------------------------------------------------
+  使用方式 (Usage)
+----------------------------------------------------------------------
+
+  1. 解压本归档：unzip wf-wordfarm-<timestamp>.zip
+  2. 打开微信开发者工具，选择「导入项目」
+  3. 项目目录指向解压后的根目录
+  4. AppID 填写 project.config.json 中已配置的值，
+     或选择「测试号」用于本地预览
+  5. 点击「编译」即可在模拟器中预览
+
+  注意：
+  - 本包未含 node_modules / miniprogram_npm (无外部依赖)
+  - 所有图片资源均使用纯 CSS 矢量绘制，无 PNG/SVG 资产
+  - 行尾：index.wxml/wxss 为 LF；其他 JS/WXML 文件保留原始 CRLF
+
+======================================================================

@@ -2,60 +2,10 @@
 // 直线车道 + 网格坐标系（3 行 × 5 列）
 // lane=0,1,2 对应三条竖向车道；slot=0~4 从 spawn 侧(顶) 到 房子侧(底)
 
-const { PATHS, MOVEMENT, GRID } = require('./constants.js');
+const { GRID } = require('./constants.js');
 
-/**
- * 三次贝塞尔曲线点计算（保留为工具导出，直线车道不再使用）
- */
-function cubicBezier(t, p0, p1, p2, p3) {
-  const u = 1 - t;
-  const tt = t * t;
-  const uu = u * u;
-  const uuu = uu * u;
-  const ttt = tt * t;
-  return {
-    x: uuu * p0.x + 3 * uu * t * p1.x + 3 * u * tt * p2.x + ttt * p3.x,
-    y: uuu * p0.y + 3 * uu * t * p1.y + 3 * u * tt * p2.y + ttt * p3.y
-  };
-}
-
-/**
- * 二次贝塞尔曲线点计算（保留为工具导出）
- */
-function quadBezier(t, p0, p1, p2) {
-  const u = 1 - t;
-  return {
-    x: u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
-    y: u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y
-  };
-}
-
-/**
- * 路径采样（保留为工具导出，直线车道不再使用）
- */
-function samplePath(pathCtrl, precision = MOVEMENT.PATH_PRECISION) {
-  const samples = [];
-  if (pathCtrl.length < 4) {
-    for (let i = 0; i <= precision; i++) {
-      const t = i / precision;
-      const idx = Math.min(Math.floor(t * (pathCtrl.length - 1)), pathCtrl.length - 2);
-      const localT = t * (pathCtrl.length - 1) - idx;
-      const p0 = pathCtrl[idx];
-      const p1 = pathCtrl[Math.min(idx + 1, pathCtrl.length - 1)];
-      samples.push({
-        x: p0.x + (p1.x - p0.x) * localT,
-        y: p0.y + (p1.y - p0.y) * localT
-      });
-    }
-    return samples;
-  }
-  const [p0, p1, p2, p3] = pathCtrl;
-  for (let i = 0; i <= precision; i++) {
-    const t = i / precision;
-    samples.push(cubicBezier(t, p0, p1, p2, p3));
-  }
-  return samples;
-}
+// v6 修复 (Task 11 F7): 删除 cubicBezier / quadBezier / samplePath 三函数 + 全部导出
+//  原注释「保留为工具导出」误导，全项目零调用。直线车道下路径采样在 pathManager.init 中也已退化为 initialized=true
 
 /**
  * 路径管理器：直线车道 + 网格坐标系
@@ -180,8 +130,5 @@ const pathManager = new PathManager();
 
 module.exports = {
   pathManager,
-  cubicBezier,
-  quadBezier,
-  samplePath,
   PathManager
 };

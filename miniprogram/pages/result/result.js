@@ -2,6 +2,10 @@
 
 const app = getApp();
 const storageManager = require('../../utils/storageManager.js');
+// D4: 模块期同步读 app.globalData.layout，避免首帧 1334rpx 硬编码闪烁
+const _initLayout = (app.globalData && app.globalData.layout) || {};
+const _initPageHeight = _initLayout.windowHeightRpx || 1334;
+const _initSafeBottomRpx = _initLayout.safeBottomRpx || 0;
 const audioManager = require('../../utils/audioManager.js');
 const { ASSET_KEYS } = require('../../utils/constants.js');
 const { applyLayout } = require('../../utils/layoutUtil.js');
@@ -27,9 +31,8 @@ Page({
     // 星星动画
     starAnim: [false, false, false],
     // 自适应布局
-    pageHeight: 1334,
-    safeTopRpx: 0,
-    safeBottomRpx: 0
+    pageHeight: _initPageHeight,
+    safeBottomRpx: _initSafeBottomRpx
   },
 
   onLoad(options) {

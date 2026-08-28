@@ -1,0 +1,91 @@
+<!-- pages/result/result.wxml - 结算页（自适应布局 + 滚动） -->
+<!--
+  自适应布局结构:
+    .result-page (height: {{pageHeight}}rpx, flex column)
+      ├── scroll-view          (flex: 1, 可滚动: 标题/星级/分数/统计)
+      └── .actions             (flex-shrink: 0, 固定底部按钮)
+-->
+<view class="result-page adaptive-page" style="height: {{pageHeight}}rpx;">
+
+  <!-- 背景装饰（绝对定位，不影响布局） -->
+  <view class="bg-blob blob-pink"></view>
+  <view class="bg-blob blob-sky"></view>
+
+  <!-- ============ 可滚动内容区 ============ -->
+  <scroll-view scroll-y class="result-scroll adaptive-scroll" show-scrollbar="{{false}}">
+
+    <!-- 顶部标题 -->
+    <view class="result-header">
+      <view class="header-emoji">{{result === 'win' ? '🏆' : (stars >= 2 ? '🎉' : '🎮')}}</view>
+      <view class="header-title">{{isRecord ? '🏆 新纪录！' : (result === 'win' ? '🎉 通关胜利' : '游戏结束')}}</view>
+      <view class="header-sub">{{difficultyName}}模式 · {{result === 'win' ? '成功保卫庄园' : '守卫完毕'}}</view>
+    </view>
+
+    <!-- 星级评分 -->
+    <view class="stars-row">
+      <view class="star {{starAnim[0] ? 'on anim-pop' : 'off'}}">⭐</view>
+      <view class="star {{starAnim[1] ? 'on anim-pop' : 'off'}}">⭐</view>
+      <view class="star {{starAnim[2] ? 'on anim-pop' : 'off'}}">⭐</view>
+    </view>
+
+    <!-- 主分数卡 -->
+    <view class="score-card kawaii-card">
+      <view class="score-label">本局得分</view>
+      <view class="score-value kawaii-gradient-text">{{score}}</view>
+      <view wx:if="{{isRecord}}" class="record-badge">🏆 历史新高</view>
+      <view class="highest-row">历史最高分：<text class="highest">{{highestScore}}</text></view>
+    </view>
+
+    <!-- 统计明细 -->
+    <view class="stats-grid kawaii-card">
+      <view class="grid-item">
+        <view class="grid-emoji">🎯</view>
+        <view class="grid-val">{{accuracy}}%</view>
+        <view class="grid-label">准确率</view>
+      </view>
+      <view class="grid-item">
+        <view class="grid-emoji">🔥</view>
+        <view class="grid-val">x{{maxCombo}}</view>
+        <view class="grid-label">最高连击</view>
+      </view>
+      <view class="grid-item">
+        <view class="grid-emoji">🧟</view>
+        <view class="grid-val">{{killedZombies}}</view>
+        <view class="grid-label">击杀僵尸</view>
+      </view>
+      <view class="grid-item">
+        <view class="grid-emoji">✅</view>
+        <view class="grid-val">{{correctCount}}/{{correctCount + wrongCount}}</view>
+        <view class="grid-label">答对/总题</view>
+      </view>
+      <view class="grid-item">
+        <view class="grid-emoji">⏱</view>
+        <view class="grid-val">{{gameTime}}s</view>
+        <view class="grid-label">游戏时长</view>
+      </view>
+      <view class="grid-item">
+        <view class="grid-emoji">💪</view>
+        <view class="grid-val">{{difficultyName}}</view>
+        <view class="grid-label">难度</view>
+      </view>
+    </view>
+
+  </scroll-view>
+
+  <!-- ============ 操作按钮（固定底部） ============ -->
+  <view class="actions adaptive-fixed" style="padding-bottom: calc(20rpx + {{safeBottomRpx}}rpx);">
+    <button class="kawaii-btn kawaii-btn-primary action-btn" bindtap="onReplay">
+      <text>🔄</text> 再玩一次
+    </button>
+    <view class="action-row">
+      <button class="kawaii-btn kawaii-btn-sky action-sub" bindtap="onHome">
+        🏠 首页
+      </button>
+      <button class="kawaii-btn kawaii-btn-mint action-sub" open-type="share">
+        📤 分享
+      </button>
+    </view>
+    <view class="footer-tip">💡 多答对单词可触发连击倍率，分数飞涨！</view>
+  </view>
+
+</view>

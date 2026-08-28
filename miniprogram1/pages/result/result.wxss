@@ -1,0 +1,176 @@
+/* pages/result/result.wxss - 结算页样式（自适应布局 + 滚动） */
+
+/*
+ * 布局原理:
+ *   .result-page 高度由 JS 内联 style 设为 windowHeightRpx
+ *   flex column: scroll-view(弹性) + actions(固定底部)
+ *   小屏内容溢出时 scroll-view 自动滚动
+ */
+.result-page {
+  padding: 0 32rpx;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80rpx);
+  pointer-events: none;
+  z-index: 0;
+}
+.blob-pink { width: 400rpx; height: 400rpx; background: #FFD1DC; top: -120rpx; right: -100rpx; opacity: 0.5; }
+.blob-sky { width: 360rpx; height: 360rpx; background: #C7E9FF; bottom: -100rpx; left: -80rpx; opacity: 0.45; }
+
+/* ============ 可滚动内容区 ============ */
+.result-scroll {
+  position: relative;
+  z-index: 1;
+  /* min-height: 0 由 .adaptive-scroll 提供 */
+}
+
+/* ============ 顶部标题 ============ */
+.result-header {
+  text-align: center;
+  padding: 24rpx 0 12rpx;
+}
+.header-emoji {
+  font-size: 88rpx;
+  animation: float-slow 2.5s ease-in-out infinite;
+}
+.header-title {
+  font-size: 52rpx;
+  font-weight: 900;
+  color: #5D4037;
+  margin-top: 8rpx;
+}
+.header-sub {
+  font-size: 24rpx;
+  color: #8D6E63;
+  margin-top: 6rpx;
+}
+
+/* ============ 星级 ============ */
+.stars-row {
+  display: flex;
+  justify-content: center;
+  gap: 20rpx;
+  margin: 12rpx 0 20rpx;
+}
+.star {
+  font-size: 72rpx;
+  transition: transform 0.3s ease;
+  filter: grayscale(1) opacity(0.3);
+}
+.star.on {
+  filter: none;
+  text-shadow: 0 6rpx 16rpx rgba(245,196,60,0.5);
+}
+
+/* ============ 主分数卡 ============ */
+.score-card {
+  text-align: center;
+  padding: 28rpx 32rpx;
+  margin-bottom: 20rpx;
+}
+.score-label {
+  font-size: 24rpx;
+  color: #8D6E63;
+  font-weight: 700;
+}
+.score-value {
+  font-size: 104rpx;
+  font-weight: 900;
+  line-height: 1.1;
+  margin: 8rpx 0;
+  filter: drop-shadow(0 6rpx 14rpx rgba(243,139,168,0.3));
+}
+.record-badge {
+  display: inline-block;
+  padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(145deg, #FFF3B0, #F5C43C);
+  color: #5D4037;
+  font-size: 24rpx;
+  font-weight: 900;
+  border: 3rpx solid #FFFFFF;
+  box-shadow: 0 6rpx 16rpx rgba(245,196,60,0.4);
+  margin-top: 8rpx;
+}
+.highest-row {
+  font-size: 24rpx;
+  color: #8D6E63;
+  margin-top: 12rpx;
+  font-weight: 600;
+}
+.highest {
+  color: #F48FB1;
+  font-weight: 900;
+  font-size: 28rpx;
+}
+
+/* ============ 统计网格 ============ */
+.stats-grid {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 16rpx 12rpx;
+  margin-bottom: 16rpx;
+}
+.grid-item {
+  flex: 1 1 33%;
+  min-width: 33%;
+  text-align: center;
+  padding: 14rpx 8rpx;
+  border-right: 2rpx solid rgba(243,139,168,0.08);
+  border-bottom: 2rpx solid rgba(243,139,168,0.08);
+}
+.grid-item:nth-child(3n) { border-right: none; }
+.grid-item:nth-last-child(-n+3) { border-bottom: none; }
+.grid-emoji { font-size: 36rpx; }
+.grid-val {
+  font-size: 32rpx;
+  font-weight: 900;
+  color: #5D4037;
+  margin: 4rpx 0;
+}
+.grid-label {
+  font-size: 20rpx;
+  color: #8D6E63;
+}
+
+/* ============ 操作按钮（固定底部） ============ */
+.actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  align-items: center;
+  padding-top: 8rpx;
+  /* padding-bottom 由内联 style 动态设置安全区高度 */
+}
+.action-btn {
+  width: 80%;
+  font-size: 36rpx;
+  padding: 24rpx 0;
+}
+.action-row {
+  display: flex;
+  gap: 20rpx;
+  width: 80%;
+}
+.action-sub {
+  flex: 1;
+  font-size: 30rpx;
+  padding: 20rpx 0;
+}
+
+.footer-tip {
+  text-align: center;
+  font-size: 22rpx;
+  color: #8D6E63;
+  margin-top: 8rpx;
+  font-weight: 600;
+}

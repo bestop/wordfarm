@@ -1,0 +1,30 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/game/game",
+    "pages/result/result"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#FFD1DC",
+    "navigationBarTitleText": "单词农场",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#FFF5F8",
+    "enablePullDownRefresh": false,
+    "navigationStyle": "default"
+  },
+  "deviceOrientation": "portrait",
+  "pageOrientation": "portrait",
+  "resizable": false,
+  "permission": {
+    "scope.userInfo": {
+      "desc": "用于展示用户头像与昵称"
+    }
+  },
+  "requiredPrivateInfos": [],
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents",
+  "renderer": "webview",
+  "componentFramework": "glass-easel"
+}

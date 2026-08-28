@@ -1,0 +1,38 @@
+<!-- components/quiz-panel/quiz-panel.wxml - 答题面板 -->
+<view class="quiz-panel">
+  <!-- 题目区（占面板高度50%） -->
+  <view class="question-area {{feedback === 'correct' ? 'fb-correct' : ''}} {{feedback === 'wrong' ? 'fb-wrong anim-shake' : ''}}">
+    <view class="question-label">
+      <text>📝 {{question.prompt || '选出正确答案'}}</text>
+    </view>
+    <view wx:if="{{question}}" class="question-content">
+      <view class="word">{{question.content}}</view>
+      <view wx:if="{{question.phonetic}}" class="phonetic">/{{question.phonetic}}/</view>
+    </view>
+    <view wx:else class="question-empty">准备题目中...</view>
+  </view>
+
+  <!-- 选项区（占面板高度50%） -->
+  <view class="options-area">
+    <block wx:if="{{question && question.options}}">
+      <view
+        wx:for="{{question.options}}"
+        wx:key="*this"
+        class="option {{selectedOption === index ? 'selected' : ''}} {{disabled && index === question.correctAnswer ? 'reveal' : ''}}"
+        data-index="{{index}}"
+        bindtap="onTapOption"
+      >
+        <view class="option-text">{{item}}</view>
+      </view>
+    </block>
+    <view wx:else class="question-empty">准备选项中...</view>
+  </view>
+
+  <!-- 答题反馈浮层 -->
+  <view wx:if="{{feedback === 'correct'}}" class="feedback fb-overlay correct">
+    <text>✓ 答对了！</text>
+  </view>
+  <view wx:if="{{feedback === 'wrong'}}" class="feedback fb-overlay wrong">
+    <text>✗ 答错了！</text>
+  </view>
+</view>

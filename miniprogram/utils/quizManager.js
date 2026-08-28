@@ -208,7 +208,8 @@ class QuizManager {
    * @returns {Object} {correct, score, combo, comboMult, sunlightReward}
    */
   answer(optionIndex) {
-    if (!this.currentQuestion) return { correct: false, score: 0, sunlightReward: 0 };
+    // v6 修复 (Task 7-A F12)：返回形状必须与成功分支一致，否则 gameManager.answer 读 undefined → maxCombo 变 NaN
+    if (!this.currentQuestion) return { correct: false, score: 0, combo: 0, comboMult: 1, sunlightReward: 0 };
     const correct = optionIndex === this.currentQuestion.correctAnswer;
     this.totalAnswered++;
     let score = 0;

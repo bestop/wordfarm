@@ -65,6 +65,12 @@ App({
               this.globalData.layout.windowHeight = res.size.windowHeight;
               this.globalData.layout.windowHeightRpx = Math.floor(res.size.windowHeight * rpxRatio);
               this.globalData.layout.rpxRatio = rpxRatio;
+              // D2: 旧版本未重置安全区，旋转后切换到横屏时用过期竖屏数据导致错误 padding
+              // res.size 未携带 safeArea，无法重新计算，置 0 比留过期值更安全
+              this.globalData.layout.safeTopPx = 0;
+              this.globalData.layout.safeBottomPx = 0;
+              this.globalData.layout.safeTopRpx = 0;
+              this.globalData.layout.safeBottomRpx = 0;
             }
           }
           // 通知当前页面重新计算布局
@@ -101,13 +107,23 @@ App({
    * @param {Object} sys - wx.getSystemInfoSync() 返回值
    */
   _computeLayout(sys) {
+    // v6 修复 (Task 11 F24): 提取 statusBarHeight 表达式为本地常量，避免 L122/L135 重复
+    const fallbackStatusBar = sys.statusBarHeight || (sys.platform === 'android' ? 24 : 20);
     const windowWidth = sys.windowWidth || 375;
     const windowHeight = sys.windowHeight || 667;
     const rpxRatio = 750 / windowWidth;
-    const safeArea = sys.safeArea || {};
+    const safeArea = (sys.safeArea && typeof sys.safeArea.bottom === 'number') ? sys.safeArea : null;
     // 安全区: 顶部(状态栏) + 底部(home indicator)
-    const safeTopPx = safeArea.top || 0;
-    const safeBottomPx = Math.max(0, (sys.screenHeight || windowHeight) - (safeArea.bottom || windowHeight));
+    // D1: safeArea 完全缺失时不再用 windowHeight 充当 bottom（会误把导航栏高当作 home indicator）
+    let safeTopPx, safeBottomPx;
+    if (safeArea) {
+      safeTopPx = safeArea.top || 0;
+      safeBottomPx = Math.max(0, (sys.screenHeight || windowHeight) - safeArea.bottom);
+    } else {
+      // safeArea 完全缺失：顶部用 statusBarHeight 公共回退，底部置 0（无 home indicator 信息时不猜测）
+      safeTopPx = fallbackStatusBar;
+      safeBottomPx = 0;
+    }
 
     this.globalData.layout = {
       windowWidth: windowWidth,
@@ -118,7 +134,7 @@ App({
       safeBottomPx: safeBottomPx,
       safeTopRpx: Math.floor(safeTopPx * rpxRatio),
       safeBottomRpx: Math.floor(safeBottomPx * rpxRatio),
-      statusBarHeight: sys.statusBarHeight || 20,
+      statusBarHeight: fallbackStatusBar,
       platform: sys.platform || 'unknown'
     };
 

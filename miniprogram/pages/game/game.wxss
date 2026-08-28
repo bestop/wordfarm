@@ -61,7 +61,6 @@
   max-width: 100%;
 }
 .hud-score { flex: 1.2; }
-.hud-lives { flex: 1.4; }
 .hud-defense { flex: 1.4; }
 .hud-combo { flex: 1; }
 .hud-sunlight { flex: 1.1; }
@@ -817,10 +816,6 @@
   filter: grayscale(0.5) opacity(0.6);
 }
 
-.shop-emoji {
-  font-size: 28rpx;
-  line-height: 1;
-}
 .shop-name {
   font-size: 14rpx;
   color: #6D4C41;
