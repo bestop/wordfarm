@@ -69,3 +69,5 @@ server.log
 /.git-backup*/
 *.db
 *.pid
+# public 目录下的临时分发压缩包（不进仓库）
+/public/*.zip
