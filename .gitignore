@@ -75,3 +75,6 @@ server.log
 .device_code_response.json
 .device_flow.log
 .github-credentials
+
+# 音标校验工具的数据文件 (CMU词典/中间报告, 本地保留不入库)
+scripts/data/
