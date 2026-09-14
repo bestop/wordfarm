@@ -70,4 +70,7 @@ server.log
 *.db
 *.pid
 # public 目录下的临时分发压缩包（不进仓库）
-/public/*.zip
+/public/*.zip# GitHub 设备授权临时文件（绝不入库）
+.github_token
+.device_code_response.json
+.device_flow.log
