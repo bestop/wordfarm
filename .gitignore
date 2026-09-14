@@ -74,3 +74,4 @@ server.log
 .github_token
 .device_code_response.json
 .device_flow.log
+.github-credentials
