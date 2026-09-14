@@ -22,7 +22,9 @@ export default function QuizPanel({ snap, onAnswer }: Props) {
   const remain = snap.quizRemainMs
   const ratio = remain !== null && snap.quizTimeLimit ? remain / snap.quizTimeLimit : 1
   const danger = remain !== null && remain <= QUIZ.TIMER_DANGER_MS
-  const locked = fb !== null || !q
+  // v57: 仅在无题时锁定；新题加载后立即可答（对齐小程序温和化设计），
+  //   feedback 残留期间不再锁按钮
+  const locked = !q
 
   return (
     <div
@@ -71,22 +73,19 @@ export default function QuizPanel({ snap, onAnswer }: Props) {
           </div>
 
           {/* 选项 2×2 */}
+          {/* v57 修复: 选项不再按 correctAnswer 高亮 —— 引擎换题后 feedback 仍残留
+              0.7~0.9s，旧逻辑会把「新题」的正确答案染绿直接剧透；与小程序对齐：
+              反馈只走面板底色 + 文字横幅，选项保持中性色，新题立即可答 */}
           <div className="grid grid-cols-2 gap-2">
             {q.options.map((opt, i) => {
-              const isCorrect = fb !== null && i === q.correctAnswer
-              const isWrongPick = fb?.kind === 'wrong'
               return (
                 <button
                   key={`${q.id}-${i}`}
                   onClick={() => onAnswer(i)}
                   disabled={locked}
-                  className={`rounded-xl px-2 py-2.5 text-sm sm:text-base font-bold border-2 transition-all ${
-                    isCorrect
-                      ? 'border-[#8BC34A] bg-[#DCEDC8] text-[#33691E] scale-[1.02]'
-                      : isWrongPick && i === q.correctAnswer
-                        ? 'border-[#8BC34A] bg-[#DCEDC8] text-[#33691E] animate-pulse'
-                        : 'border-[#F0E6DC] bg-[#FFFDF8] text-[#5D4037] hover:border-[#F6B8C6] hover:bg-[#FFF3C4] active:scale-95'
-                  } disabled:cursor-default`}
+                  className={`rounded-xl px-2 py-2.5 text-sm sm:text-base font-bold border-2 transition-all border-[#F0E6DC] bg-[#FFFDF8] text-[#5D4037] hover:border-[#F6B8C6] hover:bg-[#FFF3C4] active:scale-95 ${
+                    locked ? 'cursor-default' : ''
+                  }`}
                 >
                   {opt}
                 </button>
@@ -95,11 +94,13 @@ export default function QuizPanel({ snap, onAnswer }: Props) {
           </div>
 
           {/* 反馈条 */}
+          {/* v57 修复: 不再展示「正确答案: xxx」文字 —— 同理会在新题上剧透答案，
+              与小程序一致只提示对/错 + 惩罚预告 */}
           <div className="h-5 mt-1 text-center text-xs font-bold" aria-live="polite">
             {fb?.kind === 'correct' && <span className="text-[#66BB6A]">✅ 答对啦！阳光 +30</span>}
             {fb?.kind === 'wrong' && (
               <span className="text-[#E57373]">
-                ❌ 正确答案: {q.options[q.correctAnswer]}
+                ❌ 答错啦！
                 {snap.wrongStreak >= 2 ? ' · 僵尸加速了！' : ' · 再错一次会加速哦'}
               </span>
             )}
