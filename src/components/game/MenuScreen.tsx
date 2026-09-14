@@ -1,7 +1,7 @@
-// src/components/game/MenuScreen.tsx - 欢迎页：品牌标题 + 难度选择 + 词库导入 + 奖励中心入口
+// src/components/game/MenuScreen.tsx - 欢迎页：品牌标题 + 难度选择 + 词库导入 + 奖励中心/玩法弹窗入口
 'use client'
 
-import { useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { DIFFICULTY_CONFIG, type DifficultyKey } from '@/game/constants'
 import { WORD_BANK_STATS } from '@/game/words'
 import { parsePack, savePack, loadPackCached, subscribePack, removePack, validateFile } from '@/game/customPack'
@@ -27,6 +27,20 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
   const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const packInfo = useSyncExternalStore(subscribePack, loadPackCached, () => null)
   const fileRef = useRef<HTMLInputElement>(null)
+  // 「如何玩」弹窗（点击菜单后显示，避免首页信息过载）
+  const [showHelp, setShowHelp] = useState(false)
+  const helpCloseRef = useRef<HTMLButtonElement>(null)
+
+  // 弹窗打开时聚焦关闭按钮 + ESC 关闭
+  useEffect(() => {
+    if (!showHelp) return
+    helpCloseRef.current?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowHelp(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showHelp])
 
   // 当前选中的难度（对齐小程序 diff-pill 选中态 + 底部「开始」大按钮的两步交互）
   // 默认选上次玩的难度；上次是自定义但词库已被清除则回退小学
@@ -202,24 +216,79 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
         aria-label="导入词库文件"
       />
 
-      {/* 奖励中心 */}
-      <button
-        onClick={onOpenRewards}
-        className="mt-7 px-6 py-3 rounded-full bg-[#F6B8C6] hover:bg-[#F2A6B8] text-white font-bold shadow-md transition-colors text-sm"
-      >
-        🎁 亲子奖励中心
-      </button>
-
-      {/* 玩法说明 */}
-      <div className="mt-6 w-full max-w-2xl rounded-2xl bg-white/85 p-4 text-sm text-[#5D4037] leading-6 shadow-sm">
-        <p className="font-bold mb-1"> 🕹 怎么玩？</p>
-        <p>
-          ① 底部答题面板会持续出题（英译中 / 中译英 / 选音标），答对可得 <b>阳光 +30</b> 与分数，连击越高倍率越大（最高 ×3）。
-        </p>
-        <p>② 用阳光在下方商店点击选择植物，再点击草地格子种下：向日葵产阳光、豌豆射手打僵尸、坚果挡路…</p>
-        <p>③ 僵尸共 10 关，越往后越强；第 10 关僵尸王携护卫队压境，清完全场即胜利。防线共 3 道，全破则失败。</p>
-        <p className="text-xs text-[#B08080] mt-1">答错前 1 次只清连击不加速（儿童向温和惩罚）；超时自动换题不扣分。</p>
+      {/* 次级入口：如何玩 + 亲子奖励中心 */}
+      <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+        <button
+          onClick={() => setShowHelp(true)}
+          aria-haspopup="dialog"
+          aria-expanded={showHelp}
+          className="px-6 py-3 rounded-full bg-[#8FD27A] hover:bg-[#7BC566] text-white font-bold shadow-md transition-colors text-sm"
+        >
+          🕹 如何玩
+        </button>
+        <button
+          onClick={onOpenRewards}
+          className="px-6 py-3 rounded-full bg-[#F6B8C6] hover:bg-[#F2A6B8] text-white font-bold shadow-md transition-colors text-sm"
+        >
+          🎁 亲子奖励中心
+        </button>
       </div>
+
+      {/* 玩法说明弹窗（点击「如何玩」后显示） */}
+      {showHelp && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="如何玩"
+          onClick={() => setShowHelp(false)}
+        >
+          <div
+            className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-3xl bg-[#FFF9EF] p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xl font-black text-[#5D4037]">🕹 如何玩</h2>
+              <button
+                ref={helpCloseRef}
+                onClick={() => setShowHelp(false)}
+                className="w-9 h-9 rounded-full bg-[#F6B8C6] hover:bg-[#F2A6B8] text-white font-bold transition-colors"
+                aria-label="关闭玩法说明"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-3 text-sm text-[#5D4037] leading-6">
+              <section className="rounded-2xl bg-white/90 p-3.5">
+                <p className="font-bold mb-1">🎯 游戏目标</p>
+                <p>守住农场小屋，闯过全部 10 关。僵尸共 10 波、越往后越强；第 10 关僵尸王携护卫队压境，清完全场即胜利。防线共 3 道，全破则失败。</p>
+              </section>
+              <section className="rounded-2xl bg-white/90 p-3.5">
+                <p className="font-bold mb-1">☀️ 答题得阳光</p>
+                <p>底部答题面板持续出题（英译中 / 中译英 / 选音标），答对可得 <b>阳光 +30</b> 与分数，连击越高倍率越大（最高 ×3）。</p>
+              </section>
+              <section className="rounded-2xl bg-white/90 p-3.5">
+                <p className="font-bold mb-1">🌱 种植防御</p>
+                <p>用阳光在下方商店点选植物，再点击草地格子种下：向日葵产阳光、豌豆射手打僵尸、坚果挡路、寒冰射手减速、樱桃炸弹范围爆炸、食人花一口吞。</p>
+              </section>
+              <section className="rounded-2xl bg-white/90 p-3.5">
+                <p className="font-bold mb-1">💝 温和惩罚（儿童向）</p>
+                <p className="text-xs text-[#8D6E63]">答错前 1 次只清连击不加速；超时自动换题不扣分。</p>
+              </section>
+            </div>
+            <button
+              onClick={() => setShowHelp(false)}
+              className="mt-5 w-full py-3 rounded-full text-white font-black tracking-[0.2em] transition-transform active:scale-[0.98] hover:brightness-105"
+              style={{
+                background: 'linear-gradient(180deg, #9BDF7F 0%, #6FCF5E 50%, #4EA944 100%)',
+                boxShadow: '0 4px 0 #35742C, inset 0 2px 0 rgba(255,255,255,0.55)',
+              }}
+            >
+              知道啦，开始冒险！
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
