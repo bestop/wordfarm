@@ -185,10 +185,10 @@ function buildBackground(engine: GameEngine, dpr: number) {
 }
 
 /**
- * 农场篱笆门（替换原小房子）· v2 修正透视角度：
- * 篱笆沿左边缘纵向延伸（走向 = 屏幕竖直），因此板条竖放（长轴沿篱笆走向）、
- * 木桩直立带圆头柱帽分布在上端/门上/门下/下端；
- * 中段农场门取正面视角：门框 + 竖板门芯 + X 斜撑 + 合页 + 金把手 + 爱心
+ * 农场篱笆门（替换原小房子）· v3 门叶朝向僵尸来向：
+ * 篱笆沿左边缘纵向延伸（走向 = 屏幕竖直），板条竖放、木桩直立圆头柱帽；
+ * 中段农场门绕左门轴向草坪（僵尸来向 = 屏幕右侧）微旋：右缘梯形放大（近端）
+ * + 左侧门板厚度侧面 + 右缘受光高光（太阳在右上）+ 门闩把手全在右缘
  */
 function drawFenceGate(ctx: Ctx2D, x: number, top: number, height: number, cellH: number) {
   const fw = Math.max(30, x - 10) // 篱笆带宽
@@ -224,70 +224,109 @@ function drawFenceGate(ctx: Ctx2D, x: number, top: number, height: number, cellH
     ctx.lineWidth = 1
     roundRect(ctx, bx, fy, bw, fh, Math.min(6, bw * 0.4))
     ctx.stroke()
-    // 左缘高光（圆木立体感）
+    // 右缘高光（朝阳面，太阳在右上；与门叶受光方向一致）
     ctx.strokeStyle = 'rgba(255,255,255,0.22)'
     ctx.lineWidth = 1.5
     ctx.beginPath()
-    ctx.moveTo(bx + 2, fy + 8)
-    ctx.lineTo(bx + 2, fy + fh - 8)
+    ctx.moveTo(bx + bw - 2, fy + 8)
+    ctx.lineTo(bx + bw - 2, fy + fh - 8)
     ctx.stroke()
   }
 
-  // ---- 篱笆门（门框 + 竖板门芯 + X 斜撑 + 合页 + 把手 + 爱心）----
+  // ---- 篱笆门（门叶绕左门轴向僵尸来向 = 屏幕右侧微旋：右缘梯形放大近端）----
   const gxx = fx + 1
   const gww = fw - 2
-  const gGrad = ctx.createLinearGradient(0, gy, 0, gEnd)
+  const tilt = gateH * 0.1 // 右缘（近僵尸侧）离相机更近 → 上下各外扩 tilt
+  const KP = 0.22 // 透视强度：等宽门板近端投影更宽，门叶朝草坪旋出感
+  const up = (t: number) => (t + KP * t * t) / (1 + KP)
+  const GX = (t: number) => gxx + gww * up(t)
+  const gTop = (t: number) => gy - tilt * up(t)
+  const gBot = (t: number) => gEnd + tilt * up(t)
+  const gH = (u: number) => gBot(u) - gTop(u)
+  // 梯形四边形路径（u: 横向 0~1, v: 纵向 0~1）
+  const quadUV = (u0: number, v0: number, u1: number, v1: number) => {
+    ctx.beginPath()
+    ctx.moveTo(GX(u0), gTop(u0) + gH(u0) * v0)
+    ctx.lineTo(GX(u1), gTop(u1) + gH(u1) * v0)
+    ctx.lineTo(GX(u1), gTop(u1) + gH(u1) * v1)
+    ctx.lineTo(GX(u0), gTop(u0) + gH(u0) * v1)
+    ctx.closePath()
+  }
+  // 左侧厚度侧面（门轴侧看到门板厚度，深色 → 门面朝右侧）
+  ctx.fillStyle = woodDeep
+  ctx.beginPath()
+  ctx.moveTo(gxx - 6, gy + 2)
+  ctx.lineTo(gxx, gy)
+  ctx.lineTo(gxx, gEnd)
+  ctx.lineTo(gxx - 6, gEnd - 2)
+  ctx.closePath()
+  ctx.fill()
+  // 门叶（梯形填充，上亮下暗，受光与场景太阳一致）
+  const gGrad = ctx.createLinearGradient(0, gy, 0, gEnd + tilt)
   gGrad.addColorStop(0, '#DCB584')
   gGrad.addColorStop(1, woodB)
   ctx.fillStyle = gGrad
-  roundRect(ctx, gxx, gy, gww, gateH, 8)
+  quadUV(0, 0, 1, 1)
   ctx.fill()
   // 门芯凹槽底
   ctx.fillStyle = 'rgba(111,78,55,0.14)'
-  roundRect(ctx, gxx + 3, gy + 3, gww - 6, gateH - 6, 6)
+  quadUV(0.035, 0.035, 0.965, 0.965)
   ctx.fill()
   // 竖板门芯（与篱笆板条同向，经典农场门）
   const pw = Math.max(6, gww * 0.13)
   const pn = Math.max(3, Math.floor((gww - 8 + 2) / (pw + 2)))
-  const startX = gxx + (gww - (pn * pw + (pn - 1) * 2)) / 2
+  const gu = 2 / gww
+  const pu = (1 - (pn - 1) * gu) / pn
   for (let i = 0; i < pn; i++) {
+    const u0 = i * (pu + gu)
     ctx.fillStyle = i % 2 === 0 ? '#CB9F72' : woodB
-    roundRect(ctx, startX + i * (pw + 2), gy + 5, pw, gateH - 10, 3)
+    quadUV(u0, 0.05, u0 + pu, 0.95)
     ctx.fill()
   }
-  // X 斜撑
+  // X 斜撑（端点按梯形插值）
   ctx.strokeStyle = woodDark
   ctx.lineWidth = Math.max(3.5, gww * 0.085)
   ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
   ctx.beginPath()
-  ctx.moveTo(gxx + gww * 0.2, gy + gateH * 0.17)
-  ctx.lineTo(gxx + gww * 0.8, gy + gateH * 0.83)
-  ctx.moveTo(gxx + gww * 0.8, gy + gateH * 0.17)
-  ctx.lineTo(gxx + gww * 0.2, gy + gateH * 0.83)
+  ctx.moveTo(GX(0.2), gTop(0.2) + gH(0.2) * 0.17)
+  ctx.lineTo(GX(0.8), gTop(0.8) + gH(0.8) * 0.83)
+  ctx.moveTo(GX(0.8), gTop(0.8) + gH(0.8) * 0.17)
+  ctx.lineTo(GX(0.2), gTop(0.2) + gH(0.2) * 0.83)
   ctx.stroke()
   ctx.lineCap = 'butt'
   // 门框描边
   ctx.strokeStyle = woodDark
   ctx.lineWidth = 2
-  roundRect(ctx, gxx, gy, gww, gateH, 8)
+  quadUV(0, 0, 1, 1)
   ctx.stroke()
-  // 合页（左侧上下两枚，读作「门」）
+  // 右缘受光高光（太阳在右上，门面朝僵尸来向）
+  ctx.strokeStyle = 'rgba(255,255,255,0.45)'
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.moveTo(GX(1) - 1.5, gTop(1) + 4)
+  ctx.lineTo(GX(1) - 1.5, gBot(1) - 4)
+  ctx.stroke()
+  // 合页扣带（左侧门轴处探出，压在厚度侧面之上）
   ctx.fillStyle = woodDeep
-  roundRect(ctx, gxx - 1, gy + gateH * 0.16, 5.5, gateH * 0.1, 2.5)
+  roundRect(ctx, gxx - 7.5, gy + gateH * 0.16, 9.5, gateH * 0.09, 2.5)
   ctx.fill()
-  roundRect(ctx, gxx - 1, gy + gateH * 0.74, 5.5, gateH * 0.1, 2.5)
+  roundRect(ctx, gxx - 7.5, gy + gateH * 0.75, 9.5, gateH * 0.09, 2.5)
   ctx.fill()
-  // 金色把手（右侧）
+  // 门闩 + 金色把手（全在右缘 = 朝向僵尸来向的操作面）
+  ctx.fillStyle = woodDeep
+  quadUV(0.9, 0.38, 0.955, 0.64)
+  ctx.fill()
   ctx.fillStyle = '#FFD54F'
   ctx.beginPath()
-  ctx.arc(gxx + gww - 6.5, gy + gateH * 0.52, 3.6, 0, Math.PI * 2)
+  ctx.arc(GX(0.928), gTop(0.928) + gH(0.928) * 0.51, 3.8, 0, Math.PI * 2)
   ctx.fill()
   ctx.strokeStyle = woodDeep
   ctx.lineWidth = 1
   ctx.stroke()
   // 门上部小爱心（X 斜撑上三角留白处，白色光晕衬底更醒目）
-  const heartX = gxx + gww * 0.5
-  const heartY = gy + gateH * 0.27
+  const heartX = GX(0.5)
+  const heartY = gTop(0.5) + gH(0.5) * 0.27
   ctx.fillStyle = 'rgba(255,255,255,0.92)'
   heart(ctx, heartX, heartY + 1, 8)
   ctx.fillStyle = '#F6A5B8'
