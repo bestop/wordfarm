@@ -185,8 +185,10 @@ function buildBackground(engine: GameEngine, dpr: number) {
 }
 
 /**
- * 农场篱笆门（替换原小房子）：
- * 横板木篱笆（上下两段）+ 中段 X 斜撑农场门 + 金色把手 + 爱心门饰 + 脚下草丛
+ * 农场篱笆门（替换原小房子）· v2 修正透视角度：
+ * 篱笆沿左边缘纵向延伸（走向 = 屏幕竖直），因此板条竖放（长轴沿篱笆走向）、
+ * 木桩直立带圆头柱帽分布在上端/门上/门下/下端；
+ * 中段农场门取正面视角：门框 + 竖板门芯 + X 斜撑 + 合页 + 金把手 + 爱心
  */
 function drawFenceGate(ctx: Ctx2D, x: number, top: number, height: number, cellH: number) {
   const fw = Math.max(30, x - 10) // 篱笆带宽
@@ -204,65 +206,58 @@ function drawFenceGate(ctx: Ctx2D, x: number, top: number, height: number, cellH
   roundRect(ctx, fx - 2, fy + fh - 5, fw + 8, 10, 5)
   ctx.fill()
 
-  // ---- 横板篱笆（上下两段，中间留给门）----
-  const gateH = Math.min(cellH * 1.15, fh * 0.44)
+  // 门的中段位置
+  const gateH = Math.min(cellH * 1.15, fh * 0.42)
   const gy = top + height / 2 - gateH / 2
-  const plankH = Math.max(9, cellH * 0.09)
-  const drawPlanks = (y0: number, y1: number) => {
-    let k = 0
-    for (let py = y0; py + plankH <= y1 + 0.5; py += plankH + 3, k++) {
-      ctx.fillStyle = k % 2 === 0 ? woodA : woodB
-      roundRect(ctx, fx, py, fw, plankH, 4)
-      ctx.fill()
-      // 木纹
-      ctx.strokeStyle = 'rgba(111,78,55,0.22)'
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      ctx.moveTo(fx + 4, py + plankH * 0.5)
-      ctx.lineTo(fx + fw - 4, py + plankH * 0.5)
-      ctx.stroke()
-    }
-  }
-  drawPlanks(fy, gy - 3)
-  drawPlanks(gy + gateH + 3, fy + fh)
+  const gEnd = gy + gateH
 
-  // ---- 端柱（上/下段篱笆的门侧端头）----
-  const postW = Math.max(13, fw * 0.32)
-  const post = (py: number, ph: number) => {
-    const g = ctx.createLinearGradient(fx - 2, 0, fx - 2 + postW, 0)
-    g.addColorStop(0, '#DCB584')
-    g.addColorStop(1, woodDark)
-    ctx.fillStyle = g
-    roundRect(ctx, fx - 2, py, postW, ph, 5)
+  // ---- 竖板篱笆（三块长板贯穿上下，长轴沿篱笆走向；中段被门覆盖）----
+  const bw = Math.max(9, fw * 0.24)
+  const innerGap = Math.max(3, fw * 0.06)
+  const side = Math.max(2, (fw - 3 * bw - 2 * innerGap) / 2)
+  for (let k = 0; k < 3; k++) {
+    const bx = fx + side + k * (bw + innerGap)
+    ctx.fillStyle = k % 2 === 0 ? woodA : woodB
+    roundRect(ctx, bx, fy, bw, fh, Math.min(6, bw * 0.4))
     ctx.fill()
-    ctx.strokeStyle = 'rgba(111,78,55,0.45)'
+    ctx.strokeStyle = 'rgba(111,78,55,0.28)'
+    ctx.lineWidth = 1
+    roundRect(ctx, bx, fy, bw, fh, Math.min(6, bw * 0.4))
+    ctx.stroke()
+    // 左缘高光（圆木立体感）
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)'
     ctx.lineWidth = 1.5
-    roundRect(ctx, fx - 2, py, postW, ph, 5)
+    ctx.beginPath()
+    ctx.moveTo(bx + 2, fy + 8)
+    ctx.lineTo(bx + 2, fy + fh - 8)
     ctx.stroke()
   }
-  post(fy - 3, gy - fy)                      // 上段端柱
-  post(gy + gateH + 3, fy + fh - gy - gateH) // 下段端柱
 
-  // ---- 篱笆门（门框 + 内嵌板 + X 斜撑 + 把手 + 爱心）----
+  // ---- 篱笆门（门框 + 竖板门芯 + X 斜撑 + 合页 + 把手 + 爱心）----
   const gxx = fx + 1
   const gww = fw - 2
-  const gGrad = ctx.createLinearGradient(gxx, 0, gxx + gww, 0)
+  const gGrad = ctx.createLinearGradient(0, gy, 0, gEnd)
   gGrad.addColorStop(0, '#DCB584')
   gGrad.addColorStop(1, woodB)
   ctx.fillStyle = gGrad
   roundRect(ctx, gxx, gy, gww, gateH, 8)
   ctx.fill()
-  ctx.strokeStyle = woodDark
-  ctx.lineWidth = 2
-  roundRect(ctx, gxx, gy, gww, gateH, 8)
-  ctx.stroke()
-  // 内嵌板（微亮）
-  ctx.fillStyle = 'rgba(255,255,255,0.16)'
-  roundRect(ctx, gxx + 4, gy + 4, gww - 8, gateH - 8, 5)
+  // 门芯凹槽底
+  ctx.fillStyle = 'rgba(111,78,55,0.14)'
+  roundRect(ctx, gxx + 3, gy + 3, gww - 6, gateH - 6, 6)
   ctx.fill()
+  // 竖板门芯（与篱笆板条同向，经典农场门）
+  const pw = Math.max(6, gww * 0.13)
+  const pn = Math.max(3, Math.floor((gww - 8 + 2) / (pw + 2)))
+  const startX = gxx + (gww - (pn * pw + (pn - 1) * 2)) / 2
+  for (let i = 0; i < pn; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#CB9F72' : woodB
+    roundRect(ctx, startX + i * (pw + 2), gy + 5, pw, gateH - 10, 3)
+    ctx.fill()
+  }
   // X 斜撑
   ctx.strokeStyle = woodDark
-  ctx.lineWidth = Math.max(3, gww * 0.1)
+  ctx.lineWidth = Math.max(3.5, gww * 0.085)
   ctx.lineCap = 'round'
   ctx.beginPath()
   ctx.moveTo(gxx + gww * 0.2, gy + gateH * 0.17)
@@ -271,21 +266,60 @@ function drawFenceGate(ctx: Ctx2D, x: number, top: number, height: number, cellH
   ctx.lineTo(gxx + gww * 0.2, gy + gateH * 0.83)
   ctx.stroke()
   ctx.lineCap = 'butt'
+  // 门框描边
+  ctx.strokeStyle = woodDark
+  ctx.lineWidth = 2
+  roundRect(ctx, gxx, gy, gww, gateH, 8)
+  ctx.stroke()
+  // 合页（左侧上下两枚，读作「门」）
+  ctx.fillStyle = woodDeep
+  roundRect(ctx, gxx - 1, gy + gateH * 0.16, 5.5, gateH * 0.1, 2.5)
+  ctx.fill()
+  roundRect(ctx, gxx - 1, gy + gateH * 0.74, 5.5, gateH * 0.1, 2.5)
+  ctx.fill()
   // 金色把手（右侧）
   ctx.fillStyle = '#FFD54F'
   ctx.beginPath()
-  ctx.arc(gxx + gww - 6, gy + gateH * 0.5, 3.4, 0, Math.PI * 2)
+  ctx.arc(gxx + gww - 6.5, gy + gateH * 0.52, 3.6, 0, Math.PI * 2)
   ctx.fill()
   ctx.strokeStyle = woodDeep
   ctx.lineWidth = 1
   ctx.stroke()
-  // 门上部小爱心（X 斜撑上方空白处，带白色高光更醒目）
+  // 门上部小爱心（X 斜撑上三角留白处，白色光晕衬底更醒目）
   const heartX = gxx + gww * 0.5
-  const heartY = gy + gateH * 0.28
-  ctx.fillStyle = 'rgba(255,255,255,0.85)'
-  heart(ctx, heartX, heartY + 0.8, 7)
+  const heartY = gy + gateH * 0.27
+  ctx.fillStyle = 'rgba(255,255,255,0.92)'
+  heart(ctx, heartX, heartY + 1, 8)
   ctx.fillStyle = '#F6A5B8'
-  heart(ctx, heartX, heartY, 6)
+  heart(ctx, heartX, heartY, 6.5)
+
+  // ---- 直立木桩（圆头柱帽，分布在端头与门的上下，压在板条/门框之上）----
+  const postW = Math.max(13, fw * 0.2)
+  const postH = postW * 2.2
+  const px = fx + fw / 2 - postW / 2
+  const post = (py: number) => {
+    const g = ctx.createLinearGradient(0, py, 0, py + postH)
+    g.addColorStop(0, '#DCB584')
+    g.addColorStop(1, woodB)
+    ctx.fillStyle = g
+    roundRect(ctx, px, py, postW, postH, postW * 0.42)
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(111,78,55,0.5)'
+    ctx.lineWidth = 1.5
+    roundRect(ctx, px, py, postW, postH, postW * 0.42)
+    ctx.stroke()
+    // 柱帽高光
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)'
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.moveTo(px + 3, py + 3.5)
+    ctx.lineTo(px + postW - 3, py + 3.5)
+    ctx.stroke()
+  }
+  post(fy - postH * 0.18)          // 顶端
+  post(gy - postH * 0.78)          // 门上方（柱底压住门框上沿）
+  post(gEnd - postH * 0.22)        // 门下方（柱顶压住门框下沿）
+  post(fy + fh - postH * 0.82)     // 底端
 
   // ---- 脚下草丛 ----
   ctx.strokeStyle = '#7CB342'
