@@ -12,7 +12,7 @@ interface Props {
 
 export default function PlantShop({ snap, onSelect }: Props) {
   return (
-    <div className="w-full flex items-stretch gap-1.5 px-2 py-1.5 bg-[#FFF6E9]/95 border-t-2 border-[#F6B8C6]/60 overflow-x-auto select-none">
+    <div className="w-full flex items-stretch gap-1.5 px-2 py-1.5 bg-white/55 backdrop-blur-xl border-t border-white/70 shadow-[0_-2px_18px_rgba(93,64,55,0.06)] overflow-x-auto select-none">
       {PLANT_ORDER.map((key) => {
         const def = PLANT_TYPES[key]
         const affordable = snap.sunlight >= def.cost
@@ -24,12 +24,12 @@ export default function PlantShop({ snap, onSelect }: Props) {
             disabled={!affordable}
             aria-pressed={selected}
             aria-label={`${def.name}, 阳光 ${def.cost}`}
-            className={`flex flex-col items-center justify-center min-w-[64px] flex-1 rounded-xl px-1.5 py-1.5 transition-all border-2 ${
+            className={`flex flex-col items-center justify-center min-w-[64px] flex-1 rounded-xl px-1.5 py-1.5 transition-all ${
               selected
-                ? 'border-[#E91E63] bg-[#FDE0E6] scale-[1.04] shadow-md'
+                ? 'wf-glass-tile border-2 border-[#E91E63] bg-[#FDE0E6]/85 scale-[1.04] shadow-md'
                 : affordable
-                  ? 'border-transparent bg-white hover:bg-[#FFF3C4] shadow-sm'
-                  : 'border-transparent bg-[#EFE8E0] opacity-55 cursor-not-allowed'
+                  ? 'wf-glass-tile'
+                  : 'border border-transparent bg-[#EFE8E0]/70 opacity-55 cursor-not-allowed'
             }`}
           >
             <span className="text-xl leading-6" aria-hidden>{def.emoji}</span>

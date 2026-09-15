@@ -28,18 +28,18 @@ export default function QuizPanel({ snap, onAnswer }: Props) {
 
   return (
     <div
-      className={`w-full bg-white/95 border-t-2 select-none transition-colors ${
+      className={`w-full border-t backdrop-blur-xl shadow-[0_-4px_22px_rgba(93,64,55,0.07)] select-none transition-colors duration-300 ${
         fb?.kind === 'correct'
-          ? 'border-[#8BC34A] bg-[#F1F8E9]/95'
+          ? 'border-[#8BC34A]/70 bg-[#F1F8E9]/85'
           : fb?.kind === 'wrong'
-            ? 'border-[#E57373] bg-[#FDEBEA]/95'
-            : 'border-[#F6B8C6]/60'
+            ? 'border-[#E57373]/70 bg-[#FDEBEA]/85'
+            : 'border-white/70 bg-white/70'
       }`}
       role="group"
       aria-label="答题面板"
     >
       {/* 倒计时条 */}
-      <div className="h-1 w-full bg-[#F0E6DC]">
+      <div className="h-1 w-full bg-[#F0E6DC]/60">
         <div
           className={`h-full transition-[width] duration-150 ease-linear ${danger ? 'bg-[#E57373]' : 'bg-[#8BC34A]'}`}
           style={{ width: `${Math.max(0, ratio * 100)}%` }}
@@ -83,8 +83,8 @@ export default function QuizPanel({ snap, onAnswer }: Props) {
                   key={`${q.id}-${i}`}
                   onClick={() => onAnswer(i)}
                   disabled={locked}
-                  className={`rounded-xl px-2 py-2.5 text-sm sm:text-base font-bold border-2 transition-all border-[#F0E6DC] bg-[#FFFDF8] text-[#5D4037] hover:border-[#F6B8C6] hover:bg-[#FFF3C4] active:scale-95 ${
-                    locked ? 'cursor-default' : ''
+                  className={`wf-glass-tile wf-focus rounded-xl px-2 py-2.5 text-sm sm:text-base font-bold text-[#5D4037] ${
+                    locked ? 'cursor-default opacity-80' : ''
                   }`}
                 >
                   {opt}

@@ -26,15 +26,13 @@ export default function ResultOverlay({ summary, settle, highestScore, isRecord,
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div
-        className={`w-full max-w-md rounded-3xl bg-[#FFFDF8] shadow-2xl border-4 overflow-hidden animate-[popIn_0.35s_ease-out] ${
-          win ? 'border-[#FFE082]' : 'border-[#F6B8C6]'
-        }`}
+        className="wf-glass-strong w-full max-w-md rounded-3xl overflow-hidden animate-[popIn_0.35s_ease-out]"
         role="dialog"
         aria-modal="true"
         aria-label={win ? '胜利结算' : '失败结算'}
       >
         {/* 头部 */}
-        <div className={`px-6 pt-6 pb-4 text-center ${win ? 'bg-[#FFF8E1]' : 'bg-[#FDEBEA]'}`}>
+        <div className={`px-6 pt-6 pb-4 text-center ${win ? 'bg-gradient-to-b from-[#FFF8E1]/95 via-[#FFF8E1]/50 to-transparent' : 'bg-gradient-to-b from-[#FDEBEA]/95 via-[#FDEBEA]/50 to-transparent'}`}>
           <div className="text-5xl mb-1" aria-hidden>{win ? '🎉' : '🛡️'}</div>
           <h2 className={`text-2xl font-black ${win ? 'text-[#F57F17]' : 'text-[#E57373]'}`}>
             {win ? '农场守住了！' : '防线失守…'}
@@ -91,7 +89,7 @@ export default function ResultOverlay({ summary, settle, highestScore, isRecord,
 
         {/* 亲子积分 */}
         {settle && (
-          <div className="mx-5 mb-3 rounded-2xl bg-[#FFF3C4] px-4 py-2.5 text-center">
+          <div className="wf-glass-chip bg-[#FFF3C4]/60 mx-5 mb-3 rounded-2xl px-4 py-2.5 text-center">
             <p className="text-sm font-bold text-[#F57F17]">
               🎁 亲子积分 <span className="text-xl font-black">+{settle.earned}</span>
               <span className="text-xs text-[#B08080] font-normal">（钱包 {settle.points}）</span>
@@ -107,7 +105,7 @@ export default function ResultOverlay({ summary, settle, highestScore, isRecord,
 
         {/* 错词回顾 */}
         {summary.wrongWords.length > 0 && (
-          <div className="mx-5 mb-4 max-h-32 overflow-y-auto rounded-2xl bg-[#F1F8E9] px-4 py-2.5">
+          <div className="wf-glass mx-5 mb-4 max-h-32 overflow-y-auto rounded-2xl bg-[#F1F8E9]/55 px-4 py-2.5">
             <p className="text-xs font-bold text-[#558B2F] mb-1">📖 错词回顾（下次记得它们！）</p>
             <ul className="space-y-0.5">
               {summary.wrongWords.map((w, i) => (
@@ -127,13 +125,17 @@ export default function ResultOverlay({ summary, settle, highestScore, isRecord,
         <div className="flex gap-3 px-5 pb-5">
           <button
             onClick={onMenu}
-            className="flex-1 py-3 rounded-2xl bg-[#F0E6DC] hover:bg-[#E8D5C4] text-[#5D4037] font-bold transition-colors"
+            className="wf-glass-btn wf-focus flex-1 py-3 rounded-2xl text-[#8D6E63] font-bold"
           >
             回首页
           </button>
           <button
             onClick={onRestart}
-            className="flex-1 py-3 rounded-2xl bg-[#F6B8C6] hover:bg-[#F2A6B8] text-white font-bold shadow-md transition-colors"
+            className="wf-shine wf-focus flex-1 py-3 rounded-2xl text-white font-bold transition-transform active:scale-[0.98] hover:brightness-105"
+            style={{
+              background: 'linear-gradient(180deg, #F9C6D2 0%, #F2A0B4 55%, #E8809B 100%)',
+              boxShadow: '0 4px 0 #C25A75, 0 10px 22px rgba(232,128,155,0.35), inset 0 2px 0 rgba(255,255,255,0.55)',
+            }}
           >
             再玩一次
           </button>

@@ -11,7 +11,7 @@ export default function PauseOverlay({ onResume, onRestart, onMenu }: Props) {
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div
-        className="w-full max-w-xs rounded-3xl bg-[#FFFDF8] shadow-2xl border-4 border-[#BEE9F5] p-6 text-center animate-[popIn_0.3s_ease-out]"
+        className="wf-glass-strong w-full max-w-xs rounded-3xl p-6 text-center animate-[popIn_0.3s_ease-out]"
         role="dialog"
         aria-modal="true"
         aria-label="游戏暂停"
@@ -22,19 +22,23 @@ export default function PauseOverlay({ onResume, onRestart, onMenu }: Props) {
         <div className="space-y-2.5">
           <button
             onClick={onResume}
-            className="w-full py-3 rounded-2xl bg-[#8BC34A] hover:bg-[#7CB342] text-white font-bold shadow-md transition-colors"
+            className="wf-shine wf-focus w-full py-3 rounded-2xl text-white font-bold transition-transform active:scale-[0.98] hover:brightness-105"
+            style={{
+              background: 'linear-gradient(180deg, #9BDF7F 0%, #6FCF5E 55%, #4EA944 100%)',
+              boxShadow: '0 4px 0 #35742C, 0 10px 22px rgba(79,155,63,0.32), inset 0 2px 0 rgba(255,255,255,0.55)',
+            }}
           >
             ▶ 继续游戏
           </button>
           <button
             onClick={onRestart}
-            className="w-full py-3 rounded-2xl bg-[#FFF3C4] hover:bg-[#FFE082] text-[#5D4037] font-bold transition-colors"
+            className="wf-glass-btn wf-focus w-full py-3 rounded-2xl text-[#F57F17] font-bold"
           >
             🔄 重新开始
           </button>
           <button
             onClick={onMenu}
-            className="w-full py-3 rounded-2xl bg-[#F0E6DC] hover:bg-[#E8D5C4] text-[#5D4037] font-bold transition-colors"
+            className="wf-glass-btn wf-focus w-full py-3 rounded-2xl text-[#8D6E63] font-bold"
           >
             🏠 回首页
           </button>

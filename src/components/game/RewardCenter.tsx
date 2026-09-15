@@ -61,16 +61,16 @@ export default function RewardCenter({ onClose, onChanged }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm p-3" role="dialog" aria-modal="true" aria-label="亲子奖励中心">
-      <div className="w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-3xl bg-[#FFFDF8] shadow-2xl border-4 border-[#FFE082]">
+      <div className="wf-glass-strong w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-3xl">
         {/* 头部 */}
-        <div className="sticky top-0 bg-[#FFF8E1] px-5 py-4 border-b-2 border-[#FFE082] flex items-center justify-between">
+        <div className="sticky top-0 bg-white/60 backdrop-blur-xl px-5 py-4 border-b border-white/80 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-black text-[#5D4037]">🎁 亲子奖励中心</h2>
             <p className="text-[11px] text-[#8D6E63]">攒积分 · 和爸妈兑换心仪的奖励</p>
           </div>
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white hover:bg-[#FFE082] font-bold text-[#5D4037] transition-colors"
+            className="wf-glass-btn wf-focus w-9 h-9 rounded-full font-bold text-[#5D4037]"
             aria-label="关闭"
           >
             ✕
@@ -79,15 +79,15 @@ export default function RewardCenter({ onClose, onChanged }: Props) {
 
         {/* 钱包 */}
         <div className="grid grid-cols-3 gap-2 px-5 py-3 text-center">
-          <div className="rounded-2xl bg-[#FFF3C4] py-2">
+          <div className="wf-glass-chip bg-[#FFF3C4]/55 rounded-2xl py-2">
             <p className="text-xl font-black text-[#F57F17] tabular-nums">{wallet.points}</p>
             <p className="text-[11px] text-[#8D6E63]">可用积分</p>
           </div>
-          <div className="rounded-2xl bg-[#FDE0E6] py-2">
+          <div className="wf-glass-chip bg-[#FDE0E6]/55 rounded-2xl py-2">
             <p className="text-xl font-black text-[#E91E63] tabular-nums">{wallet.streak}</p>
             <p className="text-[11px] text-[#8D6E63]">连续打卡(天)</p>
           </div>
-          <div className="rounded-2xl bg-[#E1F5FE] py-2">
+          <div className="wf-glass-chip bg-[#E1F5FE]/55 rounded-2xl py-2">
             <p className="text-xl font-black text-[#0288D1] tabular-nums">
               {wallet.monthPoints}
               <span className="text-xs">/{wallet.monthGoal}</span>
@@ -116,7 +116,7 @@ export default function RewardCenter({ onClose, onChanged }: Props) {
             <p className="text-xs font-bold text-[#8D6E63] mb-1.5">📋 最近兑换</p>
             <ul className="space-y-1">
               {data.history.slice(0, 5).map((h, i) => (
-                <li key={i} className="flex justify-between text-xs text-[#5D4037] bg-white rounded-xl px-3 py-1.5">
+                <li key={i} className="wf-glass-chip flex justify-between text-xs text-[#5D4037] rounded-xl px-3 py-1.5">
                   <span>{h.emoji} {h.name}</span>
                   <span className="text-[#B08080]">-{h.cost}分</span>
                 </li>
@@ -128,7 +128,7 @@ export default function RewardCenter({ onClose, onChanged }: Props) {
 
       {/* Toast */}
       {toast && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-full bg-[#5D4037] text-white text-sm font-bold shadow-xl animate-[popIn_0.25s_ease-out]" role="status">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-full bg-[#5D4037]/85 backdrop-blur-md text-white text-sm font-bold shadow-xl animate-[popIn_0.25s_ease-out]" role="status">
           {toast}
         </div>
       )}
@@ -174,10 +174,10 @@ function TierSection({
               onTouchStart={() => item.canRedeem && onStartHold(item.id)}
               onTouchEnd={onStopHold}
               onTouchCancel={onStopHold}
-              className={`relative overflow-hidden text-left rounded-2xl px-3 py-2 border-2 transition-all ${
+              className={`relative overflow-hidden text-left rounded-2xl px-3 py-2 transition-all ${
                 item.canRedeem
-                  ? 'border-transparent bg-white hover:border-[#FFE082] shadow-sm'
-                  : 'border-transparent bg-[#F0E6DC] opacity-60 cursor-not-allowed'
+                  ? 'wf-glass-tile'
+                  : 'border border-transparent bg-[#F0E6DC]/70 opacity-60 cursor-not-allowed'
               }`}
             >
               {isHolding && (

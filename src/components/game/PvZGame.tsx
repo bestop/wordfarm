@@ -253,7 +253,7 @@ export default function PvZGame() {
         />
         {snap?.banner && (
           <div className="absolute inset-x-0 top-[28%] flex justify-center pointer-events-none" aria-live="polite">
-            <div className="px-6 py-3 rounded-2xl bg-white/92 border-2 border-[#F6B8C6] shadow-lg text-center animate-[popIn_0.25s_ease-out]">
+            <div className="wf-glass-strong px-6 py-3 rounded-2xl text-center animate-[popIn_0.25s_ease-out]">
               <p className="text-xl font-black text-[#E91E63]">{snap.banner.text}</p>
               <p className="text-xs text-[#8D6E63] mt-0.5">{snap.banner.sub}</p>
             </div>

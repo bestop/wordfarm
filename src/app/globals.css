@@ -132,3 +132,172 @@
     opacity: 1;
   }
 }
+
+/* ================================================================
+   单词农场 · 暖调玻璃拟态设计系统 (Farm Glassmorphism)
+   统一磨砂质感: 半透明白渐变 + backdrop-blur + 高光描边 + 多层柔影
+   注: 全部包在 @layer components —— Tailwind utilities 可正常覆盖
+   ================================================================ */
+
+@keyframes wfFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(14px, -20px, 0) scale(1.06);
+  }
+}
+@keyframes wfFloatSlow {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-18px, 14px, 0) scale(0.95);
+  }
+}
+@keyframes wfShine {
+  0% {
+    transform: translateX(-140%) skewX(-18deg);
+  }
+  55%,
+  100% {
+    transform: translateX(360%) skewX(-18deg);
+  }
+}
+
+@layer components {
+  /* 玻璃面板（默认强度，用于卡片/区块） */
+  .wf-glass {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.46) 100%);
+    -webkit-backdrop-filter: blur(14px) saturate(1.5);
+    backdrop-filter: blur(14px) saturate(1.5);
+    border: 1px solid rgba(255, 255, 255, 0.78);
+    box-shadow:
+      0 8px 28px rgba(93, 64, 55, 0.09),
+      0 1px 3px rgba(93, 64, 55, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  }
+
+  /* 玻璃面板（高强度，用于弹窗主体，保证可读性） */
+  .wf-glass-strong {
+    background: linear-gradient(150deg, rgba(255, 252, 245, 0.9) 0%, rgba(255, 255, 255, 0.74) 100%);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+    backdrop-filter: blur(24px) saturate(1.6);
+    border: 1px solid rgba(255, 255, 255, 0.92);
+    box-shadow:
+      0 24px 64px rgba(93, 64, 55, 0.2),
+      0 4px 14px rgba(93, 64, 55, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  }
+
+  /* 磨砂按钮（次级按钮: 如何玩 / 奖励中心 / 回首页…） */
+  .wf-glass-btn {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.66) 0%, rgba(255, 255, 255, 0.4) 100%);
+    -webkit-backdrop-filter: blur(12px) saturate(1.6);
+    backdrop-filter: blur(12px) saturate(1.6);
+    border: 1px solid rgba(255, 255, 255, 0.82);
+    box-shadow:
+      0 4px 16px rgba(93, 64, 55, 0.09),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    transition:
+      transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+      background 0.2s;
+  }
+  .wf-glass-btn:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.58) 100%);
+    transform: translateY(-2px);
+    box-shadow:
+      0 10px 26px rgba(93, 64, 55, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  }
+  .wf-glass-btn:active {
+    transform: translateY(0) scale(0.97);
+    box-shadow:
+      0 3px 10px rgba(93, 64, 55, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  /* 磨砂胶囊（统计徽章 / HUD 小药丸） */
+  .wf-glass-chip {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.74) 0%, rgba(255, 255, 255, 0.48) 100%);
+    -webkit-backdrop-filter: blur(10px) saturate(1.45);
+    backdrop-filter: blur(10px) saturate(1.45);
+    border: 1px solid rgba(255, 255, 255, 0.78);
+    box-shadow:
+      0 2px 10px rgba(93, 64, 55, 0.07),
+      inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  }
+
+  /* 首页天光渐变背景: 晨空 → 薄荷 → 暖奶油 */
+  .wf-menu-bg {
+    background:
+      radial-gradient(1100px 520px at 12% -8%, rgba(255, 224, 178, 0.55) 0%, transparent 60%),
+      radial-gradient(900px 560px at 88% 12%, rgba(246, 184, 198, 0.4) 0%, transparent 62%),
+      radial-gradient(1000px 620px at 50% 108%, rgba(143, 210, 122, 0.32) 0%, transparent 60%),
+      linear-gradient(165deg, #d9f0fa 0%, #e6f6ec 46%, #fdf3e3 100%);
+  }
+
+  /* 首页装饰光斑（缓慢漂浮） */
+  .wf-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(48px);
+    pointer-events: none;
+  }
+
+  /* 主按钮流光扫过（overflow-hidden + relative 容器内使用） */
+  .wf-shine {
+    position: relative;
+    overflow: hidden;
+  }
+  .wf-shine::after {
+    content: '';
+    position: absolute;
+    top: -20%;
+    bottom: -20%;
+    left: 0;
+    width: 34%;
+    background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+    transform: translateX(-140%) skewX(-18deg);
+    animation: wfShine 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    pointer-events: none;
+  }
+
+  /* 玻璃选项卡（答题选项 / 商店卡片 / 兑换项） */
+  .wf-glass-tile {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.58) 100%);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4);
+    backdrop-filter: blur(10px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow:
+      0 3px 12px rgba(93, 64, 55, 0.07),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    transition:
+      transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.18s,
+      background 0.18s,
+      border-color 0.18s;
+  }
+  .wf-glass-tile:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 243, 196, 0.85) 100%);
+    transform: translateY(-1px);
+    box-shadow:
+      0 8px 20px rgba(93, 64, 55, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  }
+  .wf-glass-tile:active {
+    transform: scale(0.96);
+  }
+
+  /* 键盘焦点统一优雅光圈 */
+  .wf-focus:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px #fff,
+      0 0 0 4.5px rgba(87, 170, 74, 0.65),
+      0 8px 28px rgba(93, 64, 55, 0.09);
+  }
+}
