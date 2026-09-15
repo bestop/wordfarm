@@ -57,7 +57,7 @@ export default function Hud({ snap, onPause }: Props) {
       <div className="wf-glass-chip flex items-center gap-0.5 px-2 py-1 rounded-full" title="防线">
         {[0, 1, 2].map((i) => (
           <span key={i} className={`text-sm ${i < snap.defenseLines ? '' : 'grayscale opacity-30'}`} aria-hidden>
-            🏠
+            🚪
           </span>
         ))}
       </div>

@@ -17,13 +17,9 @@ const C = {
   skyBottom: '#E8F7FB',
   hillFar: '#C5E1A5',
   hillNear: '#AED581',
-  laneA: '#B6DB8B',
-  laneB: '#A8D478',
-  gridLine: 'rgba(255,255,255,0.45)',
-  houseWall: '#FFF6E9',
-  houseRoof: '#F6B8C6',
-  houseDoor: '#F2A6B8',
-  houseWindow: '#BEE9F5',
+  stripeA: '#BCE08F', // 足球场修剪条纹·亮
+  stripeB: '#A5D374', // 足球场修剪条纹·暗
+  gridLine: 'rgba(255,255,255,0.42)',
   dirt: '#E3C896',
 }
 
@@ -126,16 +122,26 @@ function buildBackground(engine: GameEngine, dpr: number) {
   ctx.fillStyle = C.hillNear
   ctx.fillRect(0, top + 20, W, height)
 
-  // 三条车道（交替绿）
-  for (let lane = 0; lane < GRID.ROWS; lane++) {
-    ctx.fillStyle = lane % 2 === 0 ? C.laneA : C.laneB
-    ctx.fillRect(left, top + lane * cellH, width, cellH)
-    // 车道顶部高光
-    ctx.fillStyle = 'rgba(255,255,255,0.12)'
-    ctx.fillRect(left, top + lane * cellH, width, 4)
+  // 足球场式修剪草坪（纵向明暗条纹 + 条纹内割草高光）
+  for (let col = 0; col < GRID.COLS; col++) {
+    const x0 = left + col * cellW
+    ctx.fillStyle = col % 2 === 0 ? C.stripeA : C.stripeB
+    ctx.fillRect(x0, top, cellW, height)
+    // 每条条纹中央柔和高光，模拟割草后的反光
+    const sheen = ctx.createLinearGradient(x0, 0, x0 + cellW, 0)
+    sheen.addColorStop(0, 'rgba(255,255,255,0)')
+    sheen.addColorStop(0.5, col % 2 === 0 ? 'rgba(255,255,255,0.17)' : 'rgba(255,255,255,0.04)')
+    sheen.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = sheen
+    ctx.fillRect(x0, top, cellW, height)
   }
 
-  // 网格线
+  // 球场白色边线（触线）
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)'
+  ctx.lineWidth = 3
+  ctx.strokeRect(left + 2, top + 2, width - 4, height - 4)
+
+  // 网格线（战术格子）
   ctx.strokeStyle = C.gridLine
   ctx.lineWidth = 1.5
   for (let lane = 0; lane <= GRID.ROWS; lane++) {
@@ -151,10 +157,10 @@ function buildBackground(engine: GameEngine, dpr: number) {
     ctx.stroke()
   }
 
-  // 小房子（左侧, 跨三车道）
-  drawHouse(ctx, left, top, height)
+  // 农场篱笆门（左侧, 跨全部车道）
+  drawFenceGate(ctx, left, top, height, cellH)
 
-  // 草地边缘小花
+  // 草地边缘小花（右侧；左侧让位给篱笆门）
   ctx.save()
   const flower = (fx: number, fy: number, petal: string) => {
     ctx.fillStyle = petal
@@ -170,7 +176,6 @@ function buildBackground(engine: GameEngine, dpr: number) {
     ctx.fill()
   }
   for (let lane = 0; lane < GRID.ROWS; lane++) {
-    flower(16, top + lane * cellH + cellH - 8, '#F8BBD0')
     flower(W - 12, top + lane * cellH + 10, '#FFE082')
   }
   ctx.restore()
@@ -179,48 +184,124 @@ function buildBackground(engine: GameEngine, dpr: number) {
   return cv
 }
 
-function drawHouse(ctx: Ctx2D, x: number, top: number, height: number) {
-  const hw = x - 6
-  const hy = top + height * 0.18
-  const hh = height * 0.64
+/**
+ * 农场篱笆门（替换原小房子）：
+ * 横板木篱笆（上下两段）+ 中段 X 斜撑农场门 + 金色把手 + 爱心门饰 + 脚下草丛
+ */
+function drawFenceGate(ctx: Ctx2D, x: number, top: number, height: number, cellH: number) {
+  const fw = Math.max(30, x - 10) // 篱笆带宽
+  const fx = 4
+  const fy = top + height * 0.05
+  const fh = height * 0.9
+  const woodA = '#C79A6B'
+  const woodB = '#B98A5C'
+  const woodDark = '#8A6244'
+  const woodDeep = '#6F4E37'
   ctx.save()
-  // 墙体
-  ctx.fillStyle = C.houseWall
-  roundRect(ctx, 6, hy, hw, hh, 10)
+
+  // 底部草影
+  ctx.fillStyle = 'rgba(93,64,55,0.10)'
+  roundRect(ctx, fx - 2, fy + fh - 5, fw + 8, 10, 5)
   ctx.fill()
-  ctx.strokeStyle = 'rgba(215,150,120,0.4)'
+
+  // ---- 横板篱笆（上下两段，中间留给门）----
+  const gateH = Math.min(cellH * 1.15, fh * 0.44)
+  const gy = top + height / 2 - gateH / 2
+  const plankH = Math.max(9, cellH * 0.09)
+  const drawPlanks = (y0: number, y1: number) => {
+    let k = 0
+    for (let py = y0; py + plankH <= y1 + 0.5; py += plankH + 3, k++) {
+      ctx.fillStyle = k % 2 === 0 ? woodA : woodB
+      roundRect(ctx, fx, py, fw, plankH, 4)
+      ctx.fill()
+      // 木纹
+      ctx.strokeStyle = 'rgba(111,78,55,0.22)'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(fx + 4, py + plankH * 0.5)
+      ctx.lineTo(fx + fw - 4, py + plankH * 0.5)
+      ctx.stroke()
+    }
+  }
+  drawPlanks(fy, gy - 3)
+  drawPlanks(gy + gateH + 3, fy + fh)
+
+  // ---- 端柱（上/下段篱笆的门侧端头）----
+  const postW = Math.max(13, fw * 0.32)
+  const post = (py: number, ph: number) => {
+    const g = ctx.createLinearGradient(fx - 2, 0, fx - 2 + postW, 0)
+    g.addColorStop(0, '#DCB584')
+    g.addColorStop(1, woodDark)
+    ctx.fillStyle = g
+    roundRect(ctx, fx - 2, py, postW, ph, 5)
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(111,78,55,0.45)'
+    ctx.lineWidth = 1.5
+    roundRect(ctx, fx - 2, py, postW, ph, 5)
+    ctx.stroke()
+  }
+  post(fy - 3, gy - fy)                      // 上段端柱
+  post(gy + gateH + 3, fy + fh - gy - gateH) // 下段端柱
+
+  // ---- 篱笆门（门框 + 内嵌板 + X 斜撑 + 把手 + 爱心）----
+  const gxx = fx + 1
+  const gww = fw - 2
+  const gGrad = ctx.createLinearGradient(gxx, 0, gxx + gww, 0)
+  gGrad.addColorStop(0, '#DCB584')
+  gGrad.addColorStop(1, woodB)
+  ctx.fillStyle = gGrad
+  roundRect(ctx, gxx, gy, gww, gateH, 8)
+  ctx.fill()
+  ctx.strokeStyle = woodDark
   ctx.lineWidth = 2
-  roundRect(ctx, 6, hy, hw, hh, 10)
+  roundRect(ctx, gxx, gy, gww, gateH, 8)
   ctx.stroke()
-  // 屋顶（马卡龙粉三角）
-  ctx.fillStyle = C.houseRoof
+  // 内嵌板（微亮）
+  ctx.fillStyle = 'rgba(255,255,255,0.16)'
+  roundRect(ctx, gxx + 4, gy + 4, gww - 8, gateH - 8, 5)
+  ctx.fill()
+  // X 斜撑
+  ctx.strokeStyle = woodDark
+  ctx.lineWidth = Math.max(3, gww * 0.1)
+  ctx.lineCap = 'round'
   ctx.beginPath()
-  ctx.moveTo(-2, hy + 4)
-  ctx.lineTo(hw / 2 + 4, hy - hh * 0.28)
-  ctx.lineTo(hw + 8, hy + 4)
-  ctx.closePath()
-  ctx.fill()
-  // 烟囱 + 爱心烟
-  ctx.fillStyle = '#E8A87C'
-  ctx.fillRect(hw * 0.66, hy - hh * 0.2, 9, hh * 0.22)
-  ctx.fillStyle = 'rgba(248,187,208,0.8)'
-  heart(ctx, hw * 0.72, hy - hh * 0.26, 5)
-  heart(ctx, hw * 0.6, hy - hh * 0.34, 4)
-  // 门
-  ctx.fillStyle = C.houseDoor
-  roundRect(ctx, hw * 0.36, hy + hh * 0.52, hw * 0.3, hh * 0.48, 6)
-  ctx.fill()
-  ctx.fillStyle = '#FFF'
+  ctx.moveTo(gxx + gww * 0.2, gy + gateH * 0.17)
+  ctx.lineTo(gxx + gww * 0.8, gy + gateH * 0.83)
+  ctx.moveTo(gxx + gww * 0.8, gy + gateH * 0.17)
+  ctx.lineTo(gxx + gww * 0.2, gy + gateH * 0.83)
+  ctx.stroke()
+  ctx.lineCap = 'butt'
+  // 金色把手（右侧）
+  ctx.fillStyle = '#FFD54F'
   ctx.beginPath()
-  ctx.arc(hw * 0.42, hy + hh * 0.78, 2, 0, Math.PI * 2)
+  ctx.arc(gxx + gww - 6, gy + gateH * 0.5, 3.4, 0, Math.PI * 2)
   ctx.fill()
-  // 窗户
-  ctx.fillStyle = C.houseWindow
-  roundRect(ctx, hw * 0.12, hy + hh * 0.16, hw * 0.28, hh * 0.22, 4)
-  ctx.fill()
-  ctx.strokeStyle = '#FFF'
-  ctx.lineWidth = 1.5
-  ctx.strokeRect(hw * 0.12, hy + hh * 0.16, hw * 0.28, hh * 0.22)
+  ctx.strokeStyle = woodDeep
+  ctx.lineWidth = 1
+  ctx.stroke()
+  // 门上部小爱心（X 斜撑上方空白处，带白色高光更醒目）
+  const heartX = gxx + gww * 0.5
+  const heartY = gy + gateH * 0.28
+  ctx.fillStyle = 'rgba(255,255,255,0.85)'
+  heart(ctx, heartX, heartY + 0.8, 7)
+  ctx.fillStyle = '#F6A5B8'
+  heart(ctx, heartX, heartY, 6)
+
+  // ---- 脚下草丛 ----
+  ctx.strokeStyle = '#7CB342'
+  ctx.lineWidth = 2
+  ctx.lineCap = 'round'
+  const tuft = (bx: number, by: number) => {
+    for (const [dx, dy] of [[-3, -6], [0, -8], [3, -6]]) {
+      ctx.beginPath()
+      ctx.moveTo(bx, by)
+      ctx.quadraticCurveTo(bx + dx * 0.4, by + dy * 0.6, bx + dx, by + dy)
+      ctx.stroke()
+    }
+  }
+  tuft(fx + fw * 0.55, fy + fh + 1)
+  tuft(fx + fw + 4, fy + fh + 1)
+  ctx.lineCap = 'butt'
   ctx.restore()
 }
 
@@ -496,7 +577,7 @@ export function render(ctx: CanvasRenderingContext2D, engine: GameEngine, dpr: n
     if (bg) {
       ctx.drawImage(bg as CanvasImageSource, 0, 0, cw, ch)
     } else {
-      ctx.fillStyle = C.laneA
+      ctx.fillStyle = C.stripeA
       ctx.fillRect(0, 0, cw, ch)
     }
 

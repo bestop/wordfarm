@@ -115,7 +115,7 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
             单词农场
           </h1>
           <p className="mt-2.5 text-[#8D6E63] text-sm sm:text-base">
-            萌系塔防 × 背单词 · 答题积攒阳光，种植物守住农场小屋！
+            萌系塔防 × 背单词 · 答题积攒阳光，种植物守住农场篱笆门！
           </p>
         </header>
 
@@ -281,7 +281,7 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
             <div className="space-y-3 text-sm text-[#5D4037] leading-6">
               <section className="wf-glass rounded-2xl p-3.5">
                 <p className="font-bold mb-1">🎯 游戏目标</p>
-                <p>守住农场小屋，闯过全部 10 关。僵尸共 10 波、越往后越强；第 10 关僵尸王携护卫队压境，清完全场即胜利。防线共 3 道，全破则失败。</p>
+                <p>守住农场篱笆门，闯过全部 10 关。僵尸共 10 波、越往后越强；第 10 关僵尸王携护卫队压境，清完全场即胜利。防线共 3 道，全破则失败。</p>
               </section>
               <section className="wf-glass rounded-2xl p-3.5">
                 <p className="font-bold mb-1">☀️ 答题得阳光</p>
