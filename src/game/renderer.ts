@@ -157,8 +157,8 @@ function buildBackground(engine: GameEngine, dpr: number) {
     ctx.stroke()
   }
 
-  // 农场篱笆门（左侧, 跨全部车道）
-  drawFenceGate(ctx, left, top, height, cellH)
+  // 农场篱笆静态门框（左侧, 跨全部车道）；门叶由 render() 每帧动态绘制
+  drawFenceFrame(ctx, left, top, height, cellH)
 
   // 草地边缘小花（右侧；左侧让位给篱笆门）
   ctx.save()
@@ -184,32 +184,32 @@ function buildBackground(engine: GameEngine, dpr: number) {
   return cv
 }
 
+/** 篱笆门几何（静态门框与动态门叶共用） */
+function gateGeom(top: number, height: number, cellH: number) {
+  const fh = height * 0.9
+  const gateH = Math.min(cellH * 1.15, fh * 0.42)
+  const gy = top + height / 2 - gateH / 2
+  return { fh, gateH, gy, gEnd: gy + gateH }
+}
+
 /**
- * 农场篱笆门（替换原小房子）· v3 门叶朝向僵尸来向：
+ * 农场篱笆·静态门框（入背景离屏缓存）· v4：
  * 篱笆沿左边缘纵向延伸（走向 = 屏幕竖直），板条竖放、木桩直立圆头柱帽；
- * 中段农场门绕左门轴向草坪（僵尸来向 = 屏幕右侧）微旋：右缘梯形放大（近端）
- * + 左侧门板厚度侧面 + 右缘受光高光（太阳在右上）+ 门闩把手全在右缘
+ * 中段门叶由 drawGateLeaf 每帧单独绘制（支持受击晃动/裂纹反馈）
  */
-function drawFenceGate(ctx: Ctx2D, x: number, top: number, height: number, cellH: number) {
+function drawFenceFrame(ctx: Ctx2D, x: number, top: number, height: number, cellH: number) {
   const fw = Math.max(30, x - 10) // 篱笆带宽
   const fx = 4
   const fy = top + height * 0.05
-  const fh = height * 0.9
+  const { fh, gy, gEnd } = gateGeom(top, height, cellH)
   const woodA = '#C79A6B'
   const woodB = '#B98A5C'
-  const woodDark = '#8A6244'
-  const woodDeep = '#6F4E37'
   ctx.save()
 
   // 底部草影
   ctx.fillStyle = 'rgba(93,64,55,0.10)'
   roundRect(ctx, fx - 2, fy + fh - 5, fw + 8, 10, 5)
   ctx.fill()
-
-  // 门的中段位置
-  const gateH = Math.min(cellH * 1.15, fh * 0.42)
-  const gy = top + height / 2 - gateH / 2
-  const gEnd = gy + gateH
 
   // ---- 竖板篱笆（三块长板贯穿上下，长轴沿篱笆走向；中段被门覆盖）----
   const bw = Math.max(9, fw * 0.24)
@@ -233,16 +233,82 @@ function drawFenceGate(ctx: Ctx2D, x: number, top: number, height: number, cellH
     ctx.stroke()
   }
 
-  // ---- 篱笆门（门叶绕左门轴向僵尸来向 = 屏幕右侧微旋：右缘梯形放大近端）----
+  // ---- 直立木桩（圆头柱帽，分布在端头与门的上下，压在板条之上）----
+  const postW = Math.max(13, fw * 0.2)
+  const postH = postW * 2.2
+  const px = fx + fw / 2 - postW / 2
+  const post = (py: number) => {
+    const g = ctx.createLinearGradient(0, py, 0, py + postH)
+    g.addColorStop(0, '#DCB584')
+    g.addColorStop(1, woodB)
+    ctx.fillStyle = g
+    roundRect(ctx, px, py, postW, postH, postW * 0.42)
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(111,78,55,0.5)'
+    ctx.lineWidth = 1.5
+    roundRect(ctx, px, py, postW, postH, postW * 0.42)
+    ctx.stroke()
+    // 柱帽高光
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)'
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.moveTo(px + 3, py + 3.5)
+    ctx.lineTo(px + postW - 3, py + 3.5)
+    ctx.stroke()
+  }
+  post(fy - postH * 0.18)          // 顶端
+  post(gy - postH * 0.78)          // 门上方（柱底压住门框上沿）
+  post(gEnd - postH * 0.22)        // 门下方（柱顶压住门框下沿）
+  post(fy + fh - postH * 0.82)     // 底端
+
+  // ---- 脚下草丛 ----
+  ctx.strokeStyle = '#7CB342'
+  ctx.lineWidth = 2
+  ctx.lineCap = 'round'
+  const tuft = (bx: number, by: number) => {
+    for (const [dx, dy] of [[-3, -6], [0, -8], [3, -6]]) {
+      ctx.beginPath()
+      ctx.moveTo(bx, by)
+      ctx.quadraticCurveTo(bx + dx * 0.4, by + dy * 0.6, bx + dx, by + dy)
+      ctx.stroke()
+    }
+  }
+  tuft(fx + fw * 0.55, fy + fh + 1)
+  tuft(fx + fw + 4, fy + fh + 1)
+  ctx.lineCap = 'butt'
+  ctx.restore()
+}
+
+/** 门叶裂纹折线（u,v 坐标）：防线 2 → 前 1 道；防线 1 → 全部 3 道 + 右缘缺角 */
+const GATE_CRACKS: Array<Array<[number, number]>> = [
+  [[0.3, 0.1], [0.37, 0.27], [0.27, 0.44], [0.35, 0.6], [0.29, 0.74]],
+  [[0.66, 0.16], [0.58, 0.34], [0.69, 0.52], [0.61, 0.7], [0.67, 0.86]],
+  [[0.15, 0.38], [0.23, 0.5], [0.17, 0.64]],
+]
+
+/**
+ * 农场篱笆门叶（每帧动态绘制）· v4 受击反馈：
+ * 门叶绕左门轴向僵尸来向（屏幕右侧）微旋（右缘梯形放大近端）；
+ * 僵尸破防线时（engine.gateHitAt）门叶绕门轴衰减晃动 650ms + 白闪 150ms；
+ * 裂纹随剩余防线递减：3 完好 / 2 一道裂纹 / 1 三道裂纹 + 右缘缺角
+ */
+function drawGateLeaf(ctx: Ctx2D, engine: GameEngine, t: number) {
+  const { left, top, height, cellH } = engine.layout
+  const fw = Math.max(30, left - 10)
+  const fx = 4
+  const { gateH, gy, gEnd } = gateGeom(top, height, cellH)
+  const woodB = '#B98A5C'
+  const woodDark = '#8A6244'
+  const woodDeep = '#6F4E37'
   const gxx = fx + 1
   const gww = fw - 2
   const tilt = gateH * 0.1 // 右缘（近僵尸侧）离相机更近 → 上下各外扩 tilt
   const KP = 0.22 // 透视强度：等宽门板近端投影更宽，门叶朝草坪旋出感
-  const up = (t: number) => (t + KP * t * t) / (1 + KP)
-  const GX = (t: number) => gxx + gww * up(t)
-  const gTop = (t: number) => gy - tilt * up(t)
-  const gBot = (t: number) => gEnd + tilt * up(t)
-  const gH = (u: number) => gBot(u) - gTop(u)
+  const up = (s: number) => (s + KP * s * s) / (1 + KP)
+  const GX = (s: number) => gxx + gww * up(s)
+  const gTop = (s: number) => gy - tilt * up(s)
+  const gBot = (s: number) => gEnd + tilt * up(s)
+  const gH = (s: number) => gBot(s) - gTop(s)
   // 梯形四边形路径（u: 横向 0~1, v: 纵向 0~1）
   const quadUV = (u0: number, v0: number, u1: number, v1: number) => {
     ctx.beginPath()
@@ -252,6 +318,20 @@ function drawFenceGate(ctx: Ctx2D, x: number, top: number, height: number, cellH
     ctx.lineTo(GX(u0), gTop(u0) + gH(u0) * v1)
     ctx.closePath()
   }
+
+  ctx.save()
+
+  // ---- 受击晃动（绕左门轴中点衰减摇摆，像门在合页上哐当）----
+  const HIT_MS = 650
+  const since = t - engine.gateHitAt
+  if (since >= 0 && since < HIT_MS) {
+    const k = (1 - since / HIT_MS) ** 2
+    const ang = Math.sin(since * 0.05) * 0.085 * k
+    ctx.translate(gxx, gy + gateH / 2)
+    ctx.rotate(ang)
+    ctx.translate(-gxx, -(gy + gateH / 2))
+  }
+
   // 左侧厚度侧面（门轴侧看到门板厚度，深色 → 门面朝右侧）
   ctx.fillStyle = woodDeep
   ctx.beginPath()
@@ -332,49 +412,54 @@ function drawFenceGate(ctx: Ctx2D, x: number, top: number, height: number, cellH
   ctx.fillStyle = '#F6A5B8'
   heart(ctx, heartX, heartY, 6.5)
 
-  // ---- 直立木桩（圆头柱帽，分布在端头与门的上下，压在板条/门框之上）----
-  const postW = Math.max(13, fw * 0.2)
-  const postH = postW * 2.2
-  const px = fx + fw / 2 - postW / 2
-  const post = (py: number) => {
-    const g = ctx.createLinearGradient(0, py, 0, py + postH)
-    g.addColorStop(0, '#DCB584')
-    g.addColorStop(1, woodB)
-    ctx.fillStyle = g
-    roundRect(ctx, px, py, postW, postH, postW * 0.42)
-    ctx.fill()
-    ctx.strokeStyle = 'rgba(111,78,55,0.5)'
-    ctx.lineWidth = 1.5
-    roundRect(ctx, px, py, postW, postH, postW * 0.42)
-    ctx.stroke()
-    // 柱帽高光
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)'
-    ctx.lineWidth = 1.5
-    ctx.beginPath()
-    ctx.moveTo(px + 3, py + 3.5)
-    ctx.lineTo(px + postW - 3, py + 3.5)
-    ctx.stroke()
-  }
-  post(fy - postH * 0.18)          // 顶端
-  post(gy - postH * 0.78)          // 门上方（柱底压住门框上沿）
-  post(gEnd - postH * 0.22)        // 门下方（柱顶压住门框下沿）
-  post(fy + fh - postH * 0.82)     // 底端
-
-  // ---- 脚下草丛 ----
-  ctx.strokeStyle = '#7CB342'
-  ctx.lineWidth = 2
-  ctx.lineCap = 'round'
-  const tuft = (bx: number, by: number) => {
-    for (const [dx, dy] of [[-3, -6], [0, -8], [3, -6]]) {
+  // ---- 裂纹（深缝 + 亮芯，随剩余防线递减）----
+  const crackCount = engine.defenseLines >= 3 ? 0 : engine.defenseLines === 2 ? 1 : 3
+  if (crackCount > 0) {
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    for (let c = 0; c < crackCount; c++) {
+      const pts = GATE_CRACKS[c]
       ctx.beginPath()
-      ctx.moveTo(bx, by)
-      ctx.quadraticCurveTo(bx + dx * 0.4, by + dy * 0.6, bx + dx, by + dy)
+      pts.forEach(([u, v], i) => {
+        const cx = GX(u)
+        const cy = gTop(u) + gH(u) * v
+        if (i === 0) ctx.moveTo(cx, cy)
+        else ctx.lineTo(cx, cy)
+      })
+      ctx.strokeStyle = 'rgba(111,78,55,0.85)'
+      ctx.lineWidth = 2.6
+      ctx.stroke()
+      ctx.strokeStyle = 'rgba(255,255,255,0.28)'
+      ctx.lineWidth = 1
       ctx.stroke()
     }
+    ctx.lineCap = 'butt'
   }
-  tuft(fx + fw * 0.55, fy + fh + 1)
-  tuft(fx + fw + 4, fy + fh + 1)
-  ctx.lineCap = 'butt'
+  // 右缘缺角（防线 1：近僵尸侧被撞掉一块木板，露出深色缺口 + 木刺）
+  if (engine.defenseLines <= 1) {
+    ctx.fillStyle = 'rgba(111,78,55,0.92)'
+    ctx.beginPath()
+    ctx.moveTo(GX(1), gTop(1))
+    ctx.lineTo(GX(1), gTop(1) + gH(1) * 0.13)
+    ctx.lineTo(GX(0.87), gTop(0.87) + gH(0.87) * 0.05)
+    ctx.closePath()
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'
+    ctx.lineWidth = 1.2
+    ctx.beginPath()
+    ctx.moveTo(GX(0.87), gTop(0.87) + gH(0.87) * 0.05)
+    ctx.lineTo(GX(0.92), gTop(0.92) + gH(0.92) * 0.02)
+    ctx.stroke()
+  }
+
+  // ---- 受击白闪（前 150ms 覆盖门叶）----
+  if (since >= 0 && since < 150) {
+    ctx.globalAlpha = 0.4 * (1 - since / 150)
+    ctx.fillStyle = '#FFFFFF'
+    quadUV(0, 0, 1, 1)
+    ctx.fill()
+    ctx.globalAlpha = 1
+  }
   ctx.restore()
 }
 
@@ -656,6 +741,9 @@ export function render(ctx: CanvasRenderingContext2D, engine: GameEngine, dpr: n
 
     const t = Date.now()
     const cellR = Math.min(engine.layout.cellW, engine.layout.cellH) * 0.3
+
+    // 篱笆门叶（动态：受击晃动/裂纹/白闪）
+    drawGateLeaf(ctx, engine, t)
 
     // 植物
     for (const p of engine.plants) {

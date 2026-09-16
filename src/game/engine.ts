@@ -195,6 +195,7 @@ export class GameEngine {
   banner: { text: string; sub: string; until: number } | null = null
   shakeUntil = 0
   shakeIntensity = 0
+  gateHitAt = 0 // 篱笆门受击时间戳（渲染器据此晃动门叶/白闪）
 
   private spawnInterval = ZOMBIE.SPAWN_INTERVAL_DEFAULT_MS
   private spawnTimer = 0
@@ -260,6 +261,7 @@ export class GameEngine {
     this.selectedPlant = null
     this.feedback = null
     this.banner = null
+    this.gateHitAt = 0
 
     this.spawnInterval = cfg.spawnInterval
     this.spawnTimer = 0
@@ -1070,6 +1072,7 @@ export class GameEngine {
           z.dyingTimer = ZOMBIE.DYING_DURATION_MS
           this.shakeUntil = Date.now() + 260
           this.shakeIntensity = 4
+          this._hitGate(z.lane)
           this.emitView(true)
         }
       } else {
@@ -1079,6 +1082,16 @@ export class GameEngine {
     if (finished.length) {
       this.zombies = this.zombies.filter((z) => !finished.includes(z))
     }
+  }
+
+  /** 篱笆门受击：记录时间戳（渲染器晃动门叶）+ 受击车道迸溅木屑 */
+  private _hitGate(lane: number) {
+    this.gateHitAt = Date.now()
+    const { left, top, cellH } = this.layout
+    const gx = Math.max(12, left * 0.5)
+    const gy = top + lane * cellH + cellH / 2
+    this._addBurst(gx, gy, '#B98A5C', 9)
+    this._addBurst(gx, gy - 10, '#C79A6B', 6)
   }
 
   private _dancerSummon(dancer: EngineZombie) {
