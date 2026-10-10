@@ -1,0 +1,132 @@
+<!-- pages/rewards/rewards.wxml - 亲子奖励中心 (v32)
+  结构：
+    .reward-page (scroll-view 全页滚动)
+      ├── .rp-wallet       积分钱包卡（大数字 + 连续打卡 / 月度积分 / 已兑换 三列）
+      ├── .rp-tier ×3      🟢即时小奖励 / 🟡周末中等 / 🔵长线大奖
+      │     └── .rp-item   奖励卡（emoji + 名称 + 价目 + 兑换按钮 / 家长确认长按条）
+      └── .rp-history      最近兑换记录
+-->
+<view class="reward-page" style="height: {{pageHeight}}rpx;">
+
+  <scroll-view scroll-y class="rp-scroll" show-scrollbar="{{false}}">
+
+    <!-- ============ 积分钱包卡 ============ -->
+    <view class="rp-wallet" wx:if="{{wallet}}">
+      <view class="rp-wallet-head">
+        <text class="rp-wallet-icon">🎁</text>
+        <view class="rp-wallet-main">
+          <view class="rp-wallet-points">{{wallet.points}}</view>
+          <view class="rp-wallet-label">当前亲子积分</view>
+        </view>
+      </view>
+      <view class="rp-wallet-meta">
+        <view class="rp-meta">
+          <view class="rp-meta-num">{{wallet.streak}}</view>
+          <view class="rp-meta-label">连续打卡天</view>
+        </view>
+        <view class="rp-meta-divider"></view>
+        <view class="rp-meta">
+          <view class="rp-meta-num">{{wallet.monthPoints}}</view>
+          <view class="rp-meta-label">本月积分</view>
+        </view>
+        <view class="rp-meta-divider"></view>
+        <view class="rp-meta">
+          <view class="rp-meta-num">{{wallet.redeemedCount}}</view>
+          <view class="rp-meta-label">已兑换次数</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- ============ 月度目标进度条 ============ -->
+    <view class="rp-month-progress" wx:if="{{wallet}}">
+      <view class="rp-month-bar">
+        <view class="rp-month-fill" style="width: {{wallet.monthPoints / wallet.monthGoal * 100 > 100 ? 100 : (wallet.monthPoints / wallet.monthGoal * 100)}}%;"></view>
+      </view>
+      <view class="rp-month-text">长线大奖月度目标：{{wallet.monthPoints}} / {{wallet.monthGoal}} 分</view>
+    </view>
+
+    <!-- ============ 三档奖励 ============ -->
+    <block wx:for="{{tiers}}" wx:key="key" wx:for-item="tier">
+
+      <view class="rp-tier tier-{{tier.key}}">
+        <!-- 档位标题行 -->
+        <view class="rp-tier-head">
+          <text class="rp-tier-icon">{{tier.icon}}</text>
+          <view class="rp-tier-name">{{tier.name}}</view>
+          <view class="rp-tier-chip {{tier.unlocked ? 'on' : 'off'}}">
+            {{tier.unlocked ? '已解锁' : tier.progressText}}
+          </view>
+        </view>
+        <view class="rp-tier-sub">
+          {{tier.key === 'instant' ? '低积分 · 单次通关解锁' : (tier.key === 'weekend' ? '中积分 · 连续打卡解锁' : '高积分 · 月度目标解锁')}}
+          · {{tier.cost}} 积分/项
+        </view>
+
+        <!-- 奖励卡网格（2 列） -->
+        <view class="rp-grid">
+          <view
+            wx:for="{{tier.items}}"
+            wx:key="id"
+            wx:for-item="item"
+            class="rp-item {{item.canRedeem ? '' : 'locked'}}"
+          >
+            <view class="rp-item-top">
+              <view class="rp-item-emoji">{{item.emoji}}</view>
+              <view class="rp-item-info">
+                <view class="rp-item-name">{{item.name}}</view>
+                <view class="rp-item-cost">💰 {{item.cost}} 分</view>
+              </view>
+            </view>
+
+            <!-- 兑换按钮 / 家长确认长按条 -->
+            <block wx:if="{{confirmingId !== item.id}}">
+              <view
+                class="rp-item-btn {{item.canRedeem ? 'can' : 'nope'}}"
+                data-id="{{item.id}}"
+                bindtap="onTapRedeem"
+                hover-class="{{item.canRedeem ? 'rp-btn-hover' : ''}}"
+              >{{item.statusText}}</view>
+            </block>
+            <block wx:else>
+              <view class="rp-confirm">
+                <view class="rp-confirm-tip">家长确认 · 👆 长按 2 秒发放</view>
+                <view
+                  class="rp-confirm-btn {{holdRunning ? 'run' : ''}}"
+                  data-id="{{item.id}}"
+                  bindtouchstart="onHoldStart"
+                  bindtouchend="onHoldCancel"
+                  bindtouchcancel="onHoldCancel"
+                >
+                  <text class="rp-confirm-text">按住发放</text>
+                  <view class="rp-confirm-fill"></view>
+                </view>
+              </view>
+            </block>
+          </view>
+        </view>
+      </view>
+
+    </block>
+
+    <!-- ============ 兑换记录 ============ -->
+    <view class="rp-history" wx:if="{{history.length > 0}}">
+      <view class="rp-history-head">📜 最近兑换</view>
+      <view wx:for="{{history}}" wx:key="ts" class="rp-history-row">
+        <text class="rp-history-emoji">{{item.emoji}}</text>
+        <view class="rp-history-name">{{item.name}}</view>
+        <view class="rp-history-cost">-{{item.cost}} 分</view>
+        <view class="rp-history-time">{{item.timeText}}</view>
+      </view>
+    </view>
+
+    <!-- 底部说明 -->
+    <view class="rp-footer-tip">
+      <view>💡 通关得积分：实际得分每 2000 分 +1（保底 5 · 封顶 20）· 星级最多 +5 · 每日打卡 +5 · 连续打卡最多 +10</view>
+      <view>兑换需家长长按确认，共同守护约定的亲子时光 ❤️</view>
+    </view>
+
+    <view class="rp-bottom-safe" style="height: calc(20rpx + {{safeBottomRpx}}rpx);"></view>
+
+  </scroll-view>
+
+</view>

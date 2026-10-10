@@ -1,0 +1,242 @@
+<!-- pages/game/game.wxml - 游戏页（自适应布局） -->
+<!-- v17: 移除内联 pageHeight 高度绑定,改用纯 CSS 视口链路(page{height:100%} → .game-page{height:100%})
+     根治 layout 数据未就绪/机型切换时 fallback 1334rpx > 实际视口导致的底部裁切 -->
+<view class="game-page">
+
+  <!-- ============ HUD 顶部栏 ============ -->
+  <view class="hud">
+    <view class="hud-row">
+      <!-- 阳光 -->
+      <view class="hud-item hud-sunlight">
+        <view class="hud-label">阳光</view>
+        <view class="hud-value">
+          <text class="sun-icon">☀️</text>
+          <text>{{sunlight}}</text>
+        </view>
+      </view>
+      <!-- 分数 + 关卡 -->
+      <view class="hud-item hud-score">
+        <view class="hud-label">分数</view>
+        <view class="hud-value">
+          <text class="level-badge">Lv.{{level}}</text>
+          <text>{{score}}</text>
+        </view>
+      </view>
+      <!-- 防线（v2 替代生命：防线数，僵尸突破终点扣减） -->
+      <view class="hud-item hud-defense">
+        <view class="hud-label">防线</view>
+        <view class="lives-row">
+          <text wx:for="{{[1,2,3]}}" wx:key="*this" class="flower {{defenseLines >= item ? 'on' : 'off'}}">🌸</text>
+        </view>
+      </view>
+      <!-- 连击 -->
+      <view class="hud-item hud-combo {{combo >= 2 ? 'combo-active anim-pulse' : ''}}">
+        <view class="hud-label">连击</view>
+        <view class="hud-value">
+          <text>x{{combo}}</text>
+          <text wx:if="{{combo >= 5}}" class="combo-fire">🔥</text>
+        </view>
+      </view>
+      <!-- 暂停按钮 -->
+      <view class="hud-item hud-pause" bindtap="onTogglePause">
+        <view class="pause-btn">{{paused ? '▶' : '⏸'}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ============ 植物商店栏 ============ -->
+  <view class="shop-bar">
+    <scroll-view scroll-x class="shop-scroll" enhanced show-scrollbar="{{false}}">
+      <view
+        wx:for="{{shopItems}}"
+        wx:key="type"
+        class="shop-item {{selectedPlant === item.type ? 'selected' : ''}} {{!item.affordable ? 'disabled' : ''}}"
+        data-type="{{item.type}}"
+        bindtap="onShopSelect"
+      >
+        <!-- 纯 CSS 萌系植物图标（与 Canvas 植物风格一致，无图片） -->
+        <view class="shop-avatar shop-avatar-{{item.type}}">
+          <view class="sa-head"></view>
+          <view class="sa-deco-top"></view>
+          <view class="sa-deco-left"></view>
+          <view class="sa-deco-right"></view>
+          <view class="sa-eye sa-eye-l">
+            <view class="sa-pupil"></view>
+            <view class="sa-shine"></view>
+          </view>
+          <view class="sa-eye sa-eye-r">
+            <view class="sa-pupil"></view>
+            <view class="sa-shine"></view>
+          </view>
+          <view class="sa-blush sa-blush-l"></view>
+          <view class="sa-blush sa-blush-r"></view>
+          <view class="sa-mouth"></view>
+        </view>
+        <view class="shop-name">{{item.name}}</view>
+        <view class="shop-cost">
+          <text class="shop-cost-icon">☀️</text>
+          <text>{{item.cost}}</text>
+        </view>
+      </view>
+    </scroll-view>
+    </view>
+
+  <!-- ============ Canvas 游戏区（v15 flex:1 + flex-shrink:1 与下方 quiz-wrap 物理隔离不重叠） ============ -->
+  <view class="canvas-wrap" bindtap="onCanvasTap">
+    <!-- 植物选择提示浮层（悬浮于 canvas 顶部，柔和低饱和配色，不占用布局空间、不拦截点击） -->
+    <view wx:if="{{plantTipVisible}}" class="plant-tip-toast">
+      <text class="plant-tip-emoji">👆</text>
+      <text>已选择「{{selectedPlantName}}」· 点击网格放置</text>
+    </view>
+    <canvas
+      type="2d"
+      id="gameCanvas"
+      class="game-canvas"
+      style="width: 100%; height: 100%;"
+    ></canvas>
+
+    <!-- v3: 可收集阳光 DOM 层（与 canvas 同坐标系，使用百分比定位 + 绝对布局）
+         - pointer-events: auto 允许点击收集
+         - 采用 catchtap 避免冒泡到父层 onCanvasTap 导致"放置植物"误操作
+         - wx:key 用 id 保证列表变化不重渲染非变更项
+    -->
+    <view class="suns-layer">
+      <view
+        wx:for="{{sunsView}}"
+        wx:key="id"
+        class="sun-coin {{item.collected ? 'sun-coin-collected' : ''}}"
+        style="left: {{item.left}}; top: {{item.top}}; opacity: {{item.opacity}}; transform: translate(-50%, -50%);"
+        data-id="{{item.id}}"
+        catchtap="onSunTap"
+      >
+        <!-- v23: scale 动画移至 inner —— 元素自身 transform 只保留定位 translate,
+             出现/收集动画期间点击热区 (132rpx) 恒定不随 scale 缩小 -->
+        <view class="sun-coin-inner" style="transform: scale({{item.scale}});">
+          <text class="sun-emoji">☀️</text>
+          <text class="sun-value-label" wx:if="{{!item.collected}}">+{{item.value}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 暂停遮罩
+         事件绑定策略（v3 修复 button 原生组件失响应）：
+         1. mask 用 catchtap="onTogglePause"：点空白处继续 + 阻止穿透到 canvas
+         2. pause-card 不绑定任何事件：点 card 非按钮区域冒泡到 mask → 继续（符合"点击屏幕继续"提示）
+         3. button 用 catchtap 阻止冒泡：避免点按钮时再冒泡到 mask 导致 onTogglePause 双触发
+         ⚠ 严禁使用 catchtouchstart/catchtouchend：
+            <button> 是原生组件，tap 依赖完整 touchstart→touchend 序列，
+            父层 catchtouch* 会切断序列 → button 永远不触发 tap → 按钮无响应
+    -->
+    <view wx:if="{{paused}}" class="pause-mask" catchtap="onTogglePause">
+      <view class="pause-card kawaii-card">
+        <view class="pause-title">😴 休息一下</view>
+        <view class="pause-tip">植物们在等你回来哦</view>
+        <view class="pause-actions">
+          <button class="kawaii-btn kawaii-btn-mint" catchtap="onTogglePause" hover-class="none">继续游戏</button>
+          <button class="kawaii-btn kawaii-btn-ghost" catchtap="onQuit" hover-class="none">退出本局</button>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ============ 底部答题面板（v15 文档流弹性布局，在 canvas 下方自然排列，物理隔离不重叠） ============ -->
+  <view class="quiz-wrap" style="padding-bottom: {{safeBottomRpx}}rpx;">
+    <quiz-panel
+      question="{{currentQuestion}}"
+      feedback="{{feedback}}"
+      disabled="{{quizDisabled}}"
+      time-limit-ms="{{quizTimeLimit}}"
+      remain-ms="{{quizRemainMs}}"
+      bind:answer="onAnswer"
+    ></quiz-panel>
+  </view>
+
+  <!-- ============ 游戏结束结算浮层（一屏完整显示，禁止滚动，覆盖整页） ============ -->
+  <view wx:if="{{gameOverVisible}}" class="gameover-mask">
+    <view class="gameover-card">
+      <!-- 结果头部：emoji + 胜负标题 + 破纪录徽章 -->
+      <view class="go-head">
+        <view class="go-emoji">{{gameOverSummary.result === 'win' ? '🏆' : '🌱'}}</view>
+        <view class="go-title">{{gameOverSummary.result === 'win' ? '恭喜通关！' : '再接再厉！'}}</view>
+        <view wx:if="{{gameOverIsRecord}}" class="go-record">🎉 新纪录</view>
+      </view>
+
+      <!-- 星级评定 -->
+      <view class="go-stars">
+        <text wx:for="{{[1,2,3]}}" wx:key="*this" class="go-star {{gameOverSummary.stars >= item ? 'on' : 'off'}}">★</text>
+      </view>
+
+      <!-- 得分大数字 -->
+      <view class="go-score-row">
+        <view class="go-score-label">本局得分</view>
+        <view class="go-score-value">{{gameOverSummary.scoreText || gameOverSummary.score}}</view>
+      </view>
+
+      <!-- 4 项核心数据（2×2 紧凑网格，保证空间利用率） -->
+      <view class="go-stats">
+        <view class="go-stat">
+          <view class="go-stat-num">{{gameOverSummary.level}}</view>
+          <view class="go-stat-label">关卡</view>
+        </view>
+        <view class="go-stat">
+          <view class="go-stat-num">{{gameOverSummary.maxCombo}}x</view>
+          <view class="go-stat-label">最高连击</view>
+        </view>
+        <view class="go-stat">
+          <view class="go-stat-num">{{gameOverSummary.correctCount}}/{{gameOverSummary.totalAnswered || 0}}</view>
+          <view class="go-stat-label">答对</view>
+        </view>
+        <view class="go-stat">
+          <view class="go-stat-num">{{gameOverSummary.killedZombies}}</view>
+          <view class="go-stat-label">消灭僵尸</view>
+        </view>
+      </view>
+
+      <!-- v32: 通关亲子积分 / v47: 败局努力积分（失败不空手, 复用同卡片） -->
+      <view wx:if="{{rewardSettle && rewardSettle.ok}}" class="go-reward {{gameOverSummary.result === 'lose' ? 'go-reward--lose' : ''}}">
+        <view class="go-reward-row">
+          <view class="go-reward-icon">{{gameOverSummary.result === 'win' ? '🎁' : '💪'}}</view>
+          <view class="go-reward-main">
+            <view class="go-reward-title">{{gameOverSummary.result === 'win' ? '亲子积分' : '努力积分'}} +{{rewardSettle.earned}}</view>
+            <view class="go-reward-detail">{{rewardSettle.detailText}}</view>
+          </view>
+        </view>
+        <!-- v36: 得分→积分换算条（仅通关; 败局无换算条） -->
+        <view wx:if="{{gameOverSummary.result === 'win'}}" class="go-reward-score">
+          <view class="go-rs-labels">
+            <text class="go-rs-score">本局得分 {{rewardSettle.scoreText}}</text>
+            <text class="go-rs-pts">积分 +{{rewardSettle.scorePts}}/{{rewardSettle.scorePtsMax}}</text>
+          </view>
+          <view class="go-rs-bar">
+            <view class="go-rs-fill" style="width: {{rewardSettle.scoreProgress}}%"></view>
+          </view>
+        </view>
+        <view class="go-reward-unlock">{{gameOverSummary.result === 'win' ? '解锁 1 次即时小奖励 · 首页「亲子积分」查看' : '继续挑战！通关可解锁即时小奖励 · 答对越多积分越多'}}</view>
+      </view>
+
+      <!-- 底部提示信息（一句话） -->
+      <view class="go-tip">
+        {{gameOverSummary.result === 'win' ? '你已成功守护单词农场！' : '继续加油，多多练单词会更强哦～'}}
+      </view>
+
+      <!-- 操作按钮（两个等宽） -->
+      <view class="go-actions">
+        <button class="kawaii-btn kawaii-btn-ghost" catchtap="onGameOverHome" hover-class="none">返回首页</button>
+        <button class="kawaii-btn kawaii-btn-mint" catchtap="onGameOverRestart" hover-class="none">再来一局</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- ============ v61: 里程碑全屏彩带层（纯 CSS 动画; pointer-events:none 不拦截答题/收集等任何操作） ============ -->
+  <view class="confetti-layer" wx:if="{{confettiView.length}}">
+    <view
+      wx:for="{{confettiView}}"
+      wx:key="id"
+      class="confetti-piece {{item.cls}} confetti-{{item.path}}"
+      style="left: {{item.left}}%; width: {{item.w}}rpx; height: {{item.h}}rpx; background: {{item.bg}}; animation-duration: {{item.dur}}s; animation-delay: {{item.delay}}s;"
+    >
+      <text wx:if="{{item.emoji}}" class="confetti-emoji">{{item.emoji}}</text>
+    </view>
+  </view>
+
+</view>

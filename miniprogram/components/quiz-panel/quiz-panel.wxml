@@ -1,0 +1,48 @@
+<!-- components/quiz-panel/quiz-panel.wxml - 答题面板 -->
+<view class="quiz-panel">
+  <!-- 题目区（占面板高度50%） -->
+  <view class="question-area {{feedback === 'correct' ? 'fb-correct' : ''}} {{feedback === 'wrong' ? 'fb-wrong anim-shake' : ''}} {{feedback === 'timeout' ? 'fb-timeout' : ''}}">
+    <view class="question-label">
+      <text>📝 {{question.prompt || '选出正确答案'}}</text>
+    </view>
+    <!-- v39: 题目限时倒计时（条 + 秒数；剩余 ≤5s 紧急红 + 秒数脉冲） -->
+    <view wx:if="{{timerOn}}" class="q-timer {{timerDanger ? 'q-timer-danger' : ''}}">
+      <view class="q-timer-track"><view class="q-timer-fill" style="width: {{barPct}}%;"></view></view>
+      <text class="q-timer-sec">⏱{{remainSec}}s</text>
+    </view>
+    <view wx:if="{{question}}" class="question-content">
+      <view class="word">{{question.content}}</view>
+      <view wx:if="{{question.phonetic}}" class="phonetic">/{{question.phonetic}}/</view>
+    </view>
+    <view wx:else class="question-empty">准备题目中...</view>
+  </view>
+
+  <!-- 选项区（占面板高度50%） -->
+  <view class="options-area">
+    <block wx:if="{{question && question.options}}">
+      <view
+        wx:for="{{question.options}}"
+        wx:key="*this"
+        class="option {{selectedOption === index ? 'selected' : ''}} {{disabled && index === question.correctAnswer ? 'reveal' : ''}}"
+        data-index="{{index}}"
+        bindtap="onTapOption"
+      >
+        <!-- v40: A/B/C/D 字母徽章 — 更像正规答题卡, 家长可口头引导「选 B」 -->
+        <view class="option-badge">{{optionLetters[index]}}</view>
+        <view class="option-text">{{item}}</view>
+      </view>
+    </block>
+    <view wx:else class="question-empty">准备选项中...</view>
+  </view>
+
+  <!-- 答题反馈浮层 -->
+  <view wx:if="{{feedback === 'correct'}}" class="feedback fb-overlay correct">
+    <text>✓ 答对了！</text>
+  </view>
+  <view wx:if="{{feedback === 'wrong'}}" class="feedback fb-overlay wrong">
+    <text>✗ 答错了！</text>
+  </view>
+  <view wx:if="{{feedback === 'timeout'}}" class="feedback fb-overlay timeout">
+    <text>⏰ 时间到，换一题！</text>
+  </view>
+</view>

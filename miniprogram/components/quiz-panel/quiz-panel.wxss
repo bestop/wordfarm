@@ -1,0 +1,254 @@
+/* components/quiz-panel/quiz-panel.wxss - 答题面板样式 */
+
+/* v12 关键修复：自定义组件宿主节点默认 inline，部分机型高度计算异常
+   导致面板内容（尤其底部选项）被裁切。显式声明 block 保证布局稳定。 */
+/* v16 修复（Task 15）：紧凑化 option 与 options-area，释放 ~47rpx 垂直空间
+   修复点：option min-height 72→60 / padding 8→5 / border 3→2 / options-area gap 12→8 / padding 8/14→5/8
+            question-area padding-top 2→0 / option-text font 24→22
+   目标：答题区 4 个选项在所有机型完整显示，不被 .game-page overflow:hidden 裁切 */
+:host {
+  display: block;
+  width: 100%;
+}
+
+.quiz-panel {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;          /* v15: 文档流末端不被父级 flex 压缩，永远完整显示 */
+  background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,245,248,0.98) 100%);
+  border-radius: 38rpx 38rpx 0 0;
+  border-top: 4rpx solid #FFFFFF;
+  box-shadow: 0 -10rpx 28rpx rgba(243,139,168,0.18);
+  overflow: visible;
+}
+
+/* ============ 题目区（v9 按内容收缩，弹性让位给选项区） ============ */
+.question-area {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18rpx 0;          /* v16: 2→0 紧凑化 question-area 顶部空间 */
+  position: relative;
+  transition: background 0.2s ease;
+}
+.question-area.fb-correct { background: rgba(181,234,215,0.35); }
+.question-area.fb-wrong { background: rgba(255,205,210,0.35); }
+.question-area.fb-timeout { background: rgba(255,224,178,0.35); }   /* v39: 超时琥珀色 */
+
+.question-label {
+  font-size: 16rpx;
+  color: #6D4C41;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 2rpx;
+}
+.question-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rpx;
+}
+.word {
+  font-size: 32rpx;
+  font-weight: 900;
+  color: #4E342E;
+  letter-spacing: 0.5rpx;
+  text-shadow: 0 2rpx 0 rgba(255,255,255,0.8);
+  line-height: 1.15;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.phonetic {
+  font-size: 17rpx;               /* v59: 16→17 辅学信息儿童可读 */
+  color: #C2185B;                 /* v59: 浅粉→品牌玫红深档, 白底对比 4.5:1+ */
+  font-weight: 700;
+  font-family: "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif;  /* v59: 去斜体感衬线, 正体 IPA */
+  line-height: 1.15;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.question-empty {
+  font-size: 20rpx;
+  color: #BCAAA4;
+}
+
+/* ============ v39: 题目限时倒计时 ============ */
+.q-timer {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  width: 100%;
+  margin: 2rpx 0 4rpx;
+}
+.q-timer-track {
+  flex: 1;
+  height: 10rpx;
+  background: rgba(243,139,168,0.22);   /* v59: 轨道对比度 +47%, 剩余时长一眼可辨 */
+  border-radius: 999rpx;
+  overflow: hidden;
+}
+.q-timer-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #FFB74D, #FF8A65);
+  border-radius: 999rpx;
+  /* 心跳 500ms 一跳，transition 抹平步进 → 视觉连续 */
+  transition: width 0.5s linear;
+}
+.q-timer-sec {
+  flex-shrink: 0;
+  min-width: 64rpx;
+  text-align: right;
+  font-size: 18rpx;
+  font-weight: 900;
+  color: #8D6E63;
+  line-height: 1;
+}
+/* 紧急态：红条 + 秒数脉冲提醒 */
+.q-timer-danger .q-timer-fill {
+  background: linear-gradient(90deg, #EF5350, #E53935);
+}
+.q-timer-danger .q-timer-sec {
+  color: #E53935;
+  animation: q-timer-pulse 0.6s ease-in-out infinite;
+}
+@keyframes q-timer-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+
+/* ============ 选项区（v42 2×2 网格：两行两列, 古典写法真机必换行） ============ */
+.options-area {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;              /* v42: width<50% 两列必换行成 2×2 */
+  justify-content: space-between; /* v42: 列距自动分配 — 弃 gap(iOS<14.1 不支持) */
+  padding: 8rpx 14rpx 16rpx;   /* v42: 底 12→16 吃末行 margin, 顶部呼吸感不变 */
+  box-sizing: border-box;
+}
+.option {
+  width: 48.8%;                /* v42: 百分数直写 — flex 简写嵌 calc 真机解析不可靠 */
+  margin-bottom: 10rpx;        /* v42: 行间距, margin 所有引擎恒生效 */
+  min-width: 0;
+  min-height: 72rpx;            /* v40: 60→72 点击目标 +20%，孩子手指好点 */
+  background: #FFFFFF;
+  border: 3rpx solid #F8BBD0;   /* v40: 2→3 厚边框，萌系立体感 */
+  border-radius: 18rpx;          /* v40: 12→18 更圆润 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8rpx 10rpx;          /* v40: 5/8→8/10 内容舒展 */
+  box-sizing: border-box;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease, border-color 0.15s ease;
+  box-shadow: 0 4rpx 0 rgba(244,143,158,0.5),   /* v40: 实底厚投影 — 咔萌按键质感 */
+              inset 0 2rpx 0 rgba(255,255,255,0.95);
+  overflow: hidden;
+}
+/* v40: A/B/C/D 字母徽章 */
+.option-badge {
+  flex-shrink: 0;
+  margin-right: 8rpx;        /* v42b: 徽章-文本间距, 替代 .option gap(老 iOS 不支持) */
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #FDD9E3, #F8BBD0);
+  color: #B06A7F;
+  font-size: 20rpx;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 -2rpx 0 rgba(173,94,118,0.18);
+}
+.option-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
+  word-wrap: break-word;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.35;
+  font-size: 24rpx;          /* v40: 22→24 恢复易读字号（增高由 canvas flex 吸收） */
+  font-weight: 800;
+  color: #4E342E;
+  letter-spacing: 0.3rpx;
+  flex: 1;                   /* v40: width:100%→flex 自适应（给徽章让位） */
+  min-width: 0;
+}
+.option:active {
+  transform: translateY(3rpx);   /* v40: 按下位移 — 实底按键压感（替代缩放） */
+  box-shadow: 0 1rpx 0 rgba(244,143,158,0.5),
+              inset 0 2rpx 0 rgba(255,255,255,0.95);
+  background: #FFF0F4;
+}
+.option.selected {
+  background: linear-gradient(145deg, #EC407A, #E91E63);
+  border-color: #D81B60;
+  color: #FFFFFF;
+  transform: scale(0.97);
+}
+.option.selected .option-badge {
+  background: rgba(255,255,255,0.28);   /* v40: 白色半透明徽章浮于粉渐变 */
+  color: #FFFFFF;
+  box-shadow: none;
+}
+/* v59: 选中/揭示态白字真正生效 — .option-text 自带 color 覆盖了父级 color,
+   v40 起白字从未生效（深底深字，儿童可读性 P0） */
+.option.selected .option-text { color: #FFFFFF; }
+.option.reveal .option-text { color: #FFFFFF; }
+.option.reveal {
+  background: linear-gradient(145deg, #66BB6A, #43A047);
+  border-color: #388E3C;
+  color: #FFFFFF;
+}
+.option.reveal .option-badge {
+  background: rgba(255,255,255,0.28);   /* v40: 白色半透明徽章浮于绿渐变 */
+  color: #FFFFFF;
+  box-shadow: none;
+}
+
+/* ============ 反馈浮层 ============ */
+.feedback {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 18rpx 36rpx;
+  border-radius: 999rpx;
+  font-size: 30rpx;
+  font-weight: 900;
+  color: #FFFFFF;
+  pointer-events: none;
+  animation: pop-in-centered 0.4s ease-out;
+  z-index: 10;
+}
+.feedback.correct {
+  background: linear-gradient(145deg, #66BB6A, #4CAF50);
+  box-shadow: 0 8rpx 24rpx rgba(102,187,106,0.4);
+}
+.feedback.wrong {
+  background: linear-gradient(145deg, #EF5350, #E53935);
+  box-shadow: 0 8rpx 24rpx rgba(239,83,80,0.4);
+}
+/* v39: 超时反馈（琥珀暖色 — 温和提示，区别于答错惩罚红） */
+.feedback.timeout {
+  background: linear-gradient(145deg, #FFA726, #FB8C00);
+  box-shadow: 0 8rpx 24rpx rgba(255,167,38,0.4);
+}
+
+/* v6 修复 (Task 11 F20): 改名为 pop-in-centered，避免与 app.wxss 全局 pop-in 同名冲突 */
+@keyframes pop-in-centered {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  60% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}

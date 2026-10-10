@@ -1,0 +1,413 @@
+/* pages/rewards/rewards.wxss - 亲子奖励中心样式 (v32)
+  视觉语言：延续结算浮层/首页的奶油粉底 + 圆角卡 + 软阴影；
+  三档各配主题色（🟢 #66BB6A / 🟡 #FFB300 / 🔵 #42A5F5）
+*/
+
+.reward-page {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #FFF5F8 0%, #FFFDF4 30%, #FFF8E8 100%);
+  overflow: hidden;
+}
+.rp-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 24rpx 28rpx 0;
+  box-sizing: border-box;
+}
+
+/* ============ 积分钱包卡 ============ */
+.rp-wallet {
+  padding: 26rpx 30rpx 20rpx;
+  box-sizing: border-box;
+  border-radius: 30rpx;
+  background: linear-gradient(135deg, #FFD54F 0%, #FFB300 60%, #FB8C00 100%);
+  border: 4rpx solid #FFFFFF;
+  box-shadow: 0 16rpx 36rpx rgba(251, 140, 0, 0.28),
+              inset 0 3rpx 0 rgba(255,255,255,0.75);
+  color: #FFFFFF;
+}
+.rp-wallet-head {
+  display: flex;
+  align-items: center;
+  gap: 22rpx;
+}
+.rp-wallet-icon {
+  font-size: 64rpx;
+  line-height: 1;
+  filter: drop-shadow(0 4rpx 8rpx rgba(0,0,0,0.18));
+  animation: walletBob 2.8s ease-in-out infinite;
+}
+@keyframes walletBob {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50%      { transform: translateY(-8rpx) rotate(4deg); }
+}
+.rp-wallet-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.rp-wallet-points {
+  font-size: 60rpx;   /* v59: 64→60 与三列小数据拉开层级又保冲击力 */
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: 1rpx;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 3rpx 8rpx rgba(0,0,0,0.22);
+}
+.rp-wallet-label {
+  margin-top: 6rpx;   /* v59: 主数字-副标题呼吸感 */
+  font-size: 20rpx;
+  font-weight: 700;
+  opacity: 0.92;
+  letter-spacing: 1rpx;
+}
+.rp-wallet-meta {
+  margin-top: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14rpx 18rpx;
+  border-radius: 18rpx;
+  background: rgba(255,255,255,0.22);
+  box-shadow: inset 0 2rpx 0 rgba(255,255,255,0.35);
+}
+.rp-meta {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rpx;
+}
+.rp-meta-num {
+  font-size: 30rpx;
+  font-weight: 900;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.rp-meta-label {
+  font-size: 15rpx;
+  font-weight: 600;
+  opacity: 0.92;
+}
+.rp-meta-divider {
+  flex: 0 0 auto;
+  width: 2rpx;
+  height: 40rpx;
+  background: rgba(255,255,255,0.62);   /* v59: 金底上分割线对比度 +38% */
+  border-radius: 1rpx;
+}
+
+/* ============ 月度进度条 ============ */
+.rp-month-progress {
+  margin: 16rpx 6rpx 4rpx;
+  position: relative;   /* v59: 终点旗标定位锚 */
+}
+/* v59: 终点 🏁 旗标 — 600 分长线目标具象化, 强化「快到了」的渴望感 */
+.rp-month-progress::after {
+  content: '🏁';
+  position: absolute;
+  right: -4rpx;
+  top: -14rpx;
+  font-size: 24rpx;
+  line-height: 1;
+  filter: drop-shadow(0 2rpx 2rpx rgba(180, 83, 9, 0.25));
+}
+.rp-month-bar {
+  height: 16rpx;   /* v59: 12→16 能量槽感（儿童游戏化进度） */
+  border-radius: 999rpx;
+  background: #FFF3D9;
+  border: 1rpx solid #FFE082;
+  overflow: hidden;
+  box-shadow: inset 0 1rpx 3rpx rgba(180, 83, 9, 0.12);
+}
+.rp-month-fill {
+  height: 100%;
+  min-width: 0;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, #FFD54F, #FB8C00);
+  box-shadow: 0 0 6rpx rgba(251, 140, 0, 0.5);
+  transition: width 0.6s cubic-bezier(.2,.9,.2,1);
+}
+.rp-month-text {
+  margin-top: 6rpx;
+  font-size: 16rpx;
+  font-weight: 700;
+  color: #A1782B;
+  text-align: center;
+  letter-spacing: 0.5rpx;
+}
+
+/* ============ 三档奖励区 ============ */
+.rp-tier {
+  margin-top: 28rpx;   /* v59: 模块间距呼吸感 */
+  padding: 20rpx 20rpx 16rpx;
+  box-sizing: border-box;
+  border-radius: 26rpx;
+  background: rgba(255,255,255,0.97);
+  border: 2rpx solid #F0E8D8;
+  box-shadow: 0 10rpx 24rpx rgba(120, 100, 60, 0.08),
+              inset 0 2rpx 0 rgba(255,255,255,0.95);
+}
+/* 各档主题色（左侧色条 + 标题色） */
+.tier-instant { border-left: 8rpx solid #66BB6A; }
+.tier-weekend { border-left: 8rpx solid #FFB300; }
+.tier-grand   { border-left: 8rpx solid #42A5F5; }
+
+.rp-tier-head {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+.rp-tier-icon {
+  font-size: 22rpx;
+  line-height: 1;
+}
+.rp-tier-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 30rpx;
+  font-weight: 900;
+  color: #5D4037;
+  letter-spacing: 1rpx;
+}
+.tier-instant .rp-tier-name { color: #2E7D32; }
+.tier-weekend .rp-tier-name { color: #B45309; }
+.tier-grand   .rp-tier-name { color: #1565C0; }
+
+.rp-tier-chip {
+  flex-shrink: 0;
+  max-width: 46%;
+  padding: 6rpx 16rpx;
+  border-radius: 999rpx;
+  font-size: 16rpx;
+  font-weight: 800;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rp-tier-chip.on {
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #81C784, #43A047);
+  box-shadow: 0 3rpx 8rpx rgba(67, 160, 71, 0.35);
+}
+.rp-tier-chip.off {
+  color: #8D6E63;
+  background: #FFF6E8;                    /* v59: 提亮一档 */
+  border: 1rpx solid #F0D9B4;             /* v59: 边框加深, 白底可辨 */
+  box-shadow: 0 2rpx 6rpx rgba(120, 100, 60, 0.10);   /* v59: 贴纸感微投影 */
+}
+.tier-weekend .rp-tier-chip.on { background: linear-gradient(135deg, #FFD54F, #FB8C00); }
+.tier-grand   .rp-tier-chip.on { background: linear-gradient(135deg, #64B5F6, #1E88E5); }
+
+.rp-tier-sub {
+  margin-top: 6rpx;
+  font-size: 16rpx;
+  font-weight: 600;
+  color: #A1887F;
+  letter-spacing: 0.4rpx;
+}
+
+/* ============ 奖励卡网格 ============ */
+.rp-grid {
+  margin-top: 14rpx;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+.rp-item {
+  width: calc((100% - 12rpx) / 2);
+  box-sizing: border-box;
+  padding: 14rpx 14rpx 12rpx;
+  border-radius: 18rpx;
+  background: linear-gradient(180deg, #FFFFFF, #FFFDF7);
+  border: 2rpx solid #F5EDE0;
+  box-shadow: inset 0 2rpx 0 rgba(255,255,255,0.95),
+              0 4rpx 10rpx rgba(120, 100, 60, 0.07);
+  transition: transform 150ms ease;
+}
+.rp-item.locked {
+  opacity: 0.72;
+}
+.rp-item-top {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+.rp-item-emoji {
+  flex-shrink: 0;
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  background: #FAF6EC;
+  border-radius: 16rpx;
+  border: 2rpx solid #F0E8D8;
+}
+.rp-item-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.rp-item-name {
+  font-size: 22rpx;
+  font-weight: 800;
+  color: #5D4037;
+  line-height: 1.25;
+}
+.rp-item-cost {
+  margin-top: 4rpx;
+  font-size: 16rpx;
+  font-weight: 800;
+  color: #F9A825;
+  line-height: 1;
+}
+
+/* ============ 兑换按钮 ============ */
+.rp-item-btn {
+  margin-top: 12rpx;
+  height: 62rpx;   /* v59: 56→62 与家长确认条等高, 卡片底线对齐 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14rpx;
+  font-size: 19rpx;
+  font-weight: 800;
+  letter-spacing: 0.5rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8rpx;
+  box-sizing: border-box;
+}
+.rp-item-btn.can {
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #81C784, #43A047);
+  box-shadow: 0 5rpx 0 #388E3C, 0 8rpx 14rpx rgba(67, 160, 71, 0.30);
+}
+.rp-item-btn.nope {
+  color: #8D6E63;
+  background: #FBF6EA;            /* v59: 灰败感→暖米黄 Tint, 待解锁的宝藏感 */
+  border: 1rpx dashed #D9BE93;    /* v59: 虚线加深, 可辨识「未开」而非「坏掉」 */
+}
+.rp-btn-hover {
+  transform: translateY(3rpx);
+  box-shadow: 0 2rpx 0 #388E3C, 0 4rpx 8rpx rgba(67, 160, 71, 0.25);
+}
+
+/* ============ 家长确认长按条 ============ */
+.rp-confirm {
+  margin-top: 12rpx;
+}
+.rp-confirm-tip {
+  font-size: 15rpx;
+  font-weight: 700;
+  color: #8D6E63;
+  text-align: center;
+  margin-bottom: 8rpx;
+}
+/* v32.1 VLM 建议：按钮带微脉冲，提示这是需要长按的特殊交互 */
+.rp-confirm-btn {
+  position: relative;
+  height: 62rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14rpx;
+  overflow: hidden;
+  background: linear-gradient(135deg, #FFF8E1, #FFEFC5);   /* v59: 灰败→暖琥珀, 正向激励色 */
+  border: 2rpx solid #FFC94D;
+  animation: rpPulse 1.6s ease-in-out infinite;
+}
+@keyframes rpPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 179, 0, 0.0); }
+  50%      { transform: scale(1.015); box-shadow: 0 0 0 6rpx rgba(255, 179, 0, 0.18); }
+}
+.rp-confirm-text {
+  position: relative;
+  z-index: 2;
+  font-size: 20rpx;
+  font-weight: 900;
+  color: #A05E0B;   /* v59: 暗红褐→暖琥珀（去警示感, 呼应钱包金） */
+  letter-spacing: 1rpx;
+}
+.rp-confirm-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 0;
+  background: linear-gradient(90deg, #FFE082, #FFB300);
+}
+.rp-confirm-btn.run .rp-confirm-fill {
+  width: 100%;
+  transition: width 2s linear;
+}
+
+/* ============ 兑换记录 ============ */
+.rp-history {
+  margin-top: 28rpx;
+  padding: 18rpx 22rpx;
+  border-radius: 22rpx;
+  background: rgba(255,255,255,0.92);
+  border: 2rpx solid #F0E8D8;
+}
+.rp-history-head {
+  font-size: 24rpx;
+  font-weight: 900;
+  color: #5D4037;
+  letter-spacing: 1rpx;
+}
+.rp-history-row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 12rpx 0 0;
+}
+.rp-history-emoji {
+  font-size: 28rpx;
+  line-height: 1;
+}
+.rp-history-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 19rpx;
+  font-weight: 700;
+  color: #6D4C41;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rp-history-cost {
+  flex-shrink: 0;
+  font-size: 16rpx;
+  font-weight: 800;
+  color: #E65100;
+}
+.rp-history-time {
+  flex-shrink: 0;
+  font-size: 15rpx;
+  font-weight: 600;
+  color: #BCAAA4;
+}
+
+/* ============ 底部说明 ============ */
+.rp-footer-tip {
+  margin-top: 24rpx;
+  padding: 16rpx 24rpx;
+  border-radius: 18rpx;
+  background: rgba(232, 237, 228, 0.65);
+  font-size: 17rpx;
+  font-weight: 600;
+  color: #5E6F48;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* 底部安全区占位（配合 inline style 高度） */
+.rp-bottom-safe {
+  flex-shrink: 0;
+}

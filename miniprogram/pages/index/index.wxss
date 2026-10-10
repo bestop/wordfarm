@@ -1,0 +1,2331 @@
+/* pages/index/index.wxss — v46 首页两大图视觉打磨（角色条 + Banner）
+   v62 更新（Banner 冲击力升级: 卡高 200→260 / 场景 300→336 / 太阳·彩虹放大 / 寒冰射手入阵 / 文案放大 / bannerRise 入场）:
+   v46 更新（接触阴影/天空太阳云/远山光束/光泽扫过/箭头微动/名牌描边 — 高度零改动, 一屏布局不受影响）：
+   v30 更新（标题间隔 + 游戏角色展示条 + Banner 场景升级）：
+   - main-view justify-content: flex-start → space-between（模块均衡分布，消除底部空洞）
+   - 新增 char-strip 角色展示条（.chr--* 通用迷你角色体系，Banner 复用 .chr--wall）
+   - Banner 场景 220→300rpx：彩虹拱(全圆裁切)/太阳卡哇伊脸(射线独立旋转)/云朵睡脸/
+     僵尸探头/蘑菇/蝴蝶×2/闪光星×3/栅栏第 4 柱
+   - .howto-group 成组（标题+网格语义紧凑）；howto-card 130→124rpx
+   - banner-eyebrow 文案：🌱限定关卡 → 🌻农场保卫战
+   v7 设计 tokens（基于模块节奏 = 18rpx 的 1/3/2/3 比例）：
+   - 字号 5 级：32(hero) / 26(section) / 22(button) / 18(caption) / 16(micro)
+   - 圆角 3 级：22rpx(卡片) / 42rpx(主CTA) / 999rpx(胶囊)
+   - 间距 3 级：18rpx(模块) / 12rpx(卡片间) / 6rpx(卡片内)
+   - 文本色 3 级：#2F3A26(primary) / #5E6F48(secondary) / #657551(muted)
+   - 视觉重量：stat-card 96→102rpx，howto-card 132→130rpx，节奏更稳
+   - nav-title 30→26rpx 与 howto-title 22rpx 节段层级清晰
+   - start-main 30→28rpx，banner-btn letter-spacing 验证为 1rpx，按钮族系统一
+   参考图对应区块：
+   - 背景：浅黄绿渐变（#F1FBE6 → #E6F5D3），顶有柔光光晕
+   - Hero LOGO：居中白色胶囊（绿方🌱 + "单词农场"深绿渐变文字）
+   - 统计卡：白底圆角 22rpx 矩形，数字在上文字在下，底部绿色渐变下划线
+   - 难度胶囊：小学/中学（选中态实心绿 + 🍃）/大学
+   - 玩法标题：左"🌱 游戏玩法"带绿色竖条，右"立即了解"药丸
+   - 1×4 玩法卡：图标圆圈背景（白）+ 说明文字
+   - Banner：纯 CSS 农场场景（太阳/云朵/向日葵/豌豆射手/栅栏/草地/小花）
+     + 右侧"单词农场大冒险"+副标题+"开始冒险"绿色按钮
+   - CTA 按钮：圆角 42rpx 矩形绿色渐变，压边立体阴影
+*/
+
+/* ========== 页面容器 ========== */
+.page {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  background:
+    radial-gradient(120% 80% at 50% -10%, #FFFDE1 0%, rgba(255,253,225,0) 60%),
+    linear-gradient(180deg, #F6FFE9 0%, #ECF8D5 55%, #F1FBE2 100%);
+  overflow: hidden;
+  position: relative;
+}
+.page:before,
+.page:after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(60rpx);
+  opacity: 0.6;
+  z-index: 0;
+}
+.page:before {
+  width: 520rpx; height: 520rpx;
+  left: -180rpx; top: -120rpx;
+  background: rgba(200, 236, 152, 0.55);
+}
+.page:after {
+  width: 560rpx; height: 560rpx;
+  right: -200rpx; bottom: -160rpx;
+  background: rgba(255, 241, 194, 0.55);
+}
+.page > .nav-bar,
+.page > .main-view,
+.page > .cta-bar { position: relative; z-index: 1; }
+
+/* ========== 自定义导航栏 ========== */
+.nav-bar {
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+.nav-bar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* padding 由内联 style 动态设置：padding-left:20rpx; padding-right:{capsuleRight+12}px */
+  box-sizing: border-box;
+}
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 4rpx 12rpx rgba(74, 112, 38, 0.1);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+.nav-btn-hover {
+  transform: scale(0.94);
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 3rpx 10rpx rgba(74, 112, 38, 0.08);
+}
+.nav-icon {
+  font-size: 34rpx;
+  font-weight: 800;
+  color: #3B5A1F;
+  line-height: 1;
+}
+.nav-title {
+  flex: 1;
+  text-align: center;
+  padding: 4rpx 20rpx;
+  font-size: 24rpx;          /* v58 26→24：slogan 化，品牌名交由 brand-chip（导航去重） */
+  font-weight: 600;
+  color: #657551;
+  letter-spacing: 1rpx;
+  line-height: 1.25;
+}
+
+/* ========== 主体：纯 flex 一屏，禁止滚动 ========== */
+.main-view {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 4rpx 28rpx 0;
+  gap: 18rpx;             /* v6 节奏：14→18rpx，模块间更舒展 */
+  justify-content: space-between;  /* v30 模块均衡分布，标题与内容天然保留呼吸间隔 */
+  box-sizing: border-box;
+}
+
+/* ========== 品牌 Hero 胶囊 ========== */
+.brand-hero {
+  flex: 0 0 auto;
+  position: relative;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.decor {
+  position: absolute;
+  line-height: 1;
+  opacity: 0.9;
+  pointer-events: none;
+}
+.decor-sun {
+  top: 4rpx; left: 16rpx;
+  font-size: 46rpx;
+  animation: sunPulse 3.6s ease-in-out infinite;
+}
+.decor-flower {
+  top: 18rpx; left: 90rpx;
+  font-size: 28rpx;
+}
+.decor-leaf-l {
+  bottom: 6rpx; left: 8rpx;
+  transform: scaleX(-1);
+  font-size: 56rpx;
+  opacity: 0.75;
+}
+.decor-leaf-r {
+  bottom: 8rpx; right: 6rpx;
+  font-size: 62rpx;
+  opacity: 0.75;
+}
+@keyframes sunPulse {
+  0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 2rpx 6rpx rgba(255,192,0,0.35)); }
+  50%      { transform: scale(1.08) rotate(12deg); filter: drop-shadow(0 6rpx 12rpx rgba(255,192,0,0.55)); }
+}
+.brand-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 14rpx;
+  padding: 12rpx 26rpx 12rpx 12rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10rpx 24rpx rgba(74, 112, 38, 0.12),
+              0 0 0 3rpx rgba(255,255,255,0.5);
+}
+.brand-logo-bg {
+  width: 62rpx;
+  height: 62rpx;
+  border-radius: 22rpx;
+  background: linear-gradient(145deg, #E5F7C6, #A8DC7E);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2rpx 0 rgba(255,255,255,0.7),
+              0 4rpx 10rpx rgba(106, 156, 42, 0.22);
+}
+.brand-logo-emoji {
+  font-size: 38rpx;
+  line-height: 1;
+  animation: leafFloat 2.6s ease-in-out infinite;
+}
+@keyframes leafFloat {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50%      { transform: translateY(-6rpx) rotate(6deg); }
+}
+.brand-title {
+  font-size: 32rpx;
+  font-weight: 900;
+  letter-spacing: 2rpx;
+  line-height: 1.1;
+  color: #2F3A26;
+  background: linear-gradient(180deg, #34600F 0%, #5AA454 55%, #6FBF5E 100%);  /* v58 尾色加深提对比 */
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* v58 右上小雏菊（白描边黄芯，呼应左上太阳，平衡左右装饰重量） */
+.brand-hero::after {
+  content: "";
+  position: absolute;
+  top: -4rpx;
+  right: 214rpx;
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #FFE082 0%, #FFC107 70%);
+  box-shadow: 0 0 0 4rpx #FFFFFF, 0 0 0 6rpx rgba(255,255,255,0.45),
+              0 3rpx 8rpx rgba(255,193,7,0.30);
+  pointer-events: none;
+}
+
+/* ================================================================
+   v30 新增：游戏角色展示条 CSS（4 植物 VS 舞王僵尸）
+   px→rpx 1:1 迁移自 preview_home.html（VLM 3 轮收敛版本）
+   ================================================================ */
+/* 展示条容器：天空→草地渐变小场景 */
+.char-strip {
+  flex: 0 0 auto;
+  height: 150rpx;
+  position: relative;
+  margin: 0 4rpx;
+  border-radius: 22rpx;
+  background:
+    radial-gradient(46% 54% at 8% 6%, rgba(255,243,176,0.6) 0%, rgba(255,243,176,0) 62%),
+    radial-gradient(60% 70% at 12% 0%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 60%),
+    linear-gradient(180deg, #D6EEFF 0%, #E4F6DC 45%, #CDEBA4 78%, #B8E08C 100%);
+  box-shadow: 0 8rpx 18rpx rgba(102,148,52,0.18),
+              0 0 0 3rpx rgba(255,255,255,0.55),
+              inset 0 2rpx 0 rgba(255,255,255,0.9);
+  overflow: hidden;
+}
+/* 敌方紫雾区（僵尸侧氛围，Z_DN_SUIT 系色） */
+.char-enemy-zone {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 258rpx;
+  background: linear-gradient(90deg,
+    rgba(107,61,116,0) 0%, rgba(107,61,116,0.08) 45%, rgba(74,37,80,0.16) 100%);
+  pointer-events: none; z-index: 1;
+}
+/* 草地（底色 + 双层波浪） */
+.cs-ground {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 30rpx;
+  background: linear-gradient(180deg, #8FC95F 0%, #6BA940 100%); z-index: 3;
+}
+.cs-grass { position: absolute; left: 0; right: 0; z-index: 4; pointer-events: none; }
+.cs-grass-back {
+  bottom: 24rpx; height: 16rpx; opacity: 0.85;
+  background:
+    radial-gradient(ellipse 18rpx 14rpx at 6%  100%, #7CB342 0 50%, transparent 51%),
+    radial-gradient(ellipse 18rpx 14rpx at 21% 100%, #7CB342 0 50%, transparent 51%),
+    radial-gradient(ellipse 18rpx 14rpx at 36% 100%, #7CB342 0 50%, transparent 51%),
+    radial-gradient(ellipse 18rpx 14rpx at 51% 100%, #7CB342 0 50%, transparent 51%),
+    radial-gradient(ellipse 18rpx 14rpx at 66% 100%, #7CB342 0 50%, transparent 51%),
+    radial-gradient(ellipse 18rpx 14rpx at 81% 100%, #7CB342 0 50%, transparent 51%),
+    radial-gradient(ellipse 18rpx 14rpx at 96% 100%, #7CB342 0 50%, transparent 51%);
+}
+.cs-grass-front {
+  bottom: 0; height: 12rpx; z-index: 5;
+  background:
+    radial-gradient(ellipse 15rpx 11rpx at 8%  100%, #4F8E2E 0 50%, transparent 51%),
+    radial-gradient(ellipse 15rpx 11rpx at 28% 100%, #4F8E2E 0 50%, transparent 51%),
+    radial-gradient(ellipse 15rpx 11rpx at 48% 100%, #4F8E2E 0 50%, transparent 51%),
+    radial-gradient(ellipse 15rpx 11rpx at 68% 100%, #4F8E2E 0 50%, transparent 51%),
+    radial-gradient(ellipse 15rpx 11rpx at 88% 100%, #4F8E2E 0 50%, transparent 51%);
+}
+/* 草地小白花 */
+.cs-daisy { position: absolute; width: 8rpx; height: 8rpx; background: #FFFFFF; border-radius: 50%; z-index: 4; }
+.cs-daisy::after { content: ""; position: absolute; inset: 2rpx; background: #FFC107; border-radius: 50%; }
+.cs-daisy--1 { left: 52rpx; bottom: 33rpx; }
+.cs-daisy--2 { left: 172rpx; bottom: 35rpx; }
+.cs-daisy--3 { left: 250rpx; bottom: 32rpx; }
+
+/* VS 徽章（红橙渐变 + 白描边 + 脉动） */
+.char-vs {
+  position: absolute; left: 388rpx; bottom: 56rpx;
+  width: 44rpx; height: 44rpx; border-radius: 50%;
+  background: linear-gradient(135deg, #FF8A65 0%, #E53935 100%);
+  border: 3rpx solid #FFFFFF;
+  box-shadow: 0 3rpx 7rpx rgba(229,57,53,0.25);
+  display: flex; align-items: center; justify-content: center;
+  transform: rotate(-8deg); z-index: 9;
+  animation: vsPulse 2.4s ease-in-out infinite;
+}
+.vs-text { font-size: 19rpx; font-weight: 900; color: #FFFFFF; line-height: 1; }
+@keyframes vsPulse {
+  0%, 100% { transform: rotate(-8deg) scale(1); }
+  50%      { transform: rotate(-5deg) scale(1.1); }
+}
+/* 音符（Z_DN_SUIT_LIGHT 紫，v29.1 对比度结论） */
+.cs-note {
+  position: absolute; color: #8A5590; font-weight: 900; z-index: 2;
+  opacity: 0.9; animation: noteFloat 2.6s ease-in-out infinite;
+}
+.cs-note--1 { right: 62rpx; top: 18rpx; font-size: 26rpx; }
+.cs-note--2 { right: 34rpx; top: 48rpx; font-size: 19rpx; animation-delay: 1.1s; }
+.cs-note--3 { right: 96rpx; top: 42rpx; font-size: 16rpx; animation-delay: 0.5s; opacity: 0.7; }
+@keyframes noteFloat {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50%      { transform: translateY(-7rpx) rotate(8deg); }
+}
+/* 墓碑点缀（VS 与僵尸之间空档） */
+.cs-tomb {
+  position: absolute; left: 452rpx; bottom: 26rpx;
+  width: 26rpx; height: 32rpx; z-index: 5;
+  background: linear-gradient(180deg, #CFCFCF 0%, #ADADAD 100%);
+  border-radius: 13rpx 13rpx 3rpx 3rpx;
+  box-shadow: 0 2rpx 4rpx rgba(0,0,0,0.15), inset 2rpx 0 0 rgba(255,255,255,0.4);
+}
+.cs-tomb::before {
+  content: ""; position: absolute; left: 50%; top: 9rpx; margin-left: -6rpx;
+  width: 12rpx; height: 3rpx; background: #8A8A8A; border-radius: 2rpx;
+}
+.cs-tomb::after {
+  content: ""; position: absolute; left: 50%; top: 12rpx; margin-left: -1.5rpx;
+  width: 3rpx; height: 10rpx; background: #8A8A8A; border-radius: 2rpx;
+}
+
+/* v46 天空小太阳（暖光呼应植物侧, 复用 sceneSunGlow 脉动） */
+.cs-sun {
+  position: absolute; left: 16rpx; top: 12rpx;
+  width: 18rpx; height: 18rpx; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #FFF59D 0%, #FFD54F 60%, #FFB300 100%);
+  box-shadow: 0 0 14rpx rgba(255, 200, 80, 0.75), 0 0 4rpx rgba(255, 224, 130, 0.9);
+  z-index: 2; animation: sceneSunGlow 3.4s ease-in-out infinite;
+}
+/* v46 漂移小云×2（三团径向渐变拼形; 云2独立 keyframe 防动画覆盖 scale） */
+.cs-cloud {
+  position: absolute; width: 34rpx; height: 12rpx; z-index: 2; pointer-events: none;
+  background:
+    radial-gradient(ellipse 11rpx 8rpx at 18% 82%, #FFFFFF 0 58%, rgba(255,255,255,0) 59%),
+    radial-gradient(ellipse 13rpx 10rpx at 52% 62%, #FFFFFF 0 58%, rgba(255,255,255,0) 59%),
+    radial-gradient(ellipse 10rpx 7rpx at 84% 86%, #FFFFFF 0 58%, rgba(255,255,255,0) 59%);
+  opacity: 0.92;
+  animation: csCloudDrift 9s ease-in-out infinite;
+}
+.cs-cloud--1 { left: 128rpx; top: 16rpx; }
+.cs-cloud--2 { left: 316rpx; top: 36rpx; animation-name: csCloudDrift2; animation-duration: 11s; animation-delay: 1.2s; }
+@keyframes csCloudDrift {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(9rpx); }
+}
+@keyframes csCloudDrift2 {
+  0%, 100% { transform: translateX(0) scale(0.8); }
+  50%      { transform: translateX(-7rpx) scale(0.8); }
+}
+/* 角色槽位（站位于草地顶面 bottom 30rpx） */
+.cs-slot { position: absolute; bottom: 30rpx; z-index: 6; }
+.cs-slot--sunflower { left: 22rpx;  width: 64rpx; height: 78rpx; }
+.cs-slot--shooter   { left: 114rpx; width: 58rpx; height: 74rpx; }
+.cs-slot--ice       { left: 204rpx; width: 58rpx; height: 78rpx; }
+.cs-slot--wall      { left: 294rpx; width: 48rpx; height: 56rpx; }
+.cs-slot--zombie    { left: 512rpx; width: 62rpx; height: 96rpx; z-index: 7; }
+.cs-slot .chr { position: absolute; left: 0; bottom: 0; animation: charBob 2.8s ease-in-out infinite; }
+.cs-slot--shooter .chr { animation-delay: 0.4s; }
+.cs-slot--ice .chr     { animation-delay: 0.8s; }
+.cs-slot--wall .chr    { animation-delay: 1.2s; }
+.cs-slot--zombie .chr  { animation: zombieGroove 1.8s ease-in-out infinite; }
+@keyframes charBob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5rpx); }
+}
+@keyframes zombieGroove {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50%      { transform: translateY(-6rpx) rotate(5deg); }
+}
+/* v46 脚下接触阴影（消除角色悬浮感; ::after z-1 低于 .chr 且不随 charBob 抖动 → 贴地正确） */
+.cs-slot::after {
+  content: ""; position: absolute; bottom: -4rpx; left: 50%;
+  width: 44rpx; height: 9rpx; margin-left: -22rpx; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(52,78,22,0.34) 0%, rgba(52,78,22,0) 68%);
+  z-index: -1; pointer-events: none;
+}
+.cs-slot--sunflower::after { width: 48rpx; margin-left: -24rpx; }
+.cs-slot--shooter::after   { width: 42rpx; margin-left: -21rpx; }
+.cs-slot--ice::after       { width: 42rpx; margin-left: -21rpx; }
+.cs-slot--wall::after      { width: 36rpx; height: 7rpx; margin-left: -18rpx; }
+.cs-slot--zombie::after    { width: 46rpx; height: 10rpx; margin-left: -23rpx;
+  background: radial-gradient(ellipse, rgba(38,20,44,0.4) 0%, rgba(38,20,44,0) 68%); }
+/* 名牌（RPG 立牌风，敌方深紫底） */
+.cs-name {
+  position: absolute; bottom: 3rpx; padding: 0 10rpx;
+  height: 25rpx; line-height: 25rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid rgba(255,255,255,0.85);
+  letter-spacing: 0.5rpx;
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 2rpx 4rpx rgba(80,120,45,0.14);
+  font-size: 16rpx; font-weight: 700; color: #4B6A2D;
+  z-index: 8; white-space: nowrap;
+}
+.cs-name--sunflower { left: 20rpx; }
+.cs-name--shooter   { left: 100rpx; }
+.cs-name--ice       { left: 190rpx; }
+.cs-name--wall      { left: 283rpx; }
+.cs-name--zombie    { left: 500rpx; background: rgba(58,28,64,0.85); color: #F3E5F5; box-shadow: 0 2rpx 4rpx rgba(58,28,64,0.3); }
+
+/* ---------- 通用角色骨架 ---------- */
+.chr { position: absolute; left: 0; bottom: 0; }
+
+/* ---------- 向日葵（迷你 v17 风格：8 花瓣 + 暖橙花盘 + 腮红） ---------- */
+.chr--sunflower { width: 64rpx; height: 78rpx; }
+.sun-stem {
+  position: absolute; left: 50%; bottom: 0; width: 6rpx; height: 36rpx; margin-left: -3rpx;
+  background: linear-gradient(180deg, #8BC34A 0%, #558B2F 100%); border-radius: 3rpx;
+}
+.sun-leaf {
+  position: absolute; width: 20rpx; height: 12rpx;
+  background: linear-gradient(135deg, #8BC34A 0%, #558B2F 100%);
+  border-radius: 50% 50% 50% 50% / 70% 70% 30% 30%;
+}
+.sun-leaf--l { left: 6rpx; bottom: 8rpx; transform: rotate(-26deg); }
+.sun-leaf--r { right: 6rpx; bottom: 4rpx; transform: rotate(26deg) scaleX(-1); }
+.sun-head { position: absolute; left: 50%; top: 0; width: 44rpx; height: 44rpx; margin-left: -22rpx; }
+.sun-p {
+  position: absolute; left: 50%; top: 50%;
+  width: 11rpx; height: 16rpx; margin: -8rpx 0 0 -5.5rpx;
+  background: linear-gradient(180deg, #FFE082 0%, #FFB300 100%);
+  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+  border: 1rpx solid #E65100; z-index: 1;
+}
+.sun-p--1 { transform: translate(0, -16rpx) rotate(0deg); }
+.sun-p--2 { transform: translate(11.3rpx, -11.3rpx) rotate(45deg); }
+.sun-p--3 { transform: translate(16rpx, 0) rotate(90deg); }
+.sun-p--4 { transform: translate(11.3rpx, 11.3rpx) rotate(135deg); }
+.sun-p--5 { transform: translate(0, 16rpx) rotate(180deg); }
+.sun-p--6 { transform: translate(-11.3rpx, 11.3rpx) rotate(225deg); }
+.sun-p--7 { transform: translate(-16rpx, 0) rotate(270deg); }
+.sun-p--8 { transform: translate(-11.3rpx, -11.3rpx) rotate(315deg); }
+.sun-disc {
+  position: absolute; left: 50%; top: 50%; width: 28rpx; height: 28rpx; margin: -14rpx 0 0 -14rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #FFCA28 0%, #FFA000 60%, #FF8F00 100%);
+  border: 1.5rpx solid #E65100;
+  box-shadow: inset 0 -2rpx 3rpx rgba(120,60,0,0.3);
+  z-index: 2;
+}
+.sun-disc::after {
+  content: ""; position: absolute; left: 16%; top: 16%;
+  width: 34%; height: 26%; border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255,253,231,0.85) 0%, rgba(255,255,255,0) 100%);
+  transform: rotate(-25deg);
+}
+.sun-eye {
+  position: absolute; top: 16rpx; width: 5rpx; height: 5rpx; border-radius: 50%;
+  background: #FFFFFF; box-shadow: 0 1rpx 1rpx rgba(0,0,0,0.25); z-index: 3;
+}
+.sun-eye--l { left: 13rpx; }
+.sun-eye--r { left: 26rpx; }
+.sun-eye::before {
+  content: ""; position: absolute; left: 1.2rpx; top: 0.8rpx;
+  width: 2.6rpx; height: 3.4rpx; border-radius: 50%; background: #4E342E;
+}
+.sun-blush {
+  position: absolute; top: 22rpx; width: 6rpx; height: 4rpx; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,171,145,0.9) 0%, rgba(255,171,145,0) 100%);
+  z-index: 3;
+}
+.sun-blush--l { left: 8rpx; }
+.sun-blush--r { left: 30rpx; }
+.sun-mouth {
+  position: absolute; left: 50%; top: 23rpx; width: 7rpx; height: 4rpx; margin-left: -3.5rpx;
+  border-bottom: 1.5rpx solid #E65100; border-radius: 0 0 50% 50%; z-index: 3;
+}
+
+/* ---------- 豌豆射手（迷你：茎叶 + 圆头 + 右侧炮口） ---------- */
+.chr--shooter { width: 58rpx; height: 74rpx; }
+.sht-stem {
+  position: absolute; left: 50%; bottom: 0; width: 6rpx; height: 30rpx; margin-left: -3rpx;
+  background: linear-gradient(180deg, #6FAE3A 0%, #4F8E2E 100%); border-radius: 3rpx;
+}
+.sht-leaf {
+  position: absolute; width: 18rpx; height: 11rpx;
+  background: linear-gradient(135deg, #8BC34A 0%, #558B2F 100%);
+  border-radius: 50% 50% 50% 50% / 70% 70% 30% 30%;
+}
+.sht-leaf--l { left: 5rpx; bottom: 8rpx; transform: rotate(-26deg); }
+.sht-leaf--r { right: 5rpx; bottom: 5rpx; transform: rotate(26deg) scaleX(-1); }
+.sht-head { position: absolute; left: 50%; top: 0; width: 44rpx; height: 44rpx; margin-left: -22rpx; }
+.sht-face {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #DCEDC8 0%, #8BC34A 52%, #558B2F 100%);
+  box-shadow: inset 0 -3rpx 4rpx rgba(0,0,0,0.16), inset 0 2rpx 0 rgba(255,255,255,0.4);
+}
+.sht-face::after {
+  content: ""; position: absolute; left: 14%; top: 12%;
+  width: 30%; height: 40%; border-radius: 50%;
+  background: rgba(255,255,255,0.4); transform: rotate(-40deg);
+}
+.sht-snout {
+  /* v34 斜戴帽式炮管：右上位置 + 逆时针 40° 翘起 + 缩短（与 canvas 版同步） */
+  position: absolute; right: -3rpx; top: 7rpx; width: 11rpx; height: 9rpx;
+  transform: rotate(-40deg);
+  transform-origin: 0 50%;
+  border-radius: 4rpx 50% 50% 4rpx;
+  background: linear-gradient(90deg, #7CB342 0%, #558B2F 60%, #33691E 100%);
+  box-shadow: inset 0 -1rpx 0 rgba(0,0,0,0.35), inset 3rpx 0 3rpx rgba(0,0,0,0.22);
+  z-index: 1;
+}
+.sht-snout::after {
+  content: ""; position: absolute; right: 0; top: 50%;
+  width: 5.5rpx; height: 7.5rpx; margin-top: -3.75rpx; border-radius: 50%;
+  background: radial-gradient(circle, #1B5E20 0%, #000000 100%);
+}
+.sht-eye {
+  position: absolute; left: 13rpx; top: 14rpx; width: 8rpx; height: 8rpx;
+  border-radius: 50%; background: #FFFFFF;
+  box-shadow: 0 1rpx 1rpx rgba(0,0,0,0.2); z-index: 2;
+}
+.sht-eye::before {
+  content: ""; position: absolute; left: 1.6rpx; top: 1.6rpx;
+  width: 4.8rpx; height: 4.8rpx; border-radius: 50%; background: #1A1A1A;
+}
+.sht-eye::after {
+  content: ""; position: absolute; left: 1.2rpx; top: 1rpx;
+  width: 1.8rpx; height: 1.8rpx; border-radius: 50%; background: #FFFFFF;
+}
+
+/* ---------- 寒冰射手（迷你 v22：薄荷青宝石头 + 三叉冰晶 + 半垂眼睑） ---------- */
+.chr--ice { width: 58rpx; height: 78rpx; }
+.ice-stem {
+  position: absolute; left: 50%; bottom: 0; width: 6rpx; height: 34rpx; margin-left: -3rpx;
+  background: linear-gradient(180deg, #8BC34A 0%, #558B2F 100%); border-radius: 3rpx;
+}
+.ice-leaf {
+  position: absolute; width: 19rpx; height: 11rpx;
+  background: linear-gradient(135deg, #9CCC65 0%, #558B2F 100%);
+  border-radius: 50% 50% 50% 50% / 70% 70% 30% 30%;
+}
+.ice-leaf--l { left: 5rpx; bottom: 8rpx; transform: rotate(-26deg); }
+.ice-leaf--r { right: 5rpx; bottom: 5rpx; transform: rotate(26deg) scaleX(-1); }
+.ice-head { position: absolute; left: 50%; top: 0; width: 44rpx; height: 44rpx; margin-left: -22rpx; }
+.ice-face {
+  position: absolute; inset: 0;
+  border-radius: 46% 46% 42% 42% / 54% 54% 40% 40%;
+  background: radial-gradient(circle at 35% 30%, #B2F0EA 0%, #6FD9CE 55%, #2BA8A0 100%);
+  box-shadow: inset 0 0 0 2rpx rgba(255,255,255,0.5),
+              inset 0 -3rpx 4rpx rgba(0,77,82,0.18),
+              inset 0 2rpx 0 rgba(255,255,255,0.5);
+}
+.ice-face::after {
+  content: ""; position: absolute; left: 14%; top: 12%;
+  width: 30%; height: 40%; border-radius: 50%;
+  background: rgba(255,255,255,0.45); transform: rotate(-40deg);
+}
+/* 顶部三叉冰晶（主晶带白色高光点） */
+.ice-crystal {
+  position: absolute;
+  background: linear-gradient(180deg, #EFFFFF 0%, #A5E8E0 60%, #6FD9CE 100%);
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  z-index: 3;
+}
+.ice-crystal--main { top: -9rpx; left: 50%; margin-left: -5rpx; width: 10rpx; height: 12rpx; }
+.ice-crystal--main::after {
+  content: ""; position: absolute; left: 2rpx; top: 4rpx;
+  width: 3rpx; height: 3rpx; border-radius: 50%;
+  background: rgba(255,255,255,0.95);
+}
+.ice-crystal--l { top: -6rpx; left: 10rpx; width: 7rpx; height: 9rpx; }
+.ice-crystal--r { top: -6rpx; left: 27rpx; width: 7rpx; height: 9rpx; }
+.ice-snout {
+  /* v34 斜戴帽式炮管：右上位置 + 逆时针 40° 翘起 + 缩短（与 canvas 版同步） */
+  position: absolute; right: -3rpx; top: 7rpx; width: 11rpx; height: 9rpx;
+  transform: rotate(-40deg);
+  transform-origin: 0 50%;
+  border-radius: 4rpx 50% 50% 4rpx;
+  background: linear-gradient(90deg, #4DB6AC 0%, #00897B 60%, #00695C 100%);
+  box-shadow: inset 0 -1rpx 0 rgba(0,0,0,0.3), inset 3rpx 0 3rpx rgba(0,0,0,0.18);
+  z-index: 1;
+}
+.ice-snout::after {
+  content: ""; position: absolute; right: 0; top: 50%;
+  width: 5.5rpx; height: 7.5rpx; margin-top: -3.75rpx; border-radius: 50%;
+  background: radial-gradient(circle, #E0F7FA 0%, #004D40 100%);
+}
+.ice-eye {
+  position: absolute; left: 13rpx; top: 15rpx; width: 8rpx; height: 8rpx;
+  border-radius: 50%; background: #FFFFFF;
+  box-shadow: 0 1rpx 1rpx rgba(0,0,0,0.18); z-index: 2;
+}
+.ice-eye::before {
+  content: ""; position: absolute; left: 1.6rpx; top: 2.6rpx;
+  width: 4.8rpx; height: 4.8rpx; border-radius: 50%; background: #1A2E32;
+}
+/* 半垂冷酷眼睑 */
+.ice-eye::after {
+  content: ""; position: absolute; left: -2rpx; top: -2rpx;
+  width: 12rpx; height: 6rpx;
+  background: #6FD9CE;
+  border-radius: 50% 50% 0 0 / 90% 90% 0 0;
+  z-index: 3;
+}
+/* 霜点 */
+.ice-frost { position: absolute; width: 2.5rpx; height: 2.5rpx; border-radius: 50%; background: rgba(255,255,255,0.75); z-index: 2; }
+.ice-frost--1 { left: 8rpx; top: 28rpx; }
+.ice-frost--2 { right: 7rpx; top: 33rpx; }
+
+/* ---------- 坚果墙（迷你 v20：暖棕体 + 深褐顶突 + 怒眉 + 双纹） ---------- */
+.chr--wall { width: 48rpx; height: 56rpx; }
+.wall-body {
+  position: absolute; inset: 0;
+  border-radius: 46% 46% 50% 50% / 42% 42% 54% 54%;
+  background: radial-gradient(circle at 35% 30%, #E89B4D 0%, #B85A18 55%, #6E3510 100%);
+  box-shadow: inset -5rpx -6rpx 0 rgba(0,0,0,0.16),
+              inset 3rpx 4rpx 0 rgba(255,255,255,0.2),
+              0 3rpx 6rpx rgba(110,53,16,0.35);
+}
+.wall-bump {
+  position: absolute; top: -8rpx; left: 50%; margin-left: -7rpx;
+  width: 14rpx; height: 11rpx;
+  background: #5D4037;
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  border-radius: 0 0 40% 40%;
+}
+.wall-wrinkle {
+  position: absolute; left: 19%; right: 19%; height: 3rpx;
+  background: rgba(109,76,65,0.55); border-radius: 2rpx; z-index: 1;
+}
+.wall-wrinkle--mid { top: 47%; }
+.wall-wrinkle--low { top: 62%; }
+.wall-eye {
+  position: absolute; top: 22%; width: 8rpx; height: 8rpx;
+  border-radius: 50%; background: #FFFFFF; z-index: 2;
+}
+.wall-eye--l { left: 18%; }
+.wall-eye--r { right: 18%; }
+.wall-eye::before {
+  content: ""; position: absolute; right: 12%; bottom: 8%;
+  width: 58%; height: 58%; border-radius: 50%; background: #4E342E;
+}
+/* 倒八字怒眉 */
+.wall-eye::after {
+  content: ""; position: absolute; left: -35%; top: -72%;
+  width: 170%; height: 32%;
+  background: #3E1F0A;
+  border-radius: 50% 50% 50% 50% / 80% 80% 30% 30%;
+  z-index: 3;
+}
+.wall-eye--l::after { transform: rotate(-20deg); }
+.wall-eye--r::after { transform: rotate(20deg); }
+.wall-blush {
+  position: absolute; top: 36%; width: 8rpx; height: 5.5rpx; border-radius: 50%;
+  background: radial-gradient(circle, rgba(244,143,177,0.85) 0%, rgba(244,143,177,0) 100%);
+  z-index: 2;
+}
+.wall-blush--l { left: 7%; }
+.wall-blush--r { right: 7%; }
+.wall-mouth {
+  position: absolute; left: 50%; bottom: 20%; width: 10rpx; height: 3rpx; margin-left: -5rpx;
+  background: #4E342E; border-radius: 2rpx; z-index: 2;
+}
+
+/* ---------- 舞王僵尸（迷你 v29：黑高帽 + 破紫西装 + 领带 + 迪斯科外张臂） ---------- */
+.chr--zombie { width: 62rpx; height: 96rpx; }
+.zb-leg {
+  position: absolute; bottom: 0; width: 9rpx; height: 15rpx;
+  background: linear-gradient(180deg, #4A2550 0%, #3A1C40 100%);
+  border-radius: 4rpx; z-index: 2;
+}
+.zb-leg--l { left: 16rpx; transform: rotate(9deg); transform-origin: top; }
+.zb-leg--r { right: 16rpx; transform: rotate(-16deg); transform-origin: top; }
+.zb-leg::after {
+  content: ""; position: absolute; bottom: -2rpx;
+  width: 13rpx; height: 6rpx; background: #5C4033;
+  border-radius: 3rpx 6rpx 3rpx 6rpx;
+}
+.zb-leg--l::after { left: -2rpx; }
+.zb-leg--r::after { right: -2rpx; }
+.zb-arm {
+  position: absolute; top: 47rpx; width: 21rpx; height: 7rpx;
+  background: linear-gradient(180deg, #8A5590 0%, #4A2550 100%);
+  border-radius: 4rpx; z-index: 4;
+}
+.zb-arm--l { left: -13rpx; transform: rotate(-24deg); }
+.zb-arm--r { right: -13rpx; transform: rotate(24deg); }
+.zb-arm::before {
+  content: ""; position: absolute; width: 5rpx; height: 7rpx;
+  background: #EDEBD2; border-radius: 2rpx;
+}
+.zb-arm--l::before { left: -2rpx; }
+.zb-arm--r::before { right: -2rpx; }
+.zb-arm::after {
+  content: ""; position: absolute; top: 0.5rpx;
+  width: 7rpx; height: 6rpx; border-radius: 50%; background: #9CB383;
+}
+.zb-arm--l::after { left: -5rpx; }
+.zb-arm--r::after { right: -5rpx; }
+.zb-body {
+  position: absolute; top: 43rpx; left: 50%; margin-left: -16rpx;
+  width: 32rpx; height: 38rpx;
+  background: linear-gradient(180deg, #6B3D74 0%, #4A2550 100%);
+  border-radius: 7rpx 7rpx 3rpx 3rpx; z-index: 3;
+}
+/* 锯齿衣摆 */
+.zb-body::after {
+  content: ""; position: absolute; left: 1rpx; right: 1rpx; bottom: -4rpx;
+  height: 5rpx; background: #4A2550;
+  clip-path: polygon(0 0, 12% 100%, 25% 0, 40% 100%, 55% 0, 70% 100%, 85% 0, 100% 100%);
+}
+.zb-shirt {
+  position: absolute; top: 2rpx; left: 50%; margin-left: -6rpx;
+  width: 12rpx; height: 16rpx; background: #EDEBD2;
+  clip-path: polygon(0 0, 100% 0, 72% 100%, 28% 100%); z-index: 4;
+}
+.zb-tie {
+  position: absolute; top: 3rpx; left: 50%; margin-left: -3rpx;
+  width: 6rpx; height: 11rpx; background: #2D1440;
+  clip-path: polygon(50% 0, 100% 22%, 74% 100%, 26% 100%, 0 22%); z-index: 5;
+}
+.zb-head {
+  position: absolute; top: 16rpx; left: 50%; margin-left: -16rpx;
+  width: 32rpx; height: 29rpx;
+  background: radial-gradient(circle at 35% 30%, #B5C9A0 0%, #9CB383 60%, #7E9272 100%);
+  border-radius: 48% 48% 44% 44%; z-index: 5;
+}
+.zb-eye {
+  position: absolute; top: 10rpx; width: 6rpx; height: 6rpx;
+  border-radius: 50%; background: #F5EDB5;
+  box-shadow: 0 1rpx 1rpx rgba(0,0,0,0.2); z-index: 6;
+}
+.zb-eye--l { left: 5rpx; }
+.zb-eye--r { left: 21rpx; }
+.zb-eye::before {
+  content: ""; position: absolute; left: 1.6rpx; top: 0.5rpx;
+  width: 2.8rpx; height: 2.8rpx; border-radius: 50%; background: #1A1A1A;
+}
+/* 高挑细眉 */
+.zb-brow {
+  position: absolute; top: 7rpx; width: 7rpx; height: 1.6rpx;
+  background: #55663F; border-radius: 1rpx; z-index: 6;
+}
+.zb-brow--l { left: 4rpx; transform: rotate(14deg); }
+.zb-brow--r { left: 21rpx; transform: rotate(-14deg); }
+/* 狂笑大嘴：暗红口腔 + 双獠牙 + 红舌 */
+.zb-mouth {
+  position: absolute; left: 50%; top: 18rpx; margin-left: -5.5rpx;
+  width: 11rpx; height: 7rpx;
+  background: #6E1B1B; border-radius: 0 0 50% 50%; z-index: 6;
+}
+.zb-mouth::before {
+  content: ""; position: absolute; top: 0; left: 1.5rpx;
+  width: 2.4rpx; height: 2.6rpx; background: #F5F0DC;
+  border-radius: 0 0 40% 40%;
+  box-shadow: 4.5rpx 0 0 #F5F0DC;
+}
+.zb-mouth::after {
+  content: ""; position: absolute; bottom: -1rpx; left: 2rpx;
+  width: 6rpx; height: 3rpx;
+  background: #B04A4A; border-radius: 50% 50% 0 0;
+}
+/* 黑高顶礼帽（歪戴 -4°） */
+.zb-hat {
+  position: absolute; top: 0; left: 50%; width: 36rpx; height: 19rpx;
+  margin-left: -18rpx; transform: rotate(-4deg); z-index: 7;
+}
+.zb-hat-crown {
+  position: absolute; top: 0; left: 50%; margin-left: -10rpx;
+  width: 20rpx; height: 15rpx;
+  background: linear-gradient(180deg, #3A3A46 0%, #23232B 70%);
+  border-radius: 4rpx 4rpx 1rpx 1rpx;
+}
+.zb-hat-crown::after {
+  content: ""; position: absolute; left: 3rpx; top: 2rpx;
+  width: 5rpx; height: 11rpx; background: rgba(255,255,255,0.14);
+  border-radius: 2rpx;
+}
+.zb-hat-brim {
+  position: absolute; top: 13rpx; left: 0; width: 36rpx; height: 5rpx;
+  background: linear-gradient(180deg, #23232B 0%, #0F0F15 100%);
+  border-radius: 3rpx;
+}
+
+/* ========== 3 张独立统计卡（底部分绿色下划线） ========== */
+.stats-row {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  gap: 12rpx;                /* v7 10→12rpx，卡片间距统一 */
+  padding: 0 4rpx;
+  box-sizing: border-box;
+}
+.stat-card {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;                  /* v7 2→4rpx，卡片内部间距统一 */
+  padding: 12rpx 6rpx 6rpx;
+  background: rgba(255, 255, 255, 0.97);
+  border-radius: 22rpx;       /* v7 20→22rpx，卡片圆角统一 */
+  box-shadow: 0 8rpx 18rpx rgba(80, 120, 45, 0.10),
+              inset 0 2rpx 0 rgba(255, 255, 255, 0.95);
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  min-height: 102rpx;         /* v7 96→102rpx，与 howto-card 视觉重量协调 */
+}
+.stat-card-underline {
+  width: 60%;
+  height: 3rpx;
+  margin-top: 5rpx;
+  background: linear-gradient(90deg, rgba(126,198,106,0), rgba(126,198,106,0.85), rgba(126,198,106,0));
+  border-radius: 2rpx;
+}
+.sound-card {
+  cursor: pointer;
+}
+.sound-card-hover {
+  transform: scale(0.97);
+  box-shadow: 0 4rpx 10rpx rgba(80, 120, 45, 0.06);
+}
+.stat-card-num {
+  font-size: 26rpx;          /* v9 28→26 与面板其它字号节奏一致 */
+  font-weight: 900;
+  color: #2F3A26;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.stat-card-emoji {
+  font-size: 26rpx;          /* v7 24→26rpx，与 stat-card-num 26rpx 齐平 */
+  line-height: 1;
+  margin-bottom: 2rpx;
+}
+.stat-card-label {
+  font-size: 16rpx;
+  color: #5E6F48;             /* v7 #657551→#5E6F48，副色统一为 secondary */
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.3rpx;
+}
+
+/* ========== 难度选择 胶囊 ========== */
+.diff-pills {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;                /* v50 12→10rpx：6 胶囊单行排布 */
+  padding: 0 4rpx;
+  box-sizing: border-box;
+}
+.diff-pill {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 10rpx 0;           /* v50 12→10：六胶囊单行微收 */
+  min-height: 64rpx;          /* v58 60→64：触摸热区（+描边实高 88rpx≈44px 达标） */
+  border: 2rpx solid rgba(94, 111, 72, 0.22);  /* v58.1 0.10→0.22：描边可见（一轮评审过弱） */
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.95);
+  color: #6B7C55;
+  text-align: center;
+  font-size: 20rpx;          /* v50 22→20rpx：六胶囊单行（「导入词库」4 字裕量充足） */
+  font-weight: 700;
+  letter-spacing: 1rpx;
+  box-shadow: 0 3rpx 8rpx rgba(80, 120, 45, 0.06);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 220ms cubic-bezier(.2,.8,.2,1);
+}
+.diff-pill-hover { transform: scale(0.97); }
+.diff-pill.active {
+  background: linear-gradient(135deg, #8FD27A 0%, #57AA4A 100%);
+  border-color: rgba(61, 138, 50, 0.32);   /* v58 选中态描边融入 */
+  color: #FFFFFF;
+  box-shadow: 0 4rpx 12rpx rgba(71, 145, 60, 0.26),
+              inset 0 2rpx 0 rgba(255,255,255,0.4);
+}
+.diff-leaf {
+  font-size: 16rpx;
+  line-height: 1;
+  animation: popLeaf 340ms cubic-bezier(.2,.8,.2,1);
+}
+@keyframes popLeaf {
+  0%   { transform: scale(0.3) rotate(-30deg); opacity: 0; }
+  60%  { transform: scale(1.3) rotate(12deg);  opacity: 1; }
+  100% { transform: scale(1) rotate(0deg);     opacity: 1; }
+}
+
+/* ========== v30 玩法组（标题+网格成组，space-between 下保持语义紧凑） ========== */
+.howto-group {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+/* ========== 玩法标题行（紧凑，只占一行高度） ========== */
+.howto-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4rpx;
+  box-sizing: border-box;
+}
+.howto-head-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+}
+.howto-bar {
+  display: inline-block;
+  width: 6rpx;
+  height: 22rpx;
+  border-radius: 3rpx;
+  background: linear-gradient(180deg, #7BC86A, #4D8E3F);
+  box-shadow: 0 2rpx 4rpx rgba(77, 142, 63, 0.2);
+}
+.howto-title {
+  font-size: 22rpx;
+  font-weight: 800;
+  color: #2F3A26;
+  letter-spacing: 0.5rpx;
+}
+.howto-head-more {
+  font-size: 18rpx;
+  font-weight: 600;
+  color: #5E8542;
+  padding: 6rpx 14rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 3rpx 8rpx rgba(80, 120, 45, 0.07);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.more-hover {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+/* ========== 玩法卡 网格（单行 4 列 — 原第二排重复卡片已移除） ========== */
+.howto-grid {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  column-gap: 12rpx;         /* v7 10→12rpx，卡片间距统一 */
+  padding: 0 4rpx;
+  box-sizing: border-box;
+}
+.howto-card {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 124rpx;            /* v30 130→124rpx，为角色条腾出垂直预算 */
+  border-radius: 22rpx;      /* v7 卡片圆角统一为 22rpx */
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;                 /* v7 8→6rpx，卡片内部间距统一 */
+  padding: 10rpx 6rpx;
+  background: #FFFFFF;
+  box-shadow: inset 0 2rpx 0 rgba(255, 255, 255, 0.85),
+              0 5rpx 12rpx rgba(80, 120, 45, 0.08);
+  border: 2rpx solid rgba(255, 255, 255, 0.9);
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+}
+.howto-icon-box {
+  width: 62rpx;             /* v6 56→62rpx */
+  height: 62rpx;
+  border-radius: 50%;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.05),
+              inset 0 2rpx 0 rgba(255,255,255,0.85);
+}
+.howto-card-icon {
+  font-size: 32rpx;         /* v6 28→32rpx */
+  line-height: 1;
+}
+.howto-card-title {
+  font-size: 20rpx;         /* v58 18→20rpx，儿童可读性（VLM 双轮指出偏小） */
+  font-weight: 700;
+  color: #2F3A26;            /* v7 #3A4C2A→#2F3A26，主色统一 */
+  text-align: center;
+  line-height: 1.2;
+  letter-spacing: 0.2rpx;
+}
+
+/* ========== 横幅 Banner（v6 全 CSS 农场插画，不再依赖外部 PNG） ==========
+   尺寸：高度 120→200rpx，左侧场景 220rpx 宽，右侧文字区弹性填充
+   场景元素（绝对定位）：天空层 / 太阳 / 云×2 / 草地双层 / 向日葵 / 豌豆射手 / 栅栏 / 小花×3
+*/
+.banner-hero {
+  flex: 0 0 auto;
+  height: 260rpx;            /* v62 200→260 加高，画面更有冲击力（预算富余吸收） */
+  position: relative;
+  margin: 0 4rpx;
+  padding: 16rpx 22rpx 16rpx 16rpx;
+  border-radius: 22rpx;      /* v7 24→22rpx，卡片圆角统一 */
+  background:
+    radial-gradient(85% 110% at 0% 0%, #FFF9C4 0%, rgba(255,249,196,0) 58%),
+    linear-gradient(125deg, #FFF9D6 0%, #EAF6BC 32%, #C4E48E 66%, #7FBF58 100%);
+  box-shadow:
+    0 14rpx 32rpx rgba(102, 148, 52, 0.28),
+    0 0 0 3rpx rgba(255,255,255,0.5),
+    inset 0 2rpx 0 rgba(255,255,255,0.85),
+    inset 0 -4rpx 0 rgba(97, 171, 69, 0.32);
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  box-sizing: border-box;
+  margin-bottom: 10rpx;      /* v30 与底部 CTA 留呼吸间隔 */
+  animation: bannerRise 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.1) both;  /* v62 入场上浮 */
+}
+
+/* v46 光泽扫过（斜向光带周期性掠过整卡, pointer-events 不拦截点击） */
+.banner-hero::after {
+  content: ""; position: absolute; top: -30rpx; bottom: -30rpx;
+  left: 0; width: 90rpx;
+  transform: rotate(14deg) translateX(-140rpx);
+  background: linear-gradient(100deg,
+    rgba(255,255,255,0) 0%, rgba(255,255,255,0.20) 50%, rgba(255,255,255,0) 100%);
+  pointer-events: none; z-index: 2;
+  animation: bannerShine 6.5s ease-in-out infinite;
+}
+@keyframes bannerShine {
+  0%   { transform: rotate(14deg) translateX(-140rpx); opacity: 0; }
+  10%  { opacity: 1; }
+  36%  { transform: rotate(14deg) translateX(560rpx); opacity: 0; }
+  100% { transform: rotate(14deg) translateX(560rpx); opacity: 0; }
+}
+/* v62 入场：上浮淡入（仅 transform+opacity，合成器友好） */
+@keyframes bannerRise {
+  0%   { opacity: 0; transform: translateY(26rpx) scale(0.985); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* 装饰光斑（保留旧版氛围） */
+.banner-spot {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(2rpx);
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 0;
+}
+.banner-spot-1 {
+  width: 120rpx; height: 120rpx;
+  left: -30rpx; top: -40rpx;
+  background: radial-gradient(circle, rgba(255,255,255,0.98), rgba(255,255,255,0) 65%);
+  animation: spotDrift 6s ease-in-out infinite;
+}
+.banner-spot-2 {
+  width: 110rpx; height: 110rpx;
+  right: -20rpx; bottom: -35rpx;
+  background: radial-gradient(circle, rgba(255, 220, 140, 0.7), rgba(255,255,255,0) 65%);
+  animation: spotDrift 7.2s ease-in-out infinite reverse;
+}
+@keyframes spotDrift {
+  0%, 100% { transform: translate(0,0) scale(1);    opacity: 0.55; }
+  50%      { transform: translate(12rpx,-10rpx) scale(1.08); opacity: 0.72; }
+}
+
+/* ============ 左侧：纯 CSS 农场场景 ============ */
+.banner-scene {
+  position: relative;
+  flex-shrink: 0;
+  width: 336rpx;             /* v62 300→336rpx，加宽配高，画面更开阔 */
+  height: 100%;
+  overflow: hidden;
+  border-radius: 18rpx;
+  background: linear-gradient(180deg, #AEE3FF 0%, #D5EFC0 62%, #BFE49A 100%);
+  box-shadow: inset 0 2rpx 0 rgba(255,255,255,0.6),
+              inset 0 -2rpx 0 rgba(60, 110, 30, 0.18);
+}
+
+/* 天空叠加层（增加云朵漫射感） */
+.scene-sky {
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 58%;
+  background: radial-gradient(60% 80% at 70% 10%, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 60%),
+              radial-gradient(50% 60% at 20% 30%, rgba(255,236,180,0.45) 0%, rgba(255,236,180,0) 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* v46 远处绿丘（地平线柔和起伏; z2 在 ground z3 之下 → 露出上半弧） */
+.scene-hills {
+  position: absolute; left: 0; right: 0; bottom: 34rpx; height: 44rpx;
+  z-index: 2; pointer-events: none;
+  background:
+    radial-gradient(ellipse 130rpx 34rpx at 20% 100%, rgba(154,205,84,0.75) 0%, rgba(154,205,84,0) 70%),
+    radial-gradient(ellipse 104rpx 27rpx at 58% 100%, rgba(139,195,74,0.62) 0%, rgba(139,195,74,0) 70%),
+    radial-gradient(ellipse 76rpx 20rpx at 88% 100%, rgba(124,179,66,0.55) 0%, rgba(124,179,66,0) 70%);
+}
+/* v46 太阳光束（右上斜射双束, 极淡呼吸） */
+.scene-beams {
+  position: absolute; top: -4rpx; right: 0;
+  width: 168rpx; height: 104rpx; z-index: 1; pointer-events: none;
+  background:
+    linear-gradient(112deg, rgba(255,255,255,0) 32%, rgba(255,255,255,0.22) 46%, rgba(255,255,255,0) 60%),
+    linear-gradient(112deg, rgba(255,255,255,0) 44%, rgba(255,255,255,0.14) 56%, rgba(255,255,255,0) 70%);
+  animation: beamBreathe 5.2s ease-in-out infinite;
+}
+@keyframes beamBreathe {
+  0%, 100% { opacity: 0.65; }
+  50%      { opacity: 1; }
+}
+/* 太阳：核心 + 4 道射线 + 脉动光晕 */
+.scene-sun {
+  position: absolute;
+  top: 14rpx;
+  right: 18rpx;
+  width: 56rpx;
+  height: 56rpx;
+  z-index: 2;
+}
+@keyframes sceneSunSpin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.sun-core {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 36rpx;
+  height: 36rpx;
+  margin: -18rpx 0 0 -18rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #FFF59D 0%, #FFD54F 55%, #FFB300 100%);
+  box-shadow: 0 0 16rpx rgba(255, 200, 80, 0.7),
+              inset -2rpx -2rpx 4rpx rgba(180, 110, 0, 0.35);
+  z-index: 3;
+}
+.sun-ray {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 5rpx;
+  height: 9rpx;
+  margin-left: -2.5rpx;
+  background: linear-gradient(180deg, #FFD54F 0%, rgba(255,179,0,0) 100%);
+  border-radius: 2rpx;
+  transform-origin: center 28rpx;
+}
+.sun-ray-1 { transform: translateY(-26rpx); }
+.sun-ray-2 { transform: translate(18rpx,-18rpx) rotate(45deg); }
+.sun-ray-3 { transform: translate(26rpx,0)      rotate(90deg); }
+.sun-ray-4 { transform: translate(18rpx,18rpx) rotate(135deg); }
+/* 太阳整体光晕（不旋转的脉动） */
+.scene-sun:before {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 62rpx; height: 62rpx;
+  margin: -31rpx 0 0 -31rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 220, 100, 0.55) 0%, rgba(255, 220, 100, 0) 70%);
+  z-index: 1;
+  animation: sceneSunGlow 3.4s ease-in-out infinite;
+}
+@keyframes sceneSunGlow {
+  0%, 100% { transform: scale(1);    opacity: 0.7; }
+  50%      { transform: scale(1.15); opacity: 1; }
+}
+
+/* 云朵：3 个泡叠加 */
+.scene-cloud {
+  position: absolute;
+  z-index: 2;
+}
+.scene-cloud-1 {
+  top: 40rpx;
+  left: 58rpx;
+  width: 46rpx;
+  height: 26rpx;
+  animation: sceneCloudDrift 12s ease-in-out infinite;
+}
+.scene-cloud-2 {
+  top: 68rpx;
+  left: 152rpx;
+  transform: scale(0.7);
+  opacity: 0.85;
+  animation: sceneCloudDrift 16s ease-in-out infinite reverse;
+}
+@keyframes sceneCloudDrift {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(10rpx); }
+}
+.scene-cloud-2 { animation-name: sceneCloudDrift2; }
+@keyframes sceneCloudDrift2 {
+  0%, 100% { transform: translateX(0) scale(0.7); }
+  50%      { transform: translateX(-8rpx) scale(0.7); }
+}
+.cloud-puff {
+  position: absolute;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 2rpx 6rpx rgba(150, 200, 230, 0.4);
+}
+.cloud-puff-a { width: 18rpx; height: 18rpx; left: 0;   top: 4rpx; }
+.cloud-puff-b { width: 22rpx; height: 22rpx; left: 12rpx; top: 0;  }
+.cloud-puff-c { width: 16rpx; height: 16rpx; left: 28rpx; top: 5rpx; }
+
+/* 草地：底色 + 两层绿色波浪 */
+.scene-ground {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 46rpx;
+  background: linear-gradient(180deg, #8FC95F 0%, #6BA940 100%);
+  z-index: 3;
+}
+.scene-grass {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 22rpx;
+  height: 18rpx;
+  z-index: 4;
+  pointer-events: none;
+}
+.scene-grass-back {
+  bottom: 34rpx;
+  background:
+    radial-gradient(ellipse 18rpx 14rpx at 5%  100%, #7CB342 0%, #7CB342 50%, transparent 51%),
+    radial-gradient(ellipse 18rpx 14rpx at 25% 100%, #7CB342 0%, #7CB342 50%, transparent 51%),
+    radial-gradient(ellipse 18rpx 14rpx at 45% 100%, #7CB342 0%, #7CB342 50%, transparent 51%),
+    radial-gradient(ellipse 18rpx 14rpx at 65% 100%, #7CB342 0%, #7CB342 50%, transparent 51%),
+    radial-gradient(ellipse 18rpx 14rpx at 85% 100%, #7CB342 0%, #7CB342 50%, transparent 51%);
+  opacity: 0.85;
+}
+.scene-grass-front {
+  bottom: 0;
+  height: 14rpx;
+  background:
+    radial-gradient(ellipse 16rpx 12rpx at 12% 100%, #4F8E2E 0%, #4F8E2E 50%, transparent 51%),
+    radial-gradient(ellipse 16rpx 12rpx at 35% 100%, #4F8E2E 0%, #4F8E2E 50%, transparent 51%),
+    radial-gradient(ellipse 16rpx 12rpx at 58% 100%, #4F8E2E 0%, #4F8E2E 50%, transparent 51%),
+    radial-gradient(ellipse 16rpx 12rpx at 82% 100%, #4F8E2E 0%, #4F8E2E 50%, transparent 51%);
+  z-index: 5;
+}
+
+/* 向日葵 v17 参照 role_banner.png 重新设计
+   · 12 片外层水滴形花瓣（柠檬黄 #FFE082→#FFB300） + 6 片内层小花瓣（橙黄 #FFC107）
+   · 光滑暖橙黄花盘 #FFA000 + 左上方月牙形高光
+   · 圆润草绿茎 + 心形叶 + 珊瑚粉腮红
+   · 头身比协调：head 56rpx，stem 70rpx，total 120rpx */
+.scene-sunflower {
+  position: absolute;
+  left: 20rpx;
+  bottom: 20rpx;
+  width: 60rpx;
+  height: 120rpx;
+  z-index: 6;
+  animation: sceneSway 4.2s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+@keyframes sceneSway {
+  0%, 100% { transform: rotate(-3deg); }
+  50%      { transform: rotate(3deg);  }
+}
+/* 茎：圆润矩形，渐变草绿（替代原细线 6rpx → 8rpx 更有体积感） */
+.sf-stem {
+  position: absolute;
+  left: 50%; bottom: 0;
+  width: 8rpx;
+  height: 70rpx;
+  margin-left: -4rpx;
+  background: linear-gradient(180deg, #8BC34A 0%, #558B2F 100%);
+  border-radius: 4rpx;
+  box-shadow: inset -1rpx 0 0 rgba(0,0,0,0.15);
+}
+/* 叶：心形/卵圆形，鲜草绿渐变，叶脉细线 */
+.sf-leaf {
+  position: absolute;
+  width: 24rpx;
+  height: 16rpx;
+  background: linear-gradient(135deg, #8BC34A 0%, #558B2F 100%);
+  border-radius: 50% 50% 50% 50% / 70% 70% 30% 30%;
+  border: 1rpx solid #33691E;
+}
+.sf-leaf-l {
+  left: -12rpx;
+  bottom: 30rpx;
+  transform: rotate(-30deg);
+  box-shadow: inset 0 -1rpx 0 rgba(0,0,0,0.12);
+}
+.sf-leaf-r {
+  right: -12rpx;
+  bottom: 22rpx;
+  transform: rotate(30deg) scaleX(-1);
+  box-shadow: inset 0 -1rpx 0 rgba(0,0,0,0.12);
+}
+.sf-head {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 56rpx;
+  height: 56rpx;
+  margin-left: -28rpx;
+  animation: sceneHeadBob 2.6s ease-in-out infinite;
+}
+@keyframes sceneHeadBob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50%      { transform: translateY(-2rpx) rotate(2deg); }
+}
+/* v17 外层 12 片水滴形花瓣（柠檬黄渐变，深橙描边）
+   增大至 16rpx×24rpx，覆盖范围 24rpx 半径（原 22rpx） */
+.sf-petal {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 16rpx;
+  height: 24rpx;
+  margin: -12rpx 0 0 -8rpx;
+  background: linear-gradient(180deg, #FFE082 0%, #FFB300 100%);
+  border-radius: 50% 50% 50% 50% / 65% 65% 35% 35%;
+  transform-origin: center 24rpx;
+  box-shadow: inset 0 -1rpx 0 rgba(180, 100, 0, 0.35);
+  border: 1rpx solid #E65100;
+  z-index: 1;
+}
+/* v17 12 片均匀环绕（每 30°） */
+.sf-petal-1  { transform: translateY(-24rpx) rotate(0deg); }
+.sf-petal-2  { transform: translateY(-21rpx) translateX(12rpx) rotate(30deg); }
+.sf-petal-3  { transform: translateY(-12rpx) translateX(21rpx) rotate(60deg); }
+.sf-petal-4  { transform: translateX(24rpx) rotate(90deg); }
+.sf-petal-5  { transform: translateY(12rpx) translateX(21rpx) rotate(120deg); }
+.sf-petal-6  { transform: translateY(21rpx) translateX(12rpx) rotate(150deg); }
+.sf-petal-7  { transform: translateY(24rpx) rotate(180deg); }
+.sf-petal-8  { transform: translateY(21rpx) translateX(-12rpx) rotate(210deg); }
+.sf-petal-9  { transform: translateY(12rpx) translateX(-21rpx) rotate(240deg); }
+.sf-petal-10 { transform: translateX(-24rpx) rotate(270deg); }
+.sf-petal-11 { transform: translateY(-12rpx) translateX(-21rpx) rotate(300deg); }
+.sf-petal-12 { transform: translateY(-21rpx) translateX(-12rpx) rotate(330deg); }
+/* v17 内层 6 片小花瓣（橙黄，与外层错位 15° = 60° 间隔） */
+.sf-petal-inner {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 10rpx;
+  height: 16rpx;
+  margin: -8rpx 0 0 -5rpx;
+  background: linear-gradient(180deg, #FFCA28 0%, #FF8F00 100%);
+  border-radius: 50% 50% 50% 50% / 65% 65% 35% 35%;
+  transform-origin: center 16rpx;
+  box-shadow: inset 0 -1rpx 0 rgba(180, 100, 0, 0.4);
+  border: 1rpx solid #E65100;
+  z-index: 1;
+}
+.sf-petal-inner-1 { transform: translateY(-16rpx) rotate(15deg); }
+.sf-petal-inner-2 { transform: translateX(8rpx) translateY(-14rpx) rotate(75deg); }
+.sf-petal-inner-3 { transform: translateX(16rpx) translateY(-5rpx) rotate(135deg); }
+.sf-petal-inner-4 { transform: translateX(8rpx) translateY(5rpx) rotate(195deg); }
+.sf-petal-inner-5 { transform: translateY(14rpx) translateX(-5rpx) rotate(255deg); }
+.sf-petal-inner-6 { transform: translateY(-5rpx) translateX(-14rpx) rotate(315deg); }
+/* v17 花盘：暖橙黄渐变（替代原棕色种子） + 月牙高光 */
+.sf-face {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 32rpx; height: 32rpx;
+  margin: -16rpx 0 0 -16rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #FFB300 0%, #FFA000 60%, #FF8F00 100%);
+  box-shadow: inset 0 -2rpx 4rpx rgba(120, 60, 0, 0.35);
+  border: 1.5rpx solid #E65100;
+  z-index: 2;
+  overflow: hidden;
+}
+/* v17 月牙形高光：左上方白色光斑，3D 球体光泽感 */
+.sf-face-shine {
+  position: absolute;
+  left: 18%;
+  top: 18%;
+  width: 36%;
+  height: 28%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255,253,231,0.9) 0%, rgba(255,255,255,0) 100%);
+  transform: rotate(-25deg);
+}
+/* v17 杏眼：白色圆 + 深棕瞳孔 */
+.sf-eye {
+  position: absolute;
+  width: 6rpx; height: 6rpx;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 1rpx 1rpx rgba(0,0,0,0.3);
+  z-index: 3;
+}
+.sf-eye-l { left: 17rpx; top: 24rpx; }
+.sf-eye-r { left: 33rpx; top: 24rpx; }
+.sf-eye-l:before, .sf-eye-r:before {
+  content: "";
+  position: absolute;
+  left: 1.5rpx; top: 1rpx;
+  width: 3rpx; height: 4rpx;
+  border-radius: 50%;
+  background: #4E342E;
+}
+/* v17 珊瑚粉腮红：椭圆，淡粉/珊瑚色 */
+.sf-blush {
+  position: absolute;
+  width: 6rpx;
+  height: 4rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,171,145,0.85) 0%, rgba(255,171,145,0) 100%);
+  z-index: 3;
+}
+.sf-blush-l { left: 12rpx; top: 30rpx; }
+.sf-blush-r { left: 38rpx; top: 30rpx; }
+/* v17 微笑小嘴：弧线，深橙 #E65100 描边（替代原黑色） */
+.sf-mouth {
+  position: absolute;
+  left: 50%;
+  top: 32rpx;
+  width: 8rpx; height: 4rpx;
+  margin-left: -4rpx;
+  border-bottom: 1.5rpx solid #E65100;
+  border-radius: 0 0 50% 50%;
+  z-index: 3;
+}
+
+/* 豌豆射手：茎 + 双叶 + 头（脸+眼+嘴+炮口阴影） */
+.scene-shooter {
+  position: absolute;
+  right: 30rpx;
+  bottom: 20rpx;
+  width: 50rpx;
+  height: 110rpx;
+  z-index: 6;
+  animation: sceneSway 5s ease-in-out infinite reverse;
+  transform-origin: 50% 100%;
+}
+.ps-stem {
+  position: absolute;
+  left: 50%; bottom: 0;
+  width: 6rpx;
+  height: 60rpx;
+  margin-left: -3rpx;
+  background: linear-gradient(180deg, #6FAE3A 0%, #4F8E2E 100%);
+  border-radius: 3rpx;
+}
+.ps-leaf {
+  position: absolute;
+  width: 20rpx;
+  height: 13rpx;
+  background: linear-gradient(135deg, #8BC34A 0%, #558B2F 100%);
+  border-radius: 50% 50% 50% 50% / 70% 70% 30% 30%;
+}
+.ps-leaf-l { left: -10rpx; bottom: 28rpx; transform: rotate(-30deg); }
+.ps-leaf-r { right: -10rpx; bottom: 18rpx; transform: rotate(30deg) scaleX(-1); }
+.ps-head {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 44rpx;
+  height: 44rpx;
+  margin-left: -22rpx;
+  animation: sceneHeadBob 2.4s ease-in-out infinite reverse;
+}
+.ps-face {
+  position: absolute;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #DCEDC8 0%, #8BC34A 50%, #558B2F 100%);
+  box-shadow: inset 0 -3rpx 4rpx rgba(0,0,0,0.18),
+              inset 0 2rpx 0 rgba(255,255,255,0.45),
+              inset 4rpx 0 0 rgba(255,255,255,0.18);
+}
+.ps-eye {
+  position: absolute;
+  left: 18rpx; top: 16rpx;
+  width: 9rpx; height: 9rpx;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 1rpx 1rpx rgba(0,0,0,0.2);
+}
+.ps-eye:before {
+  content: "";
+  position: absolute;
+  left: 2rpx; top: 2rpx;
+  width: 5rpx; height: 5rpx;
+  border-radius: 50%;
+  background: #1A1A1A;
+}
+.ps-mouth {
+  position: absolute;
+  right: -8rpx;
+  top: 50%;
+  width: 18rpx; height: 11rpx;
+  margin-top: -5.5rpx;
+  border-radius: 4rpx 50% 50% 4rpx;
+  background: linear-gradient(90deg, #7CB342 0%, #558B2F 60%, #33691E 100%);
+  box-shadow: inset 0 -1rpx 0 rgba(0,0,0,0.4),
+              inset 0 1rpx 0 rgba(255,255,255,0.20);
+}
+.ps-mouth::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 50%;
+  width: 7rpx; height: 9rpx;
+  margin-top: -4.5rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, #1B5E20 0%, #000000 100%);
+}
+.ps-shadow {
+  position: absolute;
+  right: -10rpx;
+  top: 50%;
+  width: 20rpx;
+  height: 14rpx;
+  margin-top: -7rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(80,160,40,0.45) 0%, rgba(80,160,40,0) 70%);
+  z-index: -1;
+}
+
+/* 栅栏：3 竖柱 + 2 横梁（前景，挡在植物前） */
+.scene-fence {
+  position: absolute;
+  left: 0; right: 0; bottom: 12rpx;
+  height: 26rpx;
+  z-index: 7;
+}
+.fence-post {
+  position: absolute;
+  bottom: 0;
+  width: 5rpx;
+  height: 26rpx;
+  background: linear-gradient(180deg, #C08A55 0%, #8B5A2B 100%);
+  border-radius: 2rpx 2rpx 0 0;
+  box-shadow: inset -1rpx 0 0 rgba(0,0,0,0.18);
+}
+.fence-post-1 { left: 24rpx;  height: 22rpx; }
+.fence-post-2 { left: 124rpx; height: 26rpx; }
+.fence-post-3 { left: 222rpx; height: 20rpx; }
+.fence-rail {
+  position: absolute;
+  left: 18rpx;
+  right: 18rpx;
+  height: 4rpx;
+  background: linear-gradient(180deg, #C4936A 0%, #8B5A2B 100%);
+  border-radius: 2rpx;
+}
+.fence-rail-top    { top: 6rpx;  width: auto; }
+.fence-rail-bottom { top: 16rpx; width: auto; }
+
+/* 小花点缀（草地上的彩色斑点） */
+.scene-bloom {
+  position: absolute;
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  z-index: 5;
+  box-shadow: 0 1rpx 2rpx rgba(0,0,0,0.18);
+}
+.scene-bloom-1 {
+  left: 14rpx;
+  bottom: 8rpx;
+  background: radial-gradient(circle, #FFEB3B 0%, #FF9800 100%);
+}
+.scene-bloom-2 {
+  left: 78rpx;
+  bottom: 5rpx;
+  background: radial-gradient(circle, #F48FB1 0%, #E91E63 100%);
+}
+.scene-bloom-3 {
+  left: 172rpx;
+  bottom: 9rpx;
+  background: radial-gradient(circle, #CE93D8 0%, #7B1FA2 100%);
+}
+
+/* ============ 右侧：文字区 + 开始冒险按钮 ============ */
+.banner-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 10rpx;                /* v62 精修 8→10rpx（VLM 一轮：松散感微调） */
+  position: relative;
+  z-index: 1;
+  padding-left: 20rpx;
+}
+/* v62 精修：右上「新伙伴」贴纸（VLM 一轮：填补右上空白; 呼应寒冰射手入阵） */
+.banner-main::before {
+  content: "❄️ 新伙伴";
+  position: absolute;
+  top: 6rpx;
+  right: 6rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #E0F7FA 0%, #B2EBF2 100%);
+  border: 1.5rpx solid rgba(0, 137, 123, 0.35);
+  color: #00695C;
+  font-size: 15rpx;
+  font-weight: 800;
+  letter-spacing: 0.5rpx;
+  transform: rotate(-6deg);
+  box-shadow: 0 3rpx 8rpx rgba(0, 105, 92, 0.15),
+              inset 0 1rpx 0 rgba(255,255,255,0.7);
+  z-index: 2;
+  pointer-events: none;
+}
+.banner-eyebrow {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #FFFFFF 0%, #F4FBDC 100%);
+  box-shadow: 0 2rpx 6rpx rgba(80, 120, 45, 0.10);
+  font-size: 17rpx;
+  font-weight: 800;
+  color: #4B6A2D;
+  letter-spacing: 0.5rpx;
+  margin-bottom: 2rpx;
+}
+.banner-title {
+  font-size: 38rpx;            /* v62 32→38rpx，卡高富余让主标题更醒目 */
+  font-weight: 900;
+  letter-spacing: 1.5rpx;
+  line-height: 1.1;
+  background: linear-gradient(180deg, #2F5312 0%, #4C8B2A 55%, #7BC86A 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2rpx 0 rgba(255,255,255,0.25);
+}
+.banner-sub {
+  font-size: 19rpx;            /* v62 18→19rpx */
+  font-weight: 700;
+  color: #4B6A2D;
+  line-height: 1.25;
+  letter-spacing: 0.3rpx;
+}
+.banner-btn {
+  margin-top: 10rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12rpx 26rpx 12rpx 28rpx;
+  gap: 4rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.92);   /* v58 次级化：白底描边，让位底部主 CTA */
+  border: 2rpx solid rgba(61, 138, 50, 0.32);
+  color: #3D8A32;
+  font-size: 24rpx;            /* v62 22→24rpx，随卡放大 */
+  font-weight: 900;
+  letter-spacing: 1rpx;
+  box-shadow:
+    0 3rpx 8rpx rgba(47, 83, 18, 0.12),
+    inset 0 1rpx 0 rgba(255,255,255,0.9);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease;
+}
+.banner-btn-hover {
+  transform: translateY(2rpx) scale(0.97);
+  filter: brightness(0.97);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 2rpx 6rpx rgba(47, 83, 18, 0.10),
+              inset 0 1rpx 0 rgba(255,255,255,0.85);
+}
+.banner-btn-arrow {
+  font-size: 30rpx;
+  font-weight: 900;
+  line-height: 1;
+  margin-top: -2rpx;
+  animation: arrowNudge 1.8s ease-in-out infinite;
+}
+@keyframes arrowNudge {
+  0%, 100% { transform: translateX(0); opacity: 0.7; }
+  50%      { transform: translateX(4rpx); opacity: 1; }
+}
+
+/* ========== 固定底部 CTA：圆角矩形（参考图样式，非胶囊） ========== */
+.cta-bar {
+  flex-shrink: 0;
+  width: 100%;
+  padding: 8rpx 28rpx 12rpx;            /* v6 6/10→8/12rpx，与底部 safe 区配合更顺 */
+  box-sizing: border-box;
+  background: linear-gradient(180deg, rgba(241,251,226,0) 0%, #E9F6CF 40%, #E2F3C1 100%);
+  box-shadow: 0 -4rpx 12rpx rgba(200, 228, 144, 0.18);
+}
+.start-main {
+  position: relative;
+  width: 100%;
+  padding: 20rpx 0;                    /* v58 18→20：主 CTA 提级（banner 按钮已次级化） */
+  border-radius: 42rpx;
+  border: none;
+  background: linear-gradient(180deg, #9BDF7F 0%, #6FCF5E 50%, #4EA944 100%);
+  color: #FFFFFF;
+  font-size: 30rpx;                    /* v58 28→30：主次按钮字号拉开层级 */
+  font-weight: 900;
+  letter-spacing: 3rpx;
+  text-align: center;
+  line-height: 1.2;
+  box-shadow:
+    0 6rpx 0 #35742C,
+    0 14rpx 26rpx rgba(79, 155, 63, 0.38),
+    inset 0 2rpx 0 rgba(255,255,255,0.55);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 130ms ease, box-shadow 130ms ease, filter 130ms ease;
+  overflow: hidden;
+}
+.start-main:after { border: none; }
+.start-main-shine {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 45%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0));
+  pointer-events: none;
+  border-radius: 40rpx 40rpx 0 0;
+}
+.start-main-hover {
+  transform: translateY(5rpx) scale(0.99);
+  filter: brightness(0.98);
+  box-shadow:
+    0 2rpx 0 #35742C,
+    0 5rpx 12rpx rgba(79, 155, 63, 0.26),
+    inset 0 2rpx 0 rgba(255,255,255,0.45);
+}
+
+/* ================================================================
+   v30 新增：Banner 场景升级 CSS（更美观可爱）
+   ================================================================ */
+/* 彩虹拱（全圆 + 父容器裁切下半 → 纯弧无腿；粉/奶油黄/薄荷三环） */
+.scene-rainbow {
+  position: absolute; top: -32rpx; left: -28rpx;
+  width: 144rpx; height: 64rpx; z-index: 1; opacity: 0.85;
+  overflow: hidden; pointer-events: none;
+}
+.rb {
+  position: absolute; border-radius: 50%;
+  border: 10rpx solid; box-sizing: border-box;
+}
+.rb--1 { left: 0;    top: 0;    width: 144rpx; height: 144rpx; border-color: #FFCDD2; }
+.rb--2 { left: 13rpx; top: 13rpx; width: 118rpx; height: 118rpx; border-color: #FFF59D; }
+.rb--3 { left: 26rpx; top: 26rpx; width: 92rpx; height: 92rpx;   border-color: #C8E6C9; }
+
+/* 太阳射线独立旋转容器（脸不转） */
+.sun-rays { position: absolute; inset: 0; animation: sceneSunSpin 14s linear infinite; z-index: 2; }
+/* 太阳卡哇伊脸（v30.1 加大，小尺寸可辨） */
+.sun-face-eye {
+  position: absolute; top: 11rpx; width: 6.5rpx; height: 7rpx;
+  border-radius: 50%; background: #5D4034; z-index: 4;
+}
+.sun-face-eye--l { left: 7rpx; }
+.sun-face-eye--r { left: 22rpx; }
+.sun-face-eye::after {
+  content: ""; position: absolute; left: 1.2rpx; top: 1.2rpx;
+  width: 2rpx; height: 2rpx; border-radius: 50%; background: #FFFFFF;
+}
+.sun-face-smile {
+  position: absolute; left: 50%; top: 20rpx; margin-left: -6rpx;
+  width: 12rpx; height: 6rpx;
+  border-bottom: 2.5rpx solid #8D5524; border-radius: 0 0 50% 50%;
+  z-index: 4;
+}
+.sun-face-blush {
+  position: absolute; top: 17rpx; width: 6.5rpx; height: 4rpx; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,120,100,0.62) 0%, rgba(255,120,100,0) 100%);
+  z-index: 4;
+}
+.sun-face-blush--l { left: 1.5rpx; }
+.sun-face-blush--r { left: 27.5rpx; }
+
+/* 云朵睡脸（细线柔和） */
+.cloud-face { position: absolute; left: 8rpx; top: 9rpx; width: 30rpx; height: 13rpx; z-index: 4; }
+.cloud-face-eye {
+  position: absolute; top: 1rpx; width: 8rpx; height: 5rpx;
+  border-bottom: 1.2rpx solid #90A4AE; border-radius: 0 0 50% 50%;
+}
+.cloud-face-eye--l { left: 1rpx; }
+.cloud-face-eye--r { right: 1rpx; }
+.cloud-face-mouth {
+  position: absolute; bottom: 0; left: 50%; margin-left: -2rpx;
+  width: 4rpx; height: 2.5rpx; border-radius: 50%;
+  background: rgba(144,164,174,0.5);
+}
+
+/* Banner 内坚果墙（复用 .chr--wall 迷你角色） */
+.banner-wall {
+  position: absolute; left: 165rpx; bottom: 16rpx;
+  width: 48rpx; height: 56rpx; z-index: 6;
+}
+.banner-wall .chr { left: 0; bottom: 0; animation: charBob 3.2s ease-in-out infinite; animation-delay: 0.9s; }
+
+/* v62 寒冰射手入阵（复用 .chr--ice 迷你角色，与向日葵/坚果/射手凑齐阵容） */
+.banner-ice {
+  position: absolute; left: 96rpx; bottom: 16rpx;
+  width: 58rpx; height: 78rpx; z-index: 6;
+}
+.banner-ice .chr { left: 0; bottom: 0; animation: charBob 3.4s ease-in-out infinite; animation-delay: 0.5s; }
+.banner-ice::after {
+  content: ""; position: absolute; bottom: -2rpx; left: 50%;
+  width: 42rpx; height: 7rpx; margin-left: -21rpx; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(52,78,22,0.32) 0%, rgba(52,78,22,0) 68%);
+  z-index: -1; pointer-events: none;
+}
+
+/* 僵尸探头（右边缘偷窥：礼帽 + 灰绿头 + 手扒边） */
+.scene-zpeek {
+  position: absolute; right: -4rpx; bottom: 36rpx;
+  width: 46rpx; height: 58rpx; z-index: 8;
+  animation: zpeekBob 3.2s ease-in-out infinite;
+}
+@keyframes zpeekBob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5rpx); }
+}
+.zk-hat-crown {
+  position: absolute; top: 0; left: 12rpx;
+  width: 21rpx; height: 14rpx;
+  background: linear-gradient(180deg, #3A3A46 0%, #23232B 70%);
+  border-radius: 4rpx 4rpx 1rpx 1rpx;
+}
+.zk-hat-brim {
+  position: absolute; top: 12rpx; left: 4rpx;
+  width: 36rpx; height: 5rpx;
+  background: linear-gradient(180deg, #23232B 0%, #0F0F15 100%);
+  border-radius: 3rpx;
+}
+.zk-head {
+  position: absolute; top: 14rpx; left: 10rpx;
+  width: 28rpx; height: 26rpx;
+  background: radial-gradient(circle at 35% 30%, #B5C9A0 0%, #9CB383 60%, #7E9272 100%);
+  border-radius: 48% 48% 44% 44%;
+}
+.zk-eye {
+  position: absolute; top: 9rpx; width: 5rpx; height: 5rpx;
+  border-radius: 50%; background: #F5EDB5;
+}
+.zk-eye--l { left: 5rpx; }
+.zk-eye--r { left: 18rpx; }
+.zk-eye::before {
+  content: ""; position: absolute; left: 1.2rpx; top: 0.5rpx;
+  width: 2.4rpx; height: 2.4rpx; border-radius: 50%; background: #1A1A1A;
+}
+.zk-grin {
+  position: absolute; left: 50%; top: 16rpx; margin-left: -4.5rpx;
+  width: 9rpx; height: 6rpx;
+  background: #6E1B1B; border-radius: 0 0 50% 50%;
+}
+.zk-grin::before {
+  content: ""; position: absolute; top: 0; left: 1.5rpx;
+  width: 2rpx; height: 2.2rpx; background: #F5F0DC;
+  border-radius: 0 0 40% 40%;
+  box-shadow: 3.5rpx 0 0 #F5F0DC;
+}
+.zk-hand {
+  position: absolute; bottom: -2rpx; left: 26rpx;
+  width: 11rpx; height: 10rpx;
+  background: #9CB383; border-radius: 50%;
+  border: 1.5rpx solid #7E9272;
+  z-index: 9;
+}
+
+/* 蝴蝶 ×2（粉 + 蓝，翅膀扑动 + 漂移路径） */
+.scene-butterfly {
+  position: absolute; width: 19rpx; height: 14rpx; z-index: 7;
+  animation: bfFly 7s ease-in-out infinite;
+}
+.scene-butterfly--1 { left: 168rpx; top: 40rpx; }
+.scene-butterfly--2 { left: 108rpx; top: 20rpx; animation-delay: 2.5s; }
+@keyframes bfFly {
+  0%, 100% { transform: translate(0, 0); }
+  25%      { transform: translate(10rpx, -8rpx); }
+  50%      { transform: translate(-6rpx, -14rpx); }
+  75%      { transform: translate(6rpx, -6rpx); }
+}
+.scene-butterfly--2 { animation-name: bfFly2; }
+@keyframes bfFly2 {
+  0%, 100% { transform: translate(0, 0) scale(0.75); }
+  30%      { transform: translate(-12rpx, 10rpx) scale(0.75); }
+  60%      { transform: translate(8rpx, 16rpx) scale(0.75); }
+}
+.bf-wing {
+  position: absolute; top: 0; width: 10rpx; height: 14rpx;
+  border-radius: 50% 50% 50% 50% / 72% 72% 42% 42%;
+}
+.bf-wing--l {
+  left: 0; background: linear-gradient(135deg, #F8BBD0 0%, #F06292 100%);
+  transform-origin: right center; animation: bfFlap 0.5s ease-in-out infinite;
+}
+.bf-wing--r {
+  right: 0; background: linear-gradient(225deg, #F8BBD0 0%, #F06292 100%);
+  transform-origin: left center; animation: bfFlapR 0.5s ease-in-out infinite;
+}
+.scene-butterfly--2 .bf-wing--l { background: linear-gradient(135deg, #B3E5FC 0%, #4FC3F7 100%); }
+.scene-butterfly--2 .bf-wing--r { background: linear-gradient(225deg, #B3E5FC 0%, #4FC3F7 100%); }
+@keyframes bfFlap  { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.35); } }
+@keyframes bfFlapR { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.35); } }
+.bf-body {
+  position: absolute; left: 50%; top: 2rpx; margin-left: -1.5rpx;
+  width: 3rpx; height: 11rpx; background: #4E342E; border-radius: 2rpx;
+}
+.bf-body::before, .bf-body::after {
+  content: ""; position: absolute; left: 0.5rpx;
+  width: 2rpx; height: 3rpx; border-radius: 50%;
+  background: #4E342E;
+}
+.bf-body::before { top: -3rpx; }
+.bf-body::after  { bottom: -3rpx; }
+
+/* 小蘑菇（红伞白点 + 睡眼菌柄） */
+.scene-shroom {
+  position: absolute; left: 16rpx; bottom: 10rpx;
+  width: 17rpx; height: 15rpx; z-index: 6;
+}
+.shroom-cap {
+  position: absolute; top: 0; left: 0;
+  width: 17rpx; height: 10rpx;
+  background: radial-gradient(circle at 35% 30%, #FF8A80 0%, #E53935 75%);
+  border-radius: 9rpx 9rpx 2rpx 2rpx;
+}
+.shroom-cap::before, .shroom-cap::after {
+  content: ""; position: absolute; top: 2rpx;
+  width: 3rpx; height: 3rpx; border-radius: 50%; background: #FFFFFF;
+}
+.shroom-cap::before { left: 2.5rpx; }
+.shroom-cap::after  { right: 3.5rpx; width: 2.5rpx; height: 2.5rpx; }
+.shroom-stem {
+  position: absolute; bottom: 0; left: 5.5rpx;
+  width: 6rpx; height: 5rpx; background: #FFF8E1; border-radius: 2rpx;
+}
+.shroom-stem::before, .shroom-stem::after {
+  content: ""; position: absolute; top: 2rpx;
+  width: 1.5rpx; height: 1.5rpx; border-radius: 50%; background: #8D6E63;
+}
+.shroom-stem::before { left: 1rpx; }
+.shroom-stem::after  { right: 1rpx; }
+
+/* 闪光星星 ×3（旋转菱形 + 闪烁） */
+.scene-spark {
+  position: absolute; width: 7rpx; height: 7rpx;
+  background: #FFFFFF; transform: rotate(45deg);
+  border-radius: 1.5rpx; opacity: 0.9; z-index: 5;
+  animation: sparkTwinkle 2.4s ease-in-out infinite;
+}
+.scene-spark--1 { left: 110rpx; top: 70rpx; }
+.scene-spark--2 { left: 214rpx; top: 36rpx; animation-delay: 0.8s; }
+.scene-spark--3 { left: 266rpx; top: 84rpx; animation-delay: 1.6s; }
+@keyframes sparkTwinkle {
+  0%, 100% { opacity: 0.25; transform: rotate(45deg) scale(0.8); }
+  50%      { opacity: 1;    transform: rotate(45deg) scale(1.15); }
+}
+
+/* v46 脚下接触阴影（向日葵/射手/坚果墙; 软椭圆贴地, 摆动幅度小可忽略） */
+.scene-sunflower::after,
+.scene-shooter::after {
+  content: ""; position: absolute; bottom: -3rpx; left: 50%;
+  width: 40rpx; height: 8rpx; margin-left: -20rpx; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(52,78,22,0.32) 0%, rgba(52,78,22,0) 68%);
+  z-index: -1; pointer-events: none;
+}
+.scene-shooter::after { width: 36rpx; margin-left: -18rpx; }
+.banner-wall::after {
+  content: ""; position: absolute; bottom: -2rpx; left: 50%;
+  width: 38rpx; height: 7rpx; margin-left: -19rpx; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(52,78,22,0.32) 0%, rgba(52,78,22,0) 68%);
+  z-index: -1; pointer-events: none;
+}
+/* v30 栅栏第 4 柱 + 补充小花 */
+.fence-post-4 { left: 296rpx; height: 22rpx; }
+.scene-bloom-4 { left: 240rpx; bottom: 6rpx; background: radial-gradient(circle, #FFEB3B 0%, #FF9800 100%); }
+.scene-bloom-5 { left: 292rpx; bottom: 9rpx; background: radial-gradient(circle, #F48FB1 0%, #E91E63 100%); }
+/* ========== v32: 亲子积分卡（stats-row 第 4 张，amber 暖色点缀） ========== */
+.reward-card {
+  cursor: pointer;
+}
+.reward-card .stat-card-num {
+  color: #B45309;             /* amber-800，与绿色主色形成暖色点缀 */
+}
+.reward-card .stat-card-underline {
+  background: linear-gradient(90deg, rgba(255,193,7,0), rgba(255,193,7,0.85), rgba(255,193,7,0));
+}
+.reward-card::after {
+  content: '奖励中心 ›';
+  position: absolute;
+  right: 8rpx;
+  top: 8rpx;
+  padding: 3rpx 10rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 193, 7, 0.16);
+  font-size: 12rpx;
+  font-weight: 800;
+  color: #B45309;
+  letter-spacing: 0.5rpx;
+}
+
+/* ================================================================
+   v33 新增：「立即了解」玩法介绍弹窗（左对齐·卡片式·替代原生 showModal）
+   - 遮罩：暗绿半透 + 毛玻璃，点击关闭；卡片 pop 弹入（回弹曲线）
+   - 规则行：数字徽章（六色渐变循环）+ 标题/描述，全部左对齐
+   - 逐条错峰淡入（内联 animation-delay）；小屏 scroll-view 兜底滚动
+   - 底部：亲子积分联动提示（v32）+ 绿色渐变 CTA（复用 start-main 视觉）
+   ================================================================ */
+.km-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(31, 42, 22, 0.42);
+  backdrop-filter: blur(6rpx);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30rpx 36rpx;
+  box-sizing: border-box;
+  z-index: 200;              /* 高于导航栏/CTA(z1)，全页覆盖 */
+  animation: kmFadeIn 0.28s ease-out;
+}
+@keyframes kmFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.km-card {
+  width: 100%;
+  max-width: 640rpx;
+  display: flex;
+  flex-direction: column;
+  padding: 30rpx 28rpx 26rpx;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, rgba(255,255,255,0.99) 0%, #F8FFEE 100%);
+  border-radius: 40rpx;
+  border: 5rpx solid rgba(255,255,255,0.98);
+  box-shadow:
+    0 20rpx 48rpx rgba(77, 142, 63, 0.28),
+    inset 0 3rpx 0 rgba(255,255,255,0.95);
+  animation: kmPop 0.42s cubic-bezier(.2,.9,.2,1.15);
+}
+@keyframes kmPop {
+  0%   { opacity: 0; transform: scale(0.82) translateY(24rpx); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ---- 头部：🌱 徽标 + 标题副标题（左） · 关闭 ✕（右） ---- */
+.km-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.km-head-left {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  min-width: 0;
+}
+.km-head-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-left: 2rpx;
+  min-width: 0;
+}
+.km-logo {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 22rpx;
+  background: linear-gradient(180deg, #C5E9A8, #7BC86A);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6rpx 12rpx rgba(93, 144, 63, 0.28), inset 0 2rpx 0 rgba(255,255,255,0.6);
+  flex-shrink: 0;
+}
+.km-logo-emoji {
+  font-size: 36rpx;
+  line-height: 1;
+  animation: kmSway 2.8s ease-in-out infinite;
+}
+@keyframes kmSway {
+  0%, 100% { transform: rotate(-7deg); }
+  50%      { transform: rotate(7deg); }
+}
+.km-title {
+  font-size: 30rpx;
+  font-weight: 900;
+  color: #2F3A26;
+  letter-spacing: 1rpx;
+  line-height: 1.2;
+}
+.km-subtitle {
+  font-size: 16rpx;
+  font-weight: 500;
+  color: #657551;
+  margin-top: 4rpx;
+  letter-spacing: 0.5rpx;
+}
+.km-close {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  background: rgba(47, 58, 38, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #657551;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 150ms ease, background 150ms ease;
+}
+.km-close-hover {
+  transform: scale(0.88);
+  background: rgba(47, 58, 38, 0.12);
+}
+
+/* ---- 分割线：绿色渐隐线 ---- */
+.km-divider {
+  height: 2rpx;
+  margin: 22rpx 4rpx 24rpx;
+  flex-shrink: 0;
+  background: linear-gradient(90deg,
+    rgba(123, 200, 106, 0) 0%,
+    rgba(123, 200, 106, 0.55) 20%,
+    rgba(77, 142, 63, 0.55) 50%,
+    rgba(123, 200, 106, 0.55) 80%,
+    rgba(123, 200, 106, 0) 100%);
+}
+
+/* ---- 规则列表：左对齐行式布局，小屏兜底滚动 ---- */
+.km-list {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 760rpx;
+}
+.km-row {
+  display: flex;
+  align-items: flex-start;       /* 左对齐核心：徽章与文字块顶对齐 */
+  gap: 14rpx;
+  padding: 15rpx 16rpx;
+  border-radius: 18rpx;
+  box-sizing: border-box;
+  opacity: 0;
+  animation: kmRowIn 0.4s ease-out forwards;   /* 逐条淡入（delay 见内联） */
+  -webkit-tap-highlight-color: transparent;
+}
+.km-row + .km-row { margin-top: 14rpx; }
+@keyframes kmRowIn {
+  from { opacity: 0; transform: translateY(14rpx); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.km-num {
+  width: 38rpx;
+  height: 38rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20rpx;
+  font-weight: 800;
+  box-shadow: inset 0 2rpx 0 rgba(255,255,255,0.4), 0 3rpx 6rpx rgba(0,0,0,0.08);
+  border: 2rpx solid rgba(255,255,255,0.85);
+  flex-shrink: 0;
+  margin-top: -5rpx;           /* v58 2→-5：徽章中心对齐标题行（VLM P0） */
+}
+.km-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;              /* 文字块整体左对齐 */
+}
+.km-row-title {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  font-size: 22rpx;
+  font-weight: 800;
+  color: #2F3A26;
+  line-height: 1.3;
+  letter-spacing: 0.3rpx;
+}
+.km-row-icon { font-size: 22rpx; line-height: 1; }
+.km-row-name { flex: 1 1 auto; min-width: 0; }
+.km-row-desc {
+  margin-top: 8rpx;
+  font-size: 17rpx;
+  font-weight: 500;
+  color: #5E6F48;
+  line-height: 1.6;
+  letter-spacing: 0.2rpx;
+  text-align: left;              /* 描述左对齐（不两端对齐，避免拉伸） */
+}
+
+/* ---- 联动提示：亲子积分 → 奖励中心（v32） ---- */
+.km-tip {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin: 16rpx 2rpx 4rpx;
+  padding: 10rpx 14rpx;
+  border-radius: 14rpx;
+  background: linear-gradient(90deg, rgba(255, 193, 7, 0.10), rgba(255, 193, 7, 0.03));
+  -webkit-tap-highlight-color: transparent;
+}
+.km-tip-icon { font-size: 20rpx; line-height: 1; flex-shrink: 0; }
+.km-tip-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 16rpx;
+  font-weight: 500;
+  color: #A16207;
+  letter-spacing: 0.2rpx;
+  text-align: left;
+}
+.km-tip-link {
+  flex-shrink: 0;
+  font-size: 16rpx;
+  font-weight: 800;
+  color: #D97706;
+  padding: 4rpx 8rpx;
+  border-radius: 999rpx;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 150ms ease, opacity 150ms ease;
+}
+.km-tip-link-hover { transform: scale(0.94); opacity: 0.8; }
+
+/* ---- CTA：绿色渐变胶囊（复用 start-main 视觉语言） ---- */
+.km-cta {
+  position: relative;
+  margin-top: 24rpx;
+  padding: 16rpx 0;
+  border-radius: 42rpx;
+  background: linear-gradient(180deg, #9BDF7F 0%, #6FCF5E 50%, #4EA944 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow:
+    0 6rpx 0 #35742C,
+    0 12rpx 22rpx rgba(79, 155, 63, 0.32),
+    inset 0 2rpx 0 rgba(255,255,255,0.55);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 130ms ease, box-shadow 130ms ease, filter 130ms ease;
+}
+.km-cta-shine {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 45%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0));
+  pointer-events: none;
+}
+.km-cta-text {
+  font-size: 26rpx;
+  font-weight: 900;
+  color: #FFFFFF;
+  letter-spacing: 3rpx;
+  line-height: 1.2;
+}
+.km-cta-arrow {
+  font-size: 30rpx;
+  font-weight: 900;
+  color: rgba(255,255,255,0.9);
+  line-height: 1;
+}
+.km-cta-hover {
+  transform: translateY(4rpx) scale(0.99);
+  filter: brightness(0.98);
+  box-shadow:
+    0 2rpx 0 #35742C,
+    0 5rpx 12rpx rgba(79, 155, 63, 0.26),
+    inset 0 2rpx 0 rgba(255,255,255,0.45);
+}
+
+/* ================================================================
+   v35 新增：自定义词包信息条（diff-pills 下方，已导入时显示）
+   · 📚 图标 + 词库名 + 词数胶囊 + 「管理 ›」入口
+   · 点按进入管理面板（换词库/清除）；样式与 stats 卡同族（浅绿底白卡）
+   ================================================================ */
+.pack-bar {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 10rpx 18rpx;
+  border-radius: 22rpx;        /* v58 16→22：与卡族圆角统一 */
+  background: linear-gradient(180deg, #FDFFF8 0%, #F5FBEC 100%);
+  border: 1rpx solid rgba(123, 200, 106, 0.35);
+  box-shadow: 0 3rpx 10rpx rgba(80, 120, 45, 0.08),
+              inset 0 2rpx 0 rgba(255, 255, 255, 0.9);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.pack-bar-hover {
+  transform: scale(0.98);
+  box-shadow: 0 2rpx 6rpx rgba(80, 120, 45, 0.10);
+}
+.pack-bar-icon {
+  font-size: 24rpx;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.pack-bar-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 18rpx;
+  font-weight: 700;
+  color: #2F3A26;
+  letter-spacing: 0.3rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+.pack-bar-count {
+  flex-shrink: 0;
+  font-size: 16rpx;
+  font-weight: 800;
+  color: #4D8E3F;
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
+  background: rgba(123, 200, 106, 0.18);
+}
+.pack-bar-action {
+  flex-shrink: 0;
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
+  background: rgba(123, 200, 106, 0.16);
+  font-size: 16rpx;
+  font-weight: 700;
+  color: #4D8E3F;
+}
