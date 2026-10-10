@@ -1,36 +1,53 @@
-/* app.wxss - 全局样式：马卡龙萌系主题 */
+/* app.wxss - 全局样式：「木语农场」木质手账拟物主题 (v63 深度重设计)
+ *
+ * 设计语言：
+ *   · 农场木质纹理 —— 板条木纹（repeating-linear-gradient 拼缝 + 顺纹丝缕 + 顶部光泽）
+ *   · 手绘感描边 —— 有机抖动圆角（不等半径 border-radius）+ 咖啡墨线描边
+ *   · 拟物卡片 —— 牛皮纸卡 + 和纸胶带 + 火漆徽章 + 皮革缝线
+ *   · 丰富微动效 —— 入场错峰浮现 / 木牌摇摆 / 火漆盖章 / 呼吸浮动 / 按压下沉
+ *
+ * 兼容性策略（高配机优先）：毛玻璃 backdrop-filter 大胆使用；纹理全部为
+ * 纯 CSS 渐变（零图片资源，不增加包体积）；老机型仅丢失模糊层不丢布局。
+ */
 
-/* ============ 颜色变量（马卡龙色系） ============ */
+/* ============ 颜色变量（木语农场色系） ============ */
 page {
-  --color-bg: #FFF5F8;
-  --color-card: #FFFFFF;
-  --color-pink: #FFD1DC;
-  --color-pink-deep: #F48FB1;
-  --color-mint: #B5EAD7;
-  --color-mint-deep: #7BC9A6;
-  --color-sky: #C7E9FF;
-  --color-sky-deep: #6EC1E4;
-  --color-lemon: #FFF3B0;
-  --color-lemon-deep: #F5C43C;
-  --color-lavender: #D4C5F9;
-  --color-lavender-deep: #B39DDB;
-  --color-peach: #FFDAC1;
-  --color-peach-deep: #F4A582;
-  --color-text: #5D4037;
-  --color-text-muted: #8D6E63;
-  --color-text-light: #BCAAA4;
-  --color-border: #FFE5EC;
-  --color-danger: #EF5350;
-  --color-success: #66BB6A;
-  --shadow-soft: 0 8rpx 24rpx rgba(243, 139, 168, 0.18);
-  --shadow-card: 0 12rpx 32rpx rgba(122, 92, 78, 0.10);
+  /* 纸张 */
+  --farm-paper: #FBF3E2;
+  --farm-paper-light: #FFFDF5;
+  --farm-kraft: #F3E5C8;
+  /* 木材 */
+  --wood-light: #C89B72;
+  --wood-mid: #A9714B;
+  --wood-deep: #8B5A3C;
+  --wood-edge: #5F3B22;
+  /* 墨色（手绘线稿） */
+  --farm-ink: #4A342A;
+  --farm-ink-soft: #7A6450;
+  --farm-ink-faint: #A9927D;
+  /* 点缀 */
+  --farm-leaf: #7CB342;
+  --farm-leaf-deep: #4E8C2F;
+  --farm-sun: #F5B301;
+  --farm-sky: #C9E8F5;
+  --farm-rust: #D9534F;
+
+  /* 兼容旧变量名（部分页面 wxss 仍引用） */
+  --color-bg: #FBF3E2;
+  --color-card: #FFFDF5;
+  --color-text: var(--farm-ink);
+  --color-text-muted: var(--farm-ink-soft);
+  --color-text-light: var(--farm-ink-faint);
+  --color-danger: var(--farm-rust);
+  --color-success: var(--farm-leaf);
+  --shadow-card: 0 12rpx 28rpx rgba(74, 52, 42, 0.14);
   --radius-sm: 12rpx;
   --radius-md: 20rpx;
   --radius-lg: 32rpx;
   --radius-xl: 48rpx;
 
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: var(--farm-paper);
+  color: var(--farm-ink);
   font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
   font-size: 28rpx;
   line-height: 1.5;
@@ -40,73 +57,181 @@ page {
 /* ============ 通用类 ============ */
 view, text { box-sizing: border-box; }
 
-/* v6 修复 (Task 11 F19): 删除 9 个无引用的 flex/text utility 类，项目已用具体类如 .hud-row .stats-row 替代 */
+/* ============ 木质纹理面板（板条拼缝 + 顺纹 + 顶光） ============ */
+.wood-surface {
+  background-image:
+    repeating-linear-gradient(90deg,
+      rgba(63, 38, 20, 0.14) 0 3rpx,
+      rgba(255, 255, 255, 0.06) 3rpx 6rpx,
+      rgba(63, 38, 20, 0) 6rpx 86rpx),
+    repeating-linear-gradient(178deg,
+      rgba(63, 38, 20, 0.05) 0 2rpx,
+      rgba(63, 38, 20, 0) 2rpx 30rpx),
+    linear-gradient(180deg,
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(255, 255, 255, 0) 34%,
+      rgba(63, 38, 20, 0.10) 100%),
+    linear-gradient(180deg, var(--wood-light) 0%, var(--wood-mid) 52%, var(--wood-deep) 100%);
+}
+/* 横向板条（用于横梁 / 木架：板缝水平分布） */
+.wood-surface-h {
+  background-image:
+    repeating-linear-gradient(0deg,
+      rgba(63, 38, 20, 0.13) 0 3rpx,
+      rgba(255, 255, 255, 0.05) 3rpx 5rpx,
+      rgba(63, 38, 20, 0) 5rpx 44rpx),
+    linear-gradient(180deg,
+      rgba(255, 255, 255, 0.20) 0%,
+      rgba(255, 255, 255, 0) 40%,
+      rgba(63, 38, 20, 0.12) 100%),
+    linear-gradient(180deg, var(--wood-light) 0%, var(--wood-mid) 55%, var(--wood-deep) 100%);
+}
 
-/* ============ 萌系按钮 ============ */
+/* ============ 手绘纸张面板（米黄纸 + 细横纹 + 墨线描边） ============ */
+.paper-surface {
+  background:
+    repeating-linear-gradient(180deg,
+      rgba(122, 100, 80, 0.045) 0 1rpx,
+      rgba(122, 100, 80, 0) 1rpx 26rpx),
+    linear-gradient(180deg, var(--farm-paper-light) 0%, var(--farm-paper) 100%);
+  border: 3rpx solid rgba(74, 52, 42, 0.55);
+  box-shadow:
+    2rpx 4rpx 0 rgba(74, 52, 42, 0.10),
+    0 10rpx 24rpx rgba(74, 52, 42, 0.12),
+    inset 0 2rpx 0 rgba(255, 255, 255, 0.85);
+}
+
+/* ============ 拟物按钮家族（沿用 kawaii-btn 类名，全面换装木牌质感） ============ */
 .kawaii-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 24rpx 56rpx;
-  border-radius: 999rpx;
+  /* 手绘抖动圆角：不等半径制造「手工剪裁」轮廓 */
+  border-radius: 38rpx 26rpx 40rpx 24rpx / 26rpx 38rpx 24rpx 40rpx;
   font-size: 34rpx;
   font-weight: 800;
-  color: #FFFFFF;
-  background: linear-gradient(145deg, #FFB4C8, #F48FB1);
-  border: 6rpx solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 10rpx 0 #D88AA0, 0 16rpx 32rpx rgba(243, 139, 168, 0.35),
-              inset 0 3rpx 0 rgba(255, 255, 255, 0.7);
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  color: #FFF8EA;
+  text-shadow: 0 2rpx 0 rgba(63, 38, 20, 0.35);
+  background-image:
+    repeating-linear-gradient(90deg,
+      rgba(63, 38, 20, 0.12) 0 3rpx,
+      rgba(255, 255, 255, 0.05) 3rpx 6rpx,
+      rgba(63, 38, 20, 0) 6rpx 64rpx),
+    linear-gradient(180deg,
+      rgba(255, 255, 255, 0.28) 0%,
+      rgba(255, 255, 255, 0) 38%,
+      rgba(63, 38, 20, 0.14) 100%),
+    linear-gradient(180deg, var(--wood-light) 0%, var(--wood-mid) 50%, var(--wood-deep) 100%);
+  border: 3rpx solid var(--wood-edge);
+  box-shadow:
+    0 8rpx 0 var(--wood-edge),
+    0 14rpx 26rpx rgba(74, 52, 42, 0.32),
+    inset 0 2rpx 0 rgba(255, 255, 255, 0.45);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
   line-height: 1.2;
 }
 .kawaii-btn:active {
   transform: translateY(6rpx) scale(0.98);
-  box-shadow: 0 4rpx 0 #D88AA0, 0 8rpx 16rpx rgba(243, 139, 168, 0.3),
-              inset 0 3rpx 0 rgba(255, 255, 255, 0.7);
+  filter: brightness(0.96);
+  box-shadow:
+    0 2rpx 0 var(--wood-edge),
+    0 6rpx 14rpx rgba(74, 52, 42, 0.28),
+    inset 0 2rpx 0 rgba(255, 255, 255, 0.35);
 }
+/* 主按钮：阳光漆木（暖琥珀木） */
 .kawaii-btn-primary {
-  background: linear-gradient(145deg, #FFD1DC, #F48FB1);
-  color: #5D2A4A;
+  color: #5A3A10;
+  text-shadow: 0 1rpx 0 rgba(255, 255, 255, 0.4);
+  background-image:
+    repeating-linear-gradient(90deg,
+      rgba(122, 74, 10, 0.10) 0 3rpx,
+      rgba(255, 255, 255, 0.08) 3rpx 6rpx,
+      rgba(122, 74, 10, 0) 6rpx 64rpx),
+    linear-gradient(180deg, #FFE082 0%, #FFC940 52%, #F0A800 100%);
+  border-color: #A96A00;
+  box-shadow:
+    0 8rpx 0 #A96A00,
+    0 14rpx 26rpx rgba(240, 168, 0, 0.35),
+    inset 0 2rpx 0 rgba(255, 255, 255, 0.6);
 }
+.kawaii-btn-primary:active { box-shadow: 0 2rpx 0 #A96A00, 0 6rpx 14rpx rgba(240,168,0,0.28), inset 0 2rpx 0 rgba(255,255,255,0.5); }
+/* 薄荷→叶绿漆木（继续/再来一局） */
 .kawaii-btn-mint {
-  background: linear-gradient(145deg, #C7F0DD, #7BC9A6);
-  color: #1F4A3A;
-  box-shadow: 0 10rpx 0 #5FA886, 0 16rpx 32rpx rgba(123, 201, 166, 0.35),
-              inset 0 3rpx 0 rgba(255, 255, 255, 0.7);
+  color: #FFFFFF;
+  background-image:
+    repeating-linear-gradient(90deg,
+      rgba(43, 74, 21, 0.12) 0 3rpx,
+      rgba(255, 255, 255, 0.06) 3rpx 6rpx,
+      rgba(43, 74, 21, 0) 6rpx 64rpx),
+    linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0) 38%, rgba(43,74,21,0.16) 100%),
+    linear-gradient(180deg, #9CCC65 0%, #7CB342 52%, #558B2F 100%);
+  border-color: #33691E;
+  box-shadow:
+    0 8rpx 0 #33691E,
+    0 14rpx 26rpx rgba(85, 139, 47, 0.35),
+    inset 0 2rpx 0 rgba(255, 255, 255, 0.45);
 }
+.kawaii-btn-mint:active { box-shadow: 0 2rpx 0 #33691E, 0 6rpx 14rpx rgba(85,139,47,0.28), inset 0 2rpx 0 rgba(255,255,255,0.35); }
+/* 天空漆木（次要强调） */
 .kawaii-btn-sky {
-  background: linear-gradient(145deg, #D8F0FF, #6EC1E4);
-  color: #1A3F5A;
-  box-shadow: 0 10rpx 0 #57A8C9, 0 16rpx 32rpx rgba(110, 193, 228, 0.35),
-              inset 0 3rpx 0 rgba(255, 255, 255, 0.7);
+  color: #14384D;
+  text-shadow: none;
+  background-image:
+    repeating-linear-gradient(90deg,
+      rgba(20, 56, 77, 0.08) 0 3rpx,
+      rgba(255, 255, 255, 0.10) 3rpx 6rpx,
+      rgba(20, 56, 77, 0) 6rpx 64rpx),
+    linear-gradient(180deg, #D8F0FF 0%, #A5DCF5 52%, #7FC4E8 100%);
+  border-color: #3E7A9E;
+  box-shadow:
+    0 8rpx 0 #3E7A9E,
+    0 14rpx 26rpx rgba(110, 193, 228, 0.35),
+    inset 0 2rpx 0 rgba(255, 255, 255, 0.65);
 }
+.kawaii-btn-sky:active { box-shadow: 0 2rpx 0 #3E7A9E, 0 6rpx 14rpx rgba(110,193,228,0.28), inset 0 2rpx 0 rgba(255,255,255,0.5); }
+/* 纸签按钮（退出等次级操作：牛皮纸签 + 墨线） */
 .kawaii-btn-ghost {
-  background: rgba(255, 255, 255, 0.85);
-  color: var(--color-pink-deep);
-  border: 4rpx solid var(--color-pink);
-  box-shadow: 0 6rpx 0 rgba(244, 143, 177, 0.3), 0 10rpx 20rpx rgba(243, 139, 168, 0.15);
+  color: var(--farm-ink-soft);
+  text-shadow: none;
+  background: var(--farm-paper-light);
+  border: 3rpx dashed rgba(74, 52, 42, 0.45);
+  box-shadow:
+    0 6rpx 0 rgba(74, 52, 42, 0.22),
+    0 10rpx 18rpx rgba(74, 52, 42, 0.12);
+}
+.kawaii-btn-ghost:active {
+  transform: translateY(4rpx) scale(0.98);
+  box-shadow: 0 2rpx 0 rgba(74, 52, 42, 0.22), 0 4rpx 10rpx rgba(74, 52, 42, 0.10);
 }
 
-/* ============ 萌系卡片 ============ */
+/* ============ 拟物卡片（米黄纸卡 + 抖动墨线描边） ============ */
 .kawaii-card {
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: var(--radius-lg);
-  border: 4rpx solid rgba(255, 255, 255, 0.95);
-  box-shadow: var(--shadow-card), inset 0 2rpx 0 rgba(255, 255, 255, 0.95);
+  background:
+    repeating-linear-gradient(180deg,
+      rgba(122, 100, 80, 0.04) 0 1rpx,
+      rgba(122, 100, 80, 0) 1rpx 26rpx),
+    linear-gradient(180deg, #FFFDF5 0%, #FBF3E2 100%);
+  border-radius: 40rpx 30rpx 42rpx 28rpx / 30rpx 40rpx 28rpx 42rpx;
+  border: 4rpx solid rgba(74, 52, 42, 0.55);
+  box-shadow:
+    0 16rpx 36rpx rgba(74, 52, 42, 0.22),
+    inset 0 3rpx 0 rgba(255, 255, 255, 0.9);
   padding: 32rpx;
 }
 
-/* ============ 渐变文字 ============ */
+/* ============ 渐变文字（麦田绿金渐变） ============ */
 .kawaii-gradient-text {
-  background: linear-gradient(120deg, #F48FB1, #F5C43C 40%, #7BC9A6 70%, #B39DDB);
+  background: linear-gradient(120deg, #E8A13D, #4E8C2F 45%, #F5B301 80%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
 }
 
-/* ============ 动画 ============ */
-/* v6 修复 (Task 11 F18): 删除 float-slow / wiggle @keyframes + .anim-float / .anim-wiggle 工具类（全部零引用） */
+/* ============ 动画库 ============ */
+/* 保留旧关键帧（多页引用，不可删） */
 @keyframes pulse-soft {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.06); }
@@ -124,9 +249,40 @@ view, text { box-sizing: border-box; }
   80% { transform: translateX(8rpx); }
 }
 
+/* v63 新增：木语农场微动效库 */
+/* 入场浮现（错峰延迟由各页面按模块设置） */
+@keyframes rise-in {
+  0%   { opacity: 0; transform: translateY(26rpx) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* 悬挂木牌摇摆（角度极小，稳定不晕） */
+@keyframes sign-sway {
+  0%, 100% { transform: rotate(-1.1deg); }
+  50%      { transform: rotate(1.1deg); }
+}
+/* 呼吸浮动 */
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8rpx); }
+}
+/* 火漆盖章 */
+@keyframes stamp-in {
+  0%   { transform: scale(0.4) rotate(-14deg); opacity: 0; }
+  60%  { transform: scale(1.14) rotate(4deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+/* 手绘微颤（挂件/贴纸） */
+@keyframes wobble-jiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-1.8deg); }
+  75%      { transform: rotate(1.8deg); }
+}
+
 .anim-pulse { animation: pulse-soft 1.4s ease-in-out infinite; }
 .anim-pop { animation: pop-in 0.4s ease-out; }
 .anim-shake { animation: shake 0.5s ease; }
+.anim-rise { animation: rise-in 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.05) both; }
+.anim-bob { animation: bob 2.6s ease-in-out infinite; }
 
 /* ============ 安全区域 ============ */
 .safe-top { padding-top: env(safe-area-inset-top); }

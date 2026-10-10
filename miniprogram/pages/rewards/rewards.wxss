@@ -1,12 +1,15 @@
 /* pages/rewards/rewards.wxss - 亲子奖励中心样式 (v32)
-  视觉语言：延续结算浮层/首页的奶油粉底 + 圆角卡 + 软阴影；
-  三档各配主题色（🟢 #66BB6A / 🟡 #FFB300 / 🔵 #42A5F5）
-*/
+ * v63「木语农场」重设计：
+ *   · 页底：草甸渐变；钱包 = 皮革缝线零钱袋；档位卡 = 米黄纸签 + 彩色左缘压条
+ *   · 奖励卡 = 挂签纸卡（打孔 + 麻绳痕）；兑换按钮 = 叶绿木印；记录 = 账本纸
+ */
 
 .reward-page {
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #FFF5F8 0%, #FFFDF4 30%, #FFF8E8 100%);
+  background:
+    radial-gradient(120% 60% at 50% -6%, #FFF7D6 0%, rgba(255,247,214,0) 55%),
+    linear-gradient(180deg, #CDEBF7 0%, #E8F3D9 30%, #F3ECD3 62%, #FBF3E2 100%);
   overflow: hidden;
 }
 .rp-scroll {
@@ -17,15 +20,36 @@
 }
 
 /* ============ 积分钱包卡 ============ */
+/* v63：皮革零钱袋（棕革渐变 + 白色缝线 + 铜扣高光） */
 .rp-wallet {
   padding: 26rpx 30rpx 20rpx;
   box-sizing: border-box;
-  border-radius: 30rpx;
-  background: linear-gradient(135deg, #FFD54F 0%, #FFB300 60%, #FB8C00 100%);
-  border: 4rpx solid #FFFFFF;
-  box-shadow: 0 16rpx 36rpx rgba(251, 140, 0, 0.28),
-              inset 0 3rpx 0 rgba(255,255,255,0.75);
-  color: #FFFFFF;
+  border-radius: 26rpx 34rpx 28rpx 36rpx / 32rpx 26rpx 36rpx 28rpx;
+  background-image:
+    repeating-linear-gradient(178deg,
+      rgba(42, 24, 12, 0.06) 0 2rpx,
+      rgba(42, 24, 12, 0) 2rpx 18rpx),
+    linear-gradient(180deg,
+      rgba(255, 235, 200, 0.20) 0%,
+      rgba(255, 235, 200, 0) 40%,
+      rgba(42, 24, 12, 0.18) 100%),
+    linear-gradient(160deg, #B0794E 0%, #8B5A3C 55%, #6B4423 100%);
+  border: 4rpx solid #5F3B22;
+  box-shadow:
+    0 10rpx 0 rgba(63, 38, 20, 0.35),
+    0 16rpx 32rpx rgba(74, 52, 42, 0.35),
+    inset 0 2rpx 0 rgba(255, 235, 200, 0.35);
+  color: #FFF8EA;
+  position: relative;
+}
+/* 内圈白色缝线（皮革手缝感） */
+.rp-wallet::after {
+  content: "";
+  position: absolute;
+  inset: 8rpx;
+  border: 3rpx dashed rgba(255, 244, 214, 0.45);
+  border-radius: 20rpx 28rpx 22rpx 30rpx / 26rpx 20rpx 30rpx 22rpx;
+  pointer-events: none;
 }
 .rp-wallet-head {
   display: flex;
@@ -52,7 +76,7 @@
   line-height: 1.05;
   letter-spacing: 1rpx;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 3rpx 8rpx rgba(0,0,0,0.22);
+  text-shadow: 0 3rpx 8rpx rgba(42, 24, 12, 0.35);
 }
 .rp-wallet-label {
   margin-top: 6rpx;   /* v59: 主数字-副标题呼吸感 */
@@ -68,8 +92,9 @@
   justify-content: space-between;
   padding: 14rpx 18rpx;
   border-radius: 18rpx;
-  background: rgba(255,255,255,0.22);
-  box-shadow: inset 0 2rpx 0 rgba(255,255,255,0.35);
+  /* v63：皮革内袋（深色内凹） */
+  background: rgba(42, 24, 12, 0.28);
+  box-shadow: inset 0 3rpx 6rpx rgba(42, 24, 12, 0.4);
 }
 .rp-meta {
   flex: 1 1 0;
@@ -94,7 +119,7 @@
   flex: 0 0 auto;
   width: 2rpx;
   height: 40rpx;
-  background: rgba(255,255,255,0.62);   /* v59: 金底上分割线对比度 +38% */
+  background: rgba(255, 244, 214, 0.5);
   border-radius: 1rpx;
 }
 
@@ -143,16 +168,26 @@
   margin-top: 28rpx;   /* v59: 模块间距呼吸感 */
   padding: 20rpx 20rpx 16rpx;
   box-sizing: border-box;
-  border-radius: 26rpx;
-  background: rgba(255,255,255,0.97);
-  border: 2rpx solid #F0E8D8;
-  box-shadow: 0 10rpx 24rpx rgba(120, 100, 60, 0.08),
-              inset 0 2rpx 0 rgba(255,255,255,0.95);
+  /* v63：米黄纸签卡（手绘抖动圆角 + 墨线 + 纸纹） */
+  border-radius: 20rpx 28rpx 24rpx 30rpx / 26rpx 20rpx 30rpx 24rpx;
+  background:
+    repeating-linear-gradient(180deg,
+      rgba(122, 100, 80, 0.04) 0 1rpx,
+      rgba(122, 100, 80, 0) 1rpx 26rpx),
+    linear-gradient(180deg, #FFFDF5 0%, #F6EDD6 100%);
+  border: 2rpx solid rgba(74, 52, 42, 0.45);
+  box-shadow: 2rpx 3rpx 0 rgba(74, 52, 42, 0.10),
+              0 8rpx 18rpx rgba(74, 52, 42, 0.12);
+  animation: rise-in 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.05) both;   /* v63 错峰入场 */
 }
-/* 各档主题色（左侧色条 + 标题色） */
-.tier-instant { border-left: 8rpx solid #66BB6A; }
-.tier-weekend { border-left: 8rpx solid #FFB300; }
-.tier-grand   { border-left: 8rpx solid #42A5F5; }
+/* v63: 三档错峰延迟（用档位类而非 nth-of-type，wx:if 场景下定位更稳） */
+.tier-instant { animation-delay: 0.02s; }
+.tier-weekend { animation-delay: 0.10s; }
+.tier-grand   { animation-delay: 0.18s; }
+/* 各档主题色（左缘厚压条 + 标题色，v63 保留识别色） */
+.tier-instant { border-left: 10rpx solid #66BB6A; }
+.tier-weekend { border-left: 10rpx solid #FFB300; }
+.tier-grand   { border-left: 10rpx solid #42A5F5; }
 
 .rp-tier-head {
   display: flex;
@@ -168,7 +203,7 @@
   min-width: 0;
   font-size: 30rpx;
   font-weight: 900;
-  color: #5D4037;
+  color: #4A342A;
   letter-spacing: 1rpx;
 }
 .tier-instant .rp-tier-name { color: #2E7D32; }
@@ -193,10 +228,10 @@
   box-shadow: 0 3rpx 8rpx rgba(67, 160, 71, 0.35);
 }
 .rp-tier-chip.off {
-  color: #8D6E63;
-  background: #FFF6E8;                    /* v59: 提亮一档 */
-  border: 1rpx solid #F0D9B4;             /* v59: 边框加深, 白底可辨 */
-  box-shadow: 0 2rpx 6rpx rgba(120, 100, 60, 0.10);   /* v59: 贴纸感微投影 */
+  color: #7A6450;
+  background: #FBF3E2;                    /* v63: 纸底 */
+  border: 2rpx dashed rgba(74, 52, 42, 0.4);  /* v63: 虚线墨框 = 待解锁印记 */
+  box-shadow: none;
 }
 .tier-weekend .rp-tier-chip.on { background: linear-gradient(135deg, #FFD54F, #FB8C00); }
 .tier-grand   .rp-tier-chip.on { background: linear-gradient(135deg, #64B5F6, #1E88E5); }
@@ -205,7 +240,7 @@
   margin-top: 6rpx;
   font-size: 16rpx;
   font-weight: 600;
-  color: #A1887F;
+  color: #7A6450;
   letter-spacing: 0.4rpx;
 }
 
@@ -220,11 +255,14 @@
   width: calc((100% - 12rpx) / 2);
   box-sizing: border-box;
   padding: 14rpx 14rpx 12rpx;
-  border-radius: 18rpx;
-  background: linear-gradient(180deg, #FFFFFF, #FFFDF7);
-  border: 2rpx solid #F5EDE0;
-  box-shadow: inset 0 2rpx 0 rgba(255,255,255,0.95),
-              0 4rpx 10rpx rgba(120, 100, 60, 0.07);
+  /* v63：挂签纸卡（右上打孔 + 墨线框） */
+  border-radius: 12rpx 18rpx 14rpx 20rpx / 16rpx 12rpx 20rpx 14rpx;
+  background:
+    radial-gradient(circle at calc(100% - 12rpx) 12rpx, #FBF3E2 0 5rpx, rgba(74, 52, 42, 0.55) 5rpx 7rpx, rgba(74, 52, 42, 0) 8rpx),
+    linear-gradient(180deg, #FFFDF5 0%, #F6EDD6 100%);
+  border: 2rpx solid rgba(74, 52, 42, 0.45);
+  box-shadow: 1rpx 2rpx 0 rgba(74, 52, 42, 0.08),
+              0 4rpx 10rpx rgba(74, 52, 42, 0.10);
   transition: transform 150ms ease;
 }
 .rp-item.locked {
@@ -243,9 +281,9 @@
   align-items: center;
   justify-content: center;
   font-size: 36rpx;
-  background: #FAF6EC;
-  border-radius: 16rpx;
-  border: 2rpx solid #F0E8D8;
+  background: #FFFDF5;
+  border-radius: 14rpx 20rpx 16rpx 22rpx / 18rpx 14rpx 22rpx 16rpx;
+  border: 2rpx dashed rgba(74, 52, 42, 0.4);
 }
 .rp-item-info {
   flex: 1 1 auto;
@@ -254,14 +292,14 @@
 .rp-item-name {
   font-size: 22rpx;
   font-weight: 800;
-  color: #5D4037;
+  color: #4A342A;
   line-height: 1.25;
 }
 .rp-item-cost {
   margin-top: 4rpx;
   font-size: 16rpx;
   font-weight: 800;
-  color: #F9A825;
+  color: #EF8F00;
   line-height: 1;
 }
 
@@ -283,18 +321,27 @@
   box-sizing: border-box;
 }
 .rp-item-btn.can {
+  /* v63：叶绿木印兑换钮 */
   color: #FFFFFF;
-  background: linear-gradient(135deg, #81C784, #43A047);
-  box-shadow: 0 5rpx 0 #388E3C, 0 8rpx 14rpx rgba(67, 160, 71, 0.30);
+  text-shadow: 0 2rpx 0 rgba(43, 74, 21, 0.4);
+  background:
+    repeating-linear-gradient(0deg,
+      rgba(43, 74, 21, 0.10) 0 2rpx,
+      rgba(255, 255, 255, 0.05) 2rpx 4rpx,
+      rgba(43, 74, 21, 0) 4rpx 30rpx),
+    linear-gradient(180deg, #9CCC65 0%, #7CB342 55%, #558B2F 100%);
+  border: 2rpx solid #33691E;
+  box-shadow: 0 5rpx 0 #33691E, 0 8rpx 14rpx rgba(85, 139, 47, 0.30);
 }
 .rp-item-btn.nope {
-  color: #8D6E63;
-  background: #FBF6EA;            /* v59: 灰败感→暖米黄 Tint, 待解锁的宝藏感 */
-  border: 1rpx dashed #D9BE93;    /* v59: 虚线加深, 可辨识「未开」而非「坏掉」 */
+  color: #A9927D;
+  background: #FBF3E2;            /* v63: 纸底 */
+  border: 2rpx dashed rgba(74, 52, 42, 0.4);    /* v63: 虚线墨框 = 未开印记 */
+  box-shadow: none;
 }
 .rp-btn-hover {
   transform: translateY(3rpx);
-  box-shadow: 0 2rpx 0 #388E3C, 0 4rpx 8rpx rgba(67, 160, 71, 0.25);
+  box-shadow: 0 2rpx 0 #33691E, 0 4rpx 8rpx rgba(85, 139, 47, 0.25);
 }
 
 /* ============ 家长确认长按条 ============ */
@@ -315,10 +362,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 14rpx;
+  border-radius: 12rpx 18rpx 14rpx 20rpx / 16rpx 12rpx 20rpx 14rpx;
   overflow: hidden;
-  background: linear-gradient(135deg, #FFF8E1, #FFEFC5);   /* v59: 灰败→暖琥珀, 正向激励色 */
-  border: 2rpx solid #FFC94D;
+  background: linear-gradient(180deg, #FFF8E1, #FFEFC5);   /* v59: 暖琥珀 */
+  border: 2rpx solid #E0A82E;
+  box-shadow: 0 3rpx 0 rgba(169, 106, 0, 0.55);
   animation: rpPulse 1.6s ease-in-out infinite;
 }
 @keyframes rpPulse {
@@ -351,14 +399,20 @@
 .rp-history {
   margin-top: 28rpx;
   padding: 18rpx 22rpx;
-  border-radius: 22rpx;
-  background: rgba(255,255,255,0.92);
-  border: 2rpx solid #F0E8D8;
+  /* v63：账本纸（横格线 + 墨线框） */
+  border-radius: 16rpx 22rpx 18rpx 24rpx / 20rpx 16rpx 24rpx 18rpx;
+  background:
+    repeating-linear-gradient(180deg,
+      rgba(122, 100, 80, 0.05) 0 1rpx,
+      rgba(122, 100, 80, 0) 1rpx 24rpx),
+    linear-gradient(180deg, #FFFDF5 0%, #F6EDD6 100%);
+  border: 2rpx solid rgba(74, 52, 42, 0.45);
+  box-shadow: 2rpx 2rpx 0 rgba(74, 52, 42, 0.08);
 }
 .rp-history-head {
   font-size: 24rpx;
   font-weight: 900;
-  color: #5D4037;
+  color: #4A342A;
   letter-spacing: 1rpx;
 }
 .rp-history-row {
@@ -376,7 +430,7 @@
   min-width: 0;
   font-size: 19rpx;
   font-weight: 700;
-  color: #6D4C41;
+  color: #6D5138;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -385,24 +439,30 @@
   flex-shrink: 0;
   font-size: 16rpx;
   font-weight: 800;
-  color: #E65100;
+  color: #D84315;
 }
 .rp-history-time {
   flex-shrink: 0;
   font-size: 15rpx;
   font-weight: 600;
-  color: #BCAAA4;
+  color: #A9927D;
 }
 
 /* ============ 底部说明 ============ */
 .rp-footer-tip {
   margin-top: 24rpx;
   padding: 16rpx 24rpx;
-  border-radius: 18rpx;
-  background: rgba(232, 237, 228, 0.65);
+  /* v63：牛皮纸提示条 */
+  border-radius: 14rpx 20rpx 16rpx 22rpx / 18rpx 14rpx 22rpx 16rpx;
+  background:
+    repeating-linear-gradient(180deg,
+      rgba(122, 100, 80, 0.045) 0 1rpx,
+      rgba(122, 100, 80, 0) 1rpx 22rpx),
+    linear-gradient(180deg, #FBF3E2 0%, #F3E5C8 100%);
+  border: 2rpx dashed rgba(74, 52, 42, 0.4);
   font-size: 17rpx;
   font-weight: 600;
-  color: #5E6F48;
+  color: #6D5138;
   line-height: 1.6;
   text-align: center;
 }

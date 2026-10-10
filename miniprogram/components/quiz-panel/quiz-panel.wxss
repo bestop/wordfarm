@@ -1,10 +1,13 @@
-/* components/quiz-panel/quiz-panel.wxss - 答题面板样式 */
+/* components/quiz-panel/quiz-panel.wxss - 答题面板样式
+ * v63「木语农场」重设计：
+ *   · 面板 = 顶部木质压条（板纹+铆钉）+ 米黄答题纸正文
+ *   · 选项 = 牛皮纸卡（手绘抖动圆角 + 墨线描边），A/B/C/D 徽章 = 火漆封印
+ *   · 选中/揭示 = 叶绿火漆印；答错抖动（本地 keyframes，组件样式隔离仍生效）
+ */
 
 /* v12 关键修复：自定义组件宿主节点默认 inline，部分机型高度计算异常
    导致面板内容（尤其底部选项）被裁切。显式声明 block 保证布局稳定。 */
 /* v16 修复（Task 15）：紧凑化 option 与 options-area，释放 ~47rpx 垂直空间
-   修复点：option min-height 72→60 / padding 8→5 / border 3→2 / options-area gap 12→8 / padding 8/14→5/8
-            question-area padding-top 2→0 / option-text font 24→22
    目标：答题区 4 个选项在所有机型完整显示，不被 .game-page overflow:hidden 裁切 */
 :host {
   display: block;
@@ -17,11 +20,36 @@
   display: flex;
   flex-direction: column;
   flex-shrink: 0;          /* v15: 文档流末端不被父级 flex 压缩，永远完整显示 */
-  background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,245,248,0.98) 100%);
+  /* v63：答题纸正文（细横纹 + 米黄渐变） */
+  background:
+    repeating-linear-gradient(180deg,
+      rgba(122, 100, 80, 0.045) 0 1rpx,
+      rgba(122, 100, 80, 0) 1rpx 26rpx),
+    linear-gradient(180deg, #FFFDF5 0%, #FBF3E2 100%);
   border-radius: 38rpx 38rpx 0 0;
-  border-top: 4rpx solid #FFFFFF;
-  box-shadow: 0 -10rpx 28rpx rgba(243,139,168,0.18);
+  box-shadow: 0 -10rpx 28rpx rgba(63, 38, 20, 0.28);
   overflow: visible;
+}
+/* v63：顶部木质压条（板纹 + 双铆钉），替代原白色顶边 */
+.quiz-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 16rpx;
+  border-radius: 38rpx 38rpx 0 0;
+  background-image:
+    radial-gradient(circle at 36rpx 8rpx, #FFF4D6 0 3rpx, rgba(63,38,20,0.8) 3rpx 5rpx, rgba(63,38,20,0) 6rpx),
+    radial-gradient(circle at calc(100% - 36rpx) 8rpx, #FFF4D6 0 3rpx, rgba(63,38,20,0.8) 3rpx 5rpx, rgba(63,38,20,0) 6rpx),
+    repeating-linear-gradient(90deg,
+      rgba(63, 38, 20, 0.12) 0 2rpx,
+      rgba(255, 255, 255, 0.05) 2rpx 4rpx,
+      rgba(63, 38, 20, 0) 4rpx 52rpx),
+    linear-gradient(180deg, #C89B72 0%, #A9714B 70%, #8B5A3C 100%);
+  border-bottom: 3rpx solid #5F3B22;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* ============ 题目区（v9 按内容收缩，弹性让位给选项区） ============ */
@@ -31,17 +59,17 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0 18rpx 0;          /* v16: 2→0 紧凑化 question-area 顶部空间 */
+  padding: 20rpx 18rpx 0;          /* v63: 顶部让出木压条高度 */
   position: relative;
   transition: background 0.2s ease;
 }
-.question-area.fb-correct { background: rgba(181,234,215,0.35); }
-.question-area.fb-wrong { background: rgba(255,205,210,0.35); }
-.question-area.fb-timeout { background: rgba(255,224,178,0.35); }   /* v39: 超时琥珀色 */
+.question-area.fb-correct { background: rgba(124, 179, 66, 0.16); }
+.question-area.fb-wrong { background: rgba(217, 83, 79, 0.14); }
+.question-area.fb-timeout { background: rgba(240, 143, 0, 0.14); }   /* v39: 超时琥珀色 */
 
 .question-label {
   font-size: 16rpx;
-  color: #6D4C41;
+  color: #7A6450;
   font-weight: 700;
   line-height: 1.2;
   margin-bottom: 2rpx;
@@ -55,7 +83,7 @@
 .word {
   font-size: 32rpx;
   font-weight: 900;
-  color: #4E342E;
+  color: #4A342A;
   letter-spacing: 0.5rpx;
   text-shadow: 0 2rpx 0 rgba(255,255,255,0.8);
   line-height: 1.15;
@@ -66,9 +94,9 @@
 }
 .phonetic {
   font-size: 17rpx;               /* v59: 16→17 辅学信息儿童可读 */
-  color: #C2185B;                 /* v59: 浅粉→品牌玫红深档, 白底对比 4.5:1+ */
+  color: #C0392B;                 /* v63: 印章朱砂红（纸上红墨 IPA） */
   font-weight: 700;
-  font-family: "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif;  /* v59: 去斜体感衬线, 正体 IPA */
+  font-family: "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif;
   line-height: 1.15;
   max-width: 100%;
   overflow: hidden;
@@ -77,7 +105,7 @@
 }
 .question-empty {
   font-size: 20rpx;
-  color: #BCAAA4;
+  color: #A9927D;
 }
 
 /* ============ v39: 题目限时倒计时 ============ */
@@ -91,14 +119,16 @@
 .q-timer-track {
   flex: 1;
   height: 10rpx;
-  background: rgba(243,139,168,0.22);   /* v59: 轨道对比度 +47%, 剩余时长一眼可辨 */
+  /* v63：纸上刻痕凹槽 */
+  background: rgba(74, 52, 42, 0.16);
   border-radius: 999rpx;
   overflow: hidden;
+  box-shadow: inset 0 1rpx 3rpx rgba(74, 52, 42, 0.18);
 }
 .q-timer-fill {
   height: 100%;
   width: 100%;
-  background: linear-gradient(90deg, #FFB74D, #FF8A65);
+  background: linear-gradient(90deg, #FFC940, #EF8F00);
   border-radius: 999rpx;
   /* 心跳 500ms 一跳，transition 抹平步进 → 视觉连续 */
   transition: width 0.5s linear;
@@ -109,15 +139,15 @@
   text-align: right;
   font-size: 18rpx;
   font-weight: 900;
-  color: #8D6E63;
+  color: #7A6450;
   line-height: 1;
 }
 /* 紧急态：红条 + 秒数脉冲提醒 */
 .q-timer-danger .q-timer-fill {
-  background: linear-gradient(90deg, #EF5350, #E53935);
+  background: linear-gradient(90deg, #EF5350, #C62828);
 }
 .q-timer-danger .q-timer-sec {
-  color: #E53935;
+  color: #C62828;
   animation: q-timer-pulse 0.6s ease-in-out infinite;
 }
 @keyframes q-timer-pulse {
@@ -139,34 +169,42 @@
   margin-bottom: 10rpx;        /* v42: 行间距, margin 所有引擎恒生效 */
   min-width: 0;
   min-height: 72rpx;            /* v40: 60→72 点击目标 +20%，孩子手指好点 */
-  background: #FFFFFF;
-  border: 3rpx solid #F8BBD0;   /* v40: 2→3 厚边框，萌系立体感 */
-  border-radius: 18rpx;          /* v40: 12→18 更圆润 */
+  /* v63：牛皮纸选项卡（手绘抖动圆角 + 墨线描边 + 按键压边） */
+  background:
+    repeating-linear-gradient(180deg,
+      rgba(122, 100, 80, 0.035) 0 1rpx,
+      rgba(122, 100, 80, 0) 1rpx 20rpx),
+    linear-gradient(180deg, #FFFDF5 0%, #F6EDD6 100%);
+  border: 3rpx solid rgba(74, 52, 42, 0.55);
+  border-radius: 16rpx 24rpx 18rpx 26rpx / 22rpx 16rpx 26rpx 18rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 8rpx 10rpx;          /* v40: 5/8→8/10 内容舒展 */
   box-sizing: border-box;
   transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease, border-color 0.15s ease;
-  box-shadow: 0 4rpx 0 rgba(244,143,158,0.5),   /* v40: 实底厚投影 — 咔萌按键质感 */
-              inset 0 2rpx 0 rgba(255,255,255,0.95);
+  box-shadow: 0 4rpx 0 rgba(63, 38, 20, 0.35),   /* 实底压边 — 木桌按键质感 */
+              inset 0 2rpx 0 rgba(255, 255, 255, 0.9);
   overflow: hidden;
 }
-/* v40: A/B/C/D 字母徽章 */
+/* v40: A/B/C/D 字母徽章 → v63 火漆封印（琥珀蜡 + 墨色字母） */
 .option-badge {
   flex-shrink: 0;
   margin-right: 8rpx;        /* v42b: 徽章-文本间距, 替代 .option gap(老 iOS 不支持) */
   width: 36rpx;
   height: 36rpx;
   border-radius: 50%;
-  background: linear-gradient(145deg, #FDD9E3, #F8BBD0);
-  color: #B06A7F;
+  background:
+    radial-gradient(circle at 34% 30%, rgba(255,255,255,0.55) 0 6rpx, rgba(255,255,255,0) 9rpx),
+    linear-gradient(145deg, #FFD54F, #F0A800);
+  color: #5A3A10;
+  border: 2rpx solid rgba(122, 74, 10, 0.55);
   font-size: 20rpx;
   font-weight: 900;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 -2rpx 0 rgba(173,94,118,0.18);
+  box-shadow: inset 0 -2rpx 0 rgba(122, 74, 10, 0.3), 0 2rpx 4rpx rgba(74, 52, 42, 0.2);
 }
 .option-text {
   display: -webkit-box;
@@ -180,70 +218,75 @@
   line-height: 1.35;
   font-size: 24rpx;          /* v40: 22→24 恢复易读字号（增高由 canvas flex 吸收） */
   font-weight: 800;
-  color: #4E342E;
+  color: #4A342A;
   letter-spacing: 0.3rpx;
   flex: 1;                   /* v40: width:100%→flex 自适应（给徽章让位） */
   min-width: 0;
 }
 .option:active {
   transform: translateY(3rpx);   /* v40: 按下位移 — 实底按键压感（替代缩放） */
-  box-shadow: 0 1rpx 0 rgba(244,143,158,0.5),
-              inset 0 2rpx 0 rgba(255,255,255,0.95);
-  background: #FFF0F4;
+  box-shadow: 0 1rpx 0 rgba(63, 38, 20, 0.35),
+              inset 0 2rpx 0 rgba(255, 255, 255, 0.8);
+  background: #FBF3E2;
 }
 .option.selected {
-  background: linear-gradient(145deg, #EC407A, #E91E63);
-  border-color: #D81B60;
+  /* v63：选中 = 叶绿火漆印卡 */
+  background: linear-gradient(180deg, #9CCC65 0%, #558B2F 100%);
+  border-color: #33691E;
   color: #FFFFFF;
   transform: scale(0.97);
 }
 .option.selected .option-badge {
-  background: rgba(255,255,255,0.28);   /* v40: 白色半透明徽章浮于粉渐变 */
+  background: rgba(255, 253, 245, 0.3);   /* 白色半透明徽章浮于绿印 */
   color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.6);
   box-shadow: none;
 }
 /* v59: 选中/揭示态白字真正生效 — .option-text 自带 color 覆盖了父级 color,
    v40 起白字从未生效（深底深字，儿童可读性 P0） */
-.option.selected .option-text { color: #FFFFFF; }
-.option.reveal .option-text { color: #FFFFFF; }
+.option.selected .option-text { color: #FFFFFF; text-shadow: 0 1rpx 0 rgba(43, 74, 21, 0.5); }
+.option.reveal .option-text { color: #FFFFFF; text-shadow: 0 1rpx 0 rgba(43, 74, 21, 0.5); }
 .option.reveal {
-  background: linear-gradient(145deg, #66BB6A, #43A047);
-  border-color: #388E3C;
+  background: linear-gradient(180deg, #9CCC65 0%, #558B2F 100%);
+  border-color: #33691E;
   color: #FFFFFF;
 }
 .option.reveal .option-badge {
-  background: rgba(255,255,255,0.28);   /* v40: 白色半透明徽章浮于绿渐变 */
+  background: rgba(255, 253, 245, 0.3);
   color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.6);
   box-shadow: none;
 }
 
-/* ============ 反馈浮层 ============ */
+/* ============ 反馈浮层（v63：盖章式印章反馈） ============ */
 .feedback {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   padding: 18rpx 36rpx;
-  border-radius: 999rpx;
+  border-radius: 20rpx 30rpx 24rpx 32rpx / 28rpx 20rpx 32rpx 24rpx;
+  border: 3rpx solid rgba(255, 255, 255, 0.55);
   font-size: 30rpx;
   font-weight: 900;
   color: #FFFFFF;
+  text-shadow: 0 2rpx 0 rgba(42, 24, 12, 0.35);
   pointer-events: none;
   animation: pop-in-centered 0.4s ease-out;
   z-index: 10;
 }
 .feedback.correct {
-  background: linear-gradient(145deg, #66BB6A, #4CAF50);
-  box-shadow: 0 8rpx 24rpx rgba(102,187,106,0.4);
+  background: linear-gradient(180deg, #9CCC65, #558B2F);
+  box-shadow: 0 8rpx 24rpx rgba(85, 139, 47, 0.45), inset 0 2rpx 0 rgba(255,255,255,0.4);
 }
 .feedback.wrong {
-  background: linear-gradient(145deg, #EF5350, #E53935);
-  box-shadow: 0 8rpx 24rpx rgba(239,83,80,0.4);
+  background: linear-gradient(180deg, #EF5350, #C62828);
+  box-shadow: 0 8rpx 24rpx rgba(198, 40, 40, 0.45), inset 0 2rpx 0 rgba(255,255,255,0.35);
 }
 /* v39: 超时反馈（琥珀暖色 — 温和提示，区别于答错惩罚红） */
 .feedback.timeout {
-  background: linear-gradient(145deg, #FFA726, #FB8C00);
-  box-shadow: 0 8rpx 24rpx rgba(255,167,38,0.4);
+  background: linear-gradient(180deg, #FFB74D, #EF8F00);
+  box-shadow: 0 8rpx 24rpx rgba(239, 143, 0, 0.45), inset 0 2rpx 0 rgba(255,255,255,0.4);
 }
 
 /* v6 修复 (Task 11 F20): 改名为 pop-in-centered，避免与 app.wxss 全局 pop-in 同名冲突 */
@@ -251,4 +294,16 @@
   0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
   60% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
   100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ============ v63 修复：答错抖动本地化 ============
+ * 组件默认样式隔离，wxml 中的 anim-shake 不会命中 app.wxss 全局定义；
+ * 此前答错抖动实际从未生效 —— 本地补齐 keyframes + 类，隔离环境下照样摇摆。 */
+.anim-shake { animation: shake-local 0.5s ease; }
+@keyframes shake-local {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-10rpx); }
+  40% { transform: translateX(10rpx); }
+  60% { transform: translateX(-8rpx); }
+  80% { transform: translateX(8rpx); }
 }

@@ -18,18 +18,28 @@
   max-height: 100%;  /* v17: 双保险,任何情况下不超视口 */
   display: flex;
   flex-direction: column;
-  background: #FFF5F8;
+  background: #FBF3E2;   /* v63: 木语农场纸色底 */
   overflow: hidden;
   box-sizing: border-box;
   position: relative;
 }
 
 /* ============ HUD ============ */
+/* v63：HUD → 农场木质横梁（板条纹理 + 深色压边 + 顶光） */
 .hud {
   flex-shrink: 0;
-  background: linear-gradient(180deg, #FFE5EC 0%, #FFD1DC 50%, #D4C5F9 100%);
-  border-bottom: 3rpx solid rgba(255,255,255,0.85);
-  box-shadow: 0 4rpx 12rpx rgba(243,139,168,0.16);
+  background-image:
+    repeating-linear-gradient(90deg,
+      rgba(63, 38, 20, 0.14) 0 3rpx,
+      rgba(255, 255, 255, 0.05) 3rpx 6rpx,
+      rgba(63, 38, 20, 0) 6rpx 86rpx),
+    linear-gradient(180deg,
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(255, 255, 255, 0) 40%,
+      rgba(63, 38, 20, 0.12) 100%),
+    linear-gradient(180deg, #C89B72 0%, #A9714B 55%, #8B5A3C 100%);
+  border-bottom: 4rpx solid #5F3B22;
+  box-shadow: 0 6rpx 14rpx rgba(63, 38, 20, 0.3);
   padding: 6rpx 20rpx 10rpx;
 }
 .hud-row {
@@ -44,14 +54,16 @@
   min-width: 0;
   overflow: hidden;
   padding: 4rpx 12rpx;
-  border-radius: 16rpx;
-  background: rgba(255,255,255,0.65);
-  border: 2rpx solid rgba(255,255,255,0.9);
-  box-shadow: inset 0 1rpx 0 rgba(255,255,255,0.95);
+  /* v63：梁上雕刻凹槽木牌（深色内凹 + 奶白刻字） */
+  border-radius: 14rpx 20rpx 16rpx 22rpx / 18rpx 14rpx 22rpx 16rpx;
+  background: rgba(63, 38, 20, 0.30);
+  border: 2rpx solid rgba(63, 38, 20, 0.45);
+  box-shadow: inset 0 3rpx 6rpx rgba(42, 24, 12, 0.4),
+              inset 0 -1rpx 0 rgba(255, 255, 255, 0.12);
 }
 .hud-label {
   font-size: 16rpx;
-  color: #8D6E63;
+  color: rgba(255, 244, 214, 0.78);
   font-weight: 700;
   line-height: 1;
   margin-bottom: 3rpx;
@@ -59,7 +71,8 @@
 .hud-value {
   font-size: 28rpx;
   font-weight: 900;
-  color: #5D4037;
+  color: #FFF4D6;
+  text-shadow: 0 2rpx 0 rgba(42, 24, 12, 0.5);
   line-height: 1.1;
   white-space: nowrap;
   overflow: hidden;
@@ -74,12 +87,11 @@
   display: flex;
   align-items: center;
   gap: 3rpx;
-  color: #F9A825;
+  color: #FFD54F;
 }
 .sun-icon { font-size: 24rpx; }
 /* v52: 关卡徽章补缺 — level-badge 自 v2 起被 wxml 引用但样式缺失(裸默认文本)。
-   胶囊形制与 hud-sunlight 的 flex 排列同款, 紫系呼应 HUD 渐变底部 #D4C5F9;
-   flex-shrink:0 防被 hud-value 的 ellipsis 截断 */
+   v63：浅木小牌 + 琥珀刻字（在深色凹槽内更醒目）；flex-shrink:0 防被 ellipsis 截断 */
 .hud-score .hud-value {
   display: flex;
   align-items: center;
@@ -88,18 +100,20 @@
 .level-badge {
   font-size: 20rpx;
   font-weight: 800;
-  color: #7E57C2;
-  background: linear-gradient(145deg, #F3E8FF, #E1D5F9);
-  border: 2rpx solid rgba(255, 255, 255, 0.9);
-  border-radius: 999rpx;
+  color: #5A3A10;
+  background: linear-gradient(180deg, #FFE082, #FFC940);
+  border: 2rpx solid rgba(95, 59, 34, 0.65);
+  border-radius: 10rpx 14rpx 12rpx 16rpx / 14rpx 10rpx 16rpx 12rpx;
   padding: 2rpx 10rpx;
   line-height: 1.25;
   flex-shrink: 0;
+  text-shadow: none;
+  box-shadow: inset 0 1rpx 0 rgba(255,255,255,0.6);
 }
 .hud-combo.combo-active {
-  /* v59: 降饱和 — 连击是结果反馈, 视觉权重让位阳光/分数等核心资源信息 */
-  background: linear-gradient(145deg, #FFFBE8, #FFEDE0);
-  border-color: #F8BBD0;
+  /* v63：连击燃烧 → 火焰烙印凹槽（木梁上像被烙铁烫过） */
+  background: linear-gradient(180deg, rgba(216, 67, 21, 0.55), rgba(183, 28, 28, 0.55));
+  border-color: rgba(120, 20, 10, 0.8);
 }
 .combo-fire { font-size: 22rpx; }
 
@@ -118,15 +132,18 @@
   width: 60rpx;
   height: 60rpx;
   border-radius: 50%;
-  background: linear-gradient(145deg, #FFFFFF, #FFE5EC);
-  border: 3rpx solid #FFFFFF;
+  /* v63：圆木图钉按钮 */
+  background-image:
+    radial-gradient(circle at 32% 30%, rgba(255,255,255,0.55) 0 12rpx, rgba(255,255,255,0) 16rpx),
+    linear-gradient(180deg, #C89B72 0%, #A9714B 60%, #8B5A3C 100%);
+  border: 3rpx solid rgba(63, 38, 20, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 28rpx;
-  color: #F48FB1;
+  color: #FFF8EA;
   font-weight: 900;
-  box-shadow: 0 4rpx 10rpx rgba(243,139,168,0.22);
+  box-shadow: 0 4rpx 10rpx rgba(63, 38, 20, 0.4), inset 0 -3rpx 6rpx rgba(63, 38, 20, 0.3);
 }
 
 /* ============ Canvas 区 ============ */
@@ -141,7 +158,8 @@
   flex-shrink: 1;         /* v15: 与 quiz-wrap flex-shrink:0 形成对比 */
   min-height: 160rpx;     /* v17: 200→160 再释放 40rpx 给 quiz 兜底 */
   position: relative;
-  background: linear-gradient(180deg, #FFF0F5, #E7DCFF);
+  /* v63：Canvas 透出区 → 农场天空兜底（与 Canvas 内草地场景衔接） */
+  background: linear-gradient(180deg, #CDEBF7 0%, #DDEEDC 100%);
   width: 100%;
 }
 .game-canvas {
@@ -230,12 +248,12 @@
 .pause-title {
   font-size: 48rpx;
   font-weight: 900;
-  color: #5D4037;
+  color: #4A342A;
   margin-bottom: 12rpx;
 }
 .pause-tip {
   font-size: 24rpx;
-  color: #8D6E63;
+  color: #7A6450;
   margin-bottom: 32rpx;
 }
 .pause-actions {
@@ -248,14 +266,14 @@
   font-size: 30rpx;
   padding: 20rpx 0;
 }
-/* v59: 次级「退出本局」弱化 — 高饱和粉描边诱导误触放弃进度 */
+/* v59: 次级「退出本局」弱化 — v63 同步纸签风（虚线墨框） */
 .pause-actions .kawaii-btn-ghost {
   font-size: 26rpx;
   padding: 15rpx 0;
-  color: #B08899;
-  border-color: #F8E3EA;
-  background: rgba(255,255,255,0.6);
-  box-shadow: 0 3rpx 0 rgba(244,143,177,0.18);
+  color: #7A6450;
+  border-color: rgba(74, 52, 42, 0.35);
+  background: rgba(255, 253, 245, 0.75);
+  box-shadow: 0 3rpx 0 rgba(74, 52, 42, 0.18);
 }
 
 /* ============ 答题面板（v16 文档流弹性布局 + 紧凑化升级） ============ */
@@ -270,17 +288,28 @@
   width: 100%;
   box-sizing: border-box;
   position: relative;
-  background: #FFF5F8;     /* 兜底底色，防止透出 canvas */
+  background: #FBF3E2;     /* v63: 木语农场纸色兜底，防止透出 canvas */
 }
 
 
 /* ============ 植物商店栏 ============ */
+/* v63：商店栏 → 农场种子木架（横板条货架 + 深色压边） */
 .shop-bar {
   flex-shrink: 0;
   height: 96rpx;
-  background: linear-gradient(180deg, rgba(255,243,224,0.95) 0%, rgba(255,224,178,0.95) 100%);
-  border-top: 2rpx solid rgba(255,255,255,0.85);
-  border-bottom: 2rpx solid rgba(243,139,168,0.25);
+  background-image:
+    repeating-linear-gradient(0deg,
+      rgba(63, 38, 20, 0.12) 0 2rpx,
+      rgba(255, 255, 255, 0.04) 2rpx 4rpx,
+      rgba(63, 38, 20, 0) 4rpx 40rpx),
+    linear-gradient(180deg,
+      rgba(255, 255, 255, 0.16) 0%,
+      rgba(255, 255, 255, 0) 45%,
+      rgba(63, 38, 20, 0.14) 100%),
+    linear-gradient(180deg, #C89B72 0%, #A9714B 55%, #8B5A3C 100%);
+  border-top: 3rpx solid rgba(255, 244, 214, 0.4);
+  border-bottom: 4rpx solid #5F3B22;
+  box-shadow: 0 6rpx 12rpx rgba(63, 38, 20, 0.22);
   padding: 6rpx 10rpx 4rpx;
   box-sizing: border-box;
   position: relative;
@@ -297,18 +326,28 @@
   width: 128rpx;
   height: 72rpx;
   margin-right: 8rpx;
-  border-radius: 16rpx;
-  background: linear-gradient(145deg, #FFFFFF, #FFF8E1);
-  border: 2rpx solid #FFE0B2;
-  box-shadow: 0 2rpx 0 rgba(243,139,168,0.15);
+  /* v63：种子纸包（纸卡 + 抖动圆角 + 墨线） */
+  border-radius: 12rpx 18rpx 14rpx 20rpx / 16rpx 12rpx 20rpx 14rpx;
+  background:
+    repeating-linear-gradient(180deg,
+      rgba(122, 100, 80, 0.04) 0 1rpx,
+      rgba(122, 100, 80, 0) 1rpx 18rpx),
+    linear-gradient(180deg, #FFFDF5 0%, #F6EDD6 100%);
+  border: 2rpx solid rgba(74, 52, 42, 0.5);
+  box-shadow: 0 3rpx 0 rgba(63, 38, 20, 0.35);
   vertical-align: top;
-  transition: transform 0.12s ease, border-color 0.15s ease;
+  transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .shop-item.selected {
-  border-color: #F48FB1;
-  background: linear-gradient(145deg, #FFD1DC, #FFE5EC);
-  transform: translateY(-2rpx);
-  box-shadow: 0 5rpx 10rpx rgba(244,143,177,0.35);
+  /* v63：选中 = 叶绿印戳纸包 + 抬起 */
+  border-color: #33691E;
+  background:
+    repeating-linear-gradient(90deg,
+      rgba(43, 74, 21, 0.07) 0 2rpx,
+      rgba(255, 255, 255, 0) 2rpx 10rpx),
+    linear-gradient(180deg, #F0F7E2 0%, #E2F0CC 100%);
+  transform: translateY(-4rpx);
+  box-shadow: 0 7rpx 0 #33691E, 0 10rpx 14rpx rgba(63, 38, 20, 0.3);
 }
 .shop-item.disabled {
   opacity: 0.45;
@@ -1106,7 +1145,7 @@
 
 .shop-name {
   font-size: 14rpx;
-  color: #6D4C41;
+  color: #6D5138;
   font-weight: 700;
   line-height: 1.1;
   margin-top: 1rpx;
@@ -1116,13 +1155,13 @@
   align-items: center;
   gap: 2rpx;
   font-size: 13rpx;
-  color: #F9A825;
+  color: #EF8F00;
   font-weight: 800;
   line-height: 1;
   margin-top: 1rpx;
 }
 .shop-cost-icon { font-size: 14rpx; }
-/* 植物选择提示浮层：柔和低饱和风格，悬浮于 canvas 顶部居中，不占布局空间 */
+/* 植物选择提示浮层：v63 纸签便条风（胶带贴顶），悬浮于 canvas 顶部居中 */
 .plant-tip-toast {
   position: absolute;
   left: 50%;
@@ -1136,19 +1175,35 @@
   max-width: 80%;
   font-size: 25rpx;
   font-weight: 500;
-  color: #3E4A3F;
+  color: #4A342A;
   text-align: center;
   letter-spacing: 0.6rpx;
   line-height: 1.35;
-  background-color: rgba(232, 237, 228, 0.92);
-  border: 1rpx solid rgba(145, 153, 130, 0.30);
-  border-radius: 40rpx;
-  box-shadow: 0 4rpx 14rpx rgba(63, 71, 55, 0.12),
-              0 1rpx 2rpx rgba(255, 255, 255, 0.45) inset;
+  background:
+    repeating-linear-gradient(180deg,
+      rgba(122, 100, 80, 0.04) 0 1rpx,
+      rgba(122, 100, 80, 0) 1rpx 22rpx),
+    rgba(255, 253, 245, 0.94);
+  border: 2rpx solid rgba(74, 52, 42, 0.45);
+  border-radius: 18rpx 26rpx 20rpx 28rpx / 24rpx 18rpx 28rpx 20rpx;
+  box-shadow: 2rpx 3rpx 0 rgba(74, 52, 42, 0.12),
+              0 6rpx 14rpx rgba(63, 71, 55, 0.16);
   backdrop-filter: blur(12rpx);
   -webkit-backdrop-filter: blur(12rpx);
   animation: tipFadeIn 220ms ease-out both;
   z-index: 20;
+  pointer-events: none;
+}
+/* 顶部小胶带 */
+.plant-tip-toast::before {
+  content: "";
+  position: absolute;
+  top: -10rpx;
+  left: 50%;
+  width: 64rpx;
+  height: 20rpx;
+  transform: translateX(-50%) rotate(-2deg);
+  background: linear-gradient(180deg, rgba(255, 236, 153, 0.85), rgba(255, 221, 102, 0.7));
   pointer-events: none;
 }
 .plant-tip-emoji {
@@ -1167,11 +1222,11 @@
   50%      { transform: translateY(-6rpx); }
 }
 
-/* ============ 游戏结束结算浮层（一屏 100%，居中卡片，禁止滚动） ============ */
+/* ============ 游戏结束结算浮层（v63：羊皮纸奖状 + 木框） ============ */
 .gameover-mask {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.48);
+  background: rgba(42, 30, 20, 0.52);
   backdrop-filter: blur(3rpx);
   display: flex;
   align-items: center;
@@ -1193,15 +1248,22 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 28rpx 28rpx 24rpx;
+  padding: 30rpx 28rpx 24rpx;
   box-sizing: border-box;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,248,250,0.98) 100%);
-  border-radius: 40rpx;
-  border: 5rpx solid rgba(255,255,255,0.98);
+  /* v63：羊皮纸奖状 + 木质厚框 + 压边 */
+  background:
+    repeating-linear-gradient(180deg,
+      rgba(122, 100, 80, 0.05) 0 1rpx,
+      rgba(122, 100, 80, 0) 1rpx 28rpx),
+    linear-gradient(180deg, #FFFDF5 0%, #F6EDD6 100%);
+  border-radius: 34rpx 26rpx 38rpx 28rpx / 28rpx 36rpx 26rpx 38rpx;
+  border: 6rpx solid #5F3B22;
   box-shadow:
-    0 20rpx 48rpx rgba(243,139,168,0.28),
-    inset 0 3rpx 0 rgba(255,255,255,0.95);
+    0 10rpx 0 rgba(63, 38, 20, 0.3),
+    0 22rpx 44rpx rgba(42, 30, 20, 0.4),
+    inset 0 0 0 3rpx rgba(255, 255, 255, 0.55),
+    inset 0 3rpx 0 rgba(255, 255, 255, 0.8);
   animation: cardPop 0.42s cubic-bezier(.2,.9,.2,1.15);
 }
 @keyframes cardPop {
@@ -1230,20 +1292,23 @@
 .go-title {
   font-size: 38rpx;
   font-weight: 900;
-  color: #5D4037;
+  color: #4A342A;
   letter-spacing: 2rpx;
   line-height: 1.2;
 }
 .go-record {
   margin-top: 4rpx;
   padding: 6rpx 20rpx;
-  background: linear-gradient(135deg, #FFE082, #FFB300);
-  color: #5D4037;
+  /* v63：新纪录 = 琥珀火漆邮票章 */
+  background: linear-gradient(180deg, #FFE082, #FFC940);
+  color: #5A3A10;
   font-size: 20rpx;
   font-weight: 800;
-  border-radius: 999rpx;
-  box-shadow: 0 3rpx 8rpx rgba(255,179,0,0.28),   /* v59.1: 投影减重, 贴合轻盈调性 */
-              inset 0 2rpx 0 rgba(255,255,255,0.7);
+  border: 2rpx solid rgba(169, 106, 0, 0.75);
+  border-radius: 14rpx 20rpx 16rpx 22rpx / 18rpx 14rpx 22rpx 16rpx;
+  box-shadow: 0 3rpx 8rpx rgba(240, 168, 0, 0.35),
+              inset 0 2rpx 0 rgba(255,255,255,0.65);
+  animation: stamp-in 0.4s cubic-bezier(.2,.9,.2,1.2) 0.3s both;
 }
 
 /* 星级 */
@@ -1290,7 +1355,8 @@
   font-size: 66rpx;
   font-weight: 900;
   line-height: 1.05;
-  background: linear-gradient(180deg, #2F5312 0%, #4C8B2A 55%, #7BC86A 100%);
+  /* v63：墨绿烙印分数 */
+  background: linear-gradient(180deg, #3F5E1E 0%, #4E8C2F 55%, #7CB342 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1319,24 +1385,24 @@
   align-items: center;
   justify-content: center;
   padding: 13rpx 8rpx;     /* v59: 微增内边距, 儿童产品留白 */
-  background: linear-gradient(180deg, #FFFFFF, #FFF7FA);
-  border-radius: 18rpx;
-  border: 2rpx solid #FFE5EC;
-  box-shadow: inset 0 2rpx 0 rgba(255,255,255,0.95),
-              0 3rpx 6rpx rgba(243,139,168,0.08);
+  /* v63：小纸片统计格 */
+  background: linear-gradient(180deg, #FFFDF5, #FBF3E2);
+  border-radius: 12rpx 18rpx 14rpx 20rpx / 16rpx 12rpx 20rpx 14rpx;
+  border: 2rpx solid rgba(74, 52, 42, 0.4);
+  box-shadow: 1rpx 2rpx 0 rgba(74, 52, 42, 0.08);
   box-sizing: border-box;
 }
 .go-stat-num {
   font-size: 28rpx;
   font-weight: 900;
-  color: #5D4037;
+  color: #4A342A;
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
 }
 .go-stat-label {
   margin-top: 4rpx;   /* v59.1: 数值-标签主次行距 */
   font-size: 16rpx;
-  color: #A1887F;
+  color: #7A6450;
   font-weight: 600;
   letter-spacing: 0.5rpx;
   line-height: 1.2;
@@ -1346,7 +1412,7 @@
 .go-tip {
   flex-shrink: 0;
   font-size: 19rpx;   /* v59.1: 18→19 底部提示不再隐形 */
-  color: #8D6E63;
+  color: #7A6450;
   line-height: 1.4;
   text-align: center;
   padding: 4rpx 12rpx 8rpx;
@@ -1376,10 +1442,10 @@
 }
 .go-actions .kawaii-btn-ghost {
   border-width: 3rpx;
-  color: #8D6E63;                 /* v59: 玫红→暖棕, 去「危险/惩罚」暗示（败局场景同理） */
-  border-color: #F48FB1;
-  background: #FFF5F8;            /* v59: 纯白→极浅粉, 次级按钮不空洞 */
-  box-shadow: 0 4rpx 0 rgba(244, 143, 177, 0.35), 0 8rpx 16rpx rgba(243, 139, 168, 0.15);
+  color: #7A6450;                 /* v59→v63: 暖棕墨色，去「危险/惩罚」暗示 */
+  border-color: rgba(74, 52, 42, 0.4);
+  background: #FFFDF5;            /* v63: 纸签底 */
+  box-shadow: 0 4rpx 0 rgba(74, 52, 42, 0.25), 0 8rpx 16rpx rgba(74, 52, 42, 0.12);
 }
 /* ============ v32: 亲子积分结算卡（结算浮层内，仅通关显示） ============ */
 .go-reward {

@@ -47,27 +47,29 @@ Page({
     ],
 
     // 玩法卡（单行 4 列，展示游戏核心循环 — 原第二排重复内容已移除）
+    // v63: 底色同步「木语农场」纸色系（手账纸签调）
     howtoList: [
-      { id: 'a1', icon: '✅', title: '答对消除', bg: '#E9F8EA' },
-      { id: 'a2', icon: '⚡',  title: '连错加速', bg: '#FFF6E0' },
-      { id: 'a3', icon: '🔥',  title: '连击翻倍', bg: '#FFECEC' },
-      { id: 'a4', icon: '🛡️', title: '防线守卫', bg: '#EAF0FF' }
+      { id: 'a1', icon: '✅', title: '答对消除', bg: '#EAF3D9' },
+      { id: 'a2', icon: '⚡',  title: '连错加速', bg: '#FBF0D2' },
+      { id: 'a3', icon: '🔥',  title: '连击翻倍', bg: '#F9E4D4' },
+      { id: 'a4', icon: '🛡️', title: '防线守卫', bg: '#DFEDF3' }
     ],
 
     // v33: 「立即了解」玩法弹窗内容（6 条规则 · 左对齐卡片式 · 徽章六色循环）
+    // v63: 规则纸条底色同步「木语农场」纸色系
     knowMoreList: [
       { id: 'k1', icon: '✅', title: '答对发射豌豆', desc: '答对单词，植物立即开火，阳光分数双收',
-        bg: '#E9F8EA', numBg: 'linear-gradient(180deg, #7BC86A, #4D8E3F)', numColor: '#FFFFFF' },
+        bg: '#EAF3D9', numBg: 'linear-gradient(180deg, #9CCC65, #558B2F)', numColor: '#FFFFFF' },
       { id: 'k2', icon: '⚡', title: '连续答错才加速', desc: '连续答错两题僵尸才狂奔，偶尔答错别紧张',
-        bg: '#FFF6E0', numBg: 'linear-gradient(180deg, #FFB74D, #F57C00)', numColor: '#FFFFFF' },
+        bg: '#FBF0D2', numBg: 'linear-gradient(180deg, #FFC940, #EF8F00)', numColor: '#FFFFFF' },
       { id: 'k3', icon: '🔥', title: '连击分数翻倍', desc: '连续答对触发连击，分数越滚越高',
-        bg: '#FFECEC', numBg: 'linear-gradient(180deg, #FF8A80, #E53935)', numColor: '#FFFFFF' },
+        bg: '#F9E4D4', numBg: 'linear-gradient(180deg, #FF8A65, #D84315)', numColor: '#FFFFFF' },
       { id: 'k4', icon: '🌻', title: '收集掉落阳光', desc: '向日葵定期掉阳光，点一点就能收集',
-        bg: '#FFF7CF', numBg: 'linear-gradient(180deg, #FBC02D, #E65100)', numColor: '#FFFFFF' },
+        bg: '#FCF2C8', numBg: 'linear-gradient(180deg, #FBC02D, #E65100)', numColor: '#FFFFFF' },
       { id: 'k5', icon: '🛡️', title: '守住三条防线', desc: '三条防线全部失守，本关就失败啦',
-        bg: '#EAF0FF', numBg: 'linear-gradient(180deg, #64B5F6, #1E88E5)', numColor: '#FFFFFF' },
+        bg: '#DFEDF3', numBg: 'linear-gradient(180deg, #81CCE8, #2E88B5)', numColor: '#FFFFFF' },
       { id: 'k6', icon: '🏆', title: '清场即通关', desc: '撑到最后一波，清光僵尸赢下胜利',
-        bg: '#F3E8FF', numBg: 'linear-gradient(180deg, #BA68C8, #7B1FA2)', numColor: '#FFFFFF' }
+        bg: '#EFE1F0', numBg: 'linear-gradient(180deg, #CE93D8, #8E24AA)', numColor: '#FFFFFF' }
     ]
   },
 
