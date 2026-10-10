@@ -91,8 +91,8 @@ const ZOMBIE_TYPES = {
   bucket: {
     type: 'bucket',
     name: '铁桶僵尸',
-    color: '#8FA57D',
-    accentColor: '#A5B694',
+    color: '#94B26E',
+    accentColor: '#ABC98A',
     baseHealth: 6,              // v31: 2→6（1发秒杀→3发，消灭难度核心）
     speedMultiplier: 1.0,
     radius: 36,
@@ -102,9 +102,9 @@ const ZOMBIE_TYPES = {
   imp: {
     type: 'imp',
     name: '小鬼僵尸',
-    // v27 皮肤色参照 zombie_extra_1.png：灰绿（原紫 #9E8BB5）
-    color: '#A6B492',
-    accentColor: '#BCCCA6',
+    // v27 皮肤色参照 zombie_extra_1.png：灰绿（原紫 #9E8BB5）；v65 提鲜
+    color: '#ACC184',
+    accentColor: '#C3D8A2',
     baseHealth: 3,              // v31: 1→3（快速炮灰仍脆，但不再被一发带走）
     speedMultiplier: 1.7,
     radius: 30,
@@ -115,8 +115,8 @@ const ZOMBIE_TYPES = {
     type: 'football',
     name: '橄榄球僵尸',
     // v28 皮肤色参照 zombie_football.png：灰绿（原棕 #A0826D）；死亡粒子同步变绿
-    color: '#7E9272',
-    accentColor: '#97AB8B',
+    color: '#84A565',
+    accentColor: '#9EBD85',
     baseHealth: 12,             // v31: 5→12（重坦6发豌豆；食人花一口(8伤)不再秒杀→补刀提示分支激活）
     speedMultiplier: 0.65,
     radius: 44,
@@ -127,8 +127,8 @@ const ZOMBIE_TYPES = {
     type: 'dancer',
     name: '舞王僵尸',
     // v29 皮肤色参照 zombie_dancer.png：灰绿（原蓝灰 #78909C）；死亡粒子同步变绿
-    color: '#9CB383',
-    accentColor: '#B5C9A0',
+    color: '#A3BF78',
+    accentColor: '#BDCE96',
     baseHealth: 14,             // v31: 6→14（最坦7发豌豆；需樱桃炸弹/多射手集火）
     speedMultiplier: 0.8,
     radius: 40,
@@ -139,8 +139,8 @@ const ZOMBIE_TYPES = {
     type: 'king',
     name: '僵尸王',
     // v51: 终局大波之王 — 皮肤灰绿承袭系列 zombie 色系
-    color: '#8A9C7D',
-    accentColor: '#A9BC9B',
+    color: '#91AF6F',
+    accentColor: '#B2C798',
     baseHealth: 32,             // v51: 固定血量(launchFinalWave 以 hpMult=1 生成, 不随关卡 ramp 漂移)
     speedMultiplier: 0.55,      // v51: 王者缓步(全场最慢, PvZ 巨人系压迫感)
     radius: 48,                 // v51: 最大体型
@@ -293,20 +293,20 @@ const PLANT_TYPES = {
     type: 'shooter', name: '豌豆射手', emoji: '🌱',
     cost: 50, health: 3, damage: 2,
     attackInterval: 1100, range: Infinity,
-    color: '#7CB342',
+    color: '#7DBE33',
     projectile: { type: 'normal', speed: 320, color: '#9CCC65', radius: 8 }
   },
   wall: {
     type: 'wall', name: '坚果', emoji: '🥜',
     cost: 50, health: 8, damage: 0,
     attackInterval: 0, range: 0,
-    color: '#A1887F'
+    color: '#B07D5E'
   },
   freezer: {
     type: 'freezer', name: '寒冰射手', emoji: '❄️',
     cost: 75, health: 3, damage: 2,
     attackInterval: 1300, range: Infinity,
-    color: '#6FD9CE',               // v22 薄荷青（参照附件，与头部渐变中调一致）
+    color: '#67E0D4',               // v22 薄荷青（参照附件，与头部渐变中调一致）；v65 提鲜
     projectile: { type: 'ice', speed: 300, color: '#81D4FA', radius: 8,
                   slow: { factor: 0.5, duration: 2000 } }
   },
@@ -317,13 +317,13 @@ const PLANT_TYPES = {
     isExplosive: true,
     fuseTime: 2000,
     blastRadius: 0.15,
-    color: '#E53935'
+    color: '#F44336'
   },
   chomper: {
     type: 'chomper', name: '食人花', emoji: '🪴',
     cost: 125, health: 4, damage: 8,
     attackInterval: 2500, range: 0.08,
-    color: '#8E24AA',
+    color: '#9C34C6',
     isChomper: true,
     swallowTime: 3000
   },
@@ -332,7 +332,7 @@ const PLANT_TYPES = {
     cost: 50, health: 2, damage: 0,
     attackInterval: 0, range: 0,
     sunInterval: 8000, sunProduce: 25,
-    color: '#FFC107'
+    color: '#FFB300'
   },
   fire: {
     type: 'fire', name: '火焰射手', emoji: '🔥',

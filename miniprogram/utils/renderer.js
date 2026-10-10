@@ -27,37 +27,37 @@ const RENDER_TOKENS = {
     STROKE:    '#FFFFFF',  // 萌系白描边：角色造型/装饰
     MOUTH_PINK:'#E91E63',  // O嘴/露齿嘴 深粉
     MOUTH_LIP: '#F48FB1',  // 下唇高光粉
-    BLUSH_PINK:'rgba(255,150,170,0.65)',  // 植物通用粉腮
-    BLUSH_RICH:'rgba(244,143,177,0.75)',  // 坚果浓腮红
-    BLUSH_COOL:'rgba(120,200,255,0.55)',  // 寒冰腮蓝
-    BLUSH_ZOMBIE:'rgba(255,120,150,0.65)',// 僵尸爱心腮红
-    // 豌豆 Shooter
-    S_LEAF_DARK:  '#AED581',
-    S_LEAF_MID:   '#9CCC65',
-    S_LEAF_LIGHT: '#C5E1A5',
-    S_STEM:       '#7CB342',
+    BLUSH_PINK:'rgba(255,141,163,0.78)',  // 植物通用粉腮（v65 提饱和）
+    BLUSH_RICH:'rgba(248,124,160,0.85)',  // 坚果浓腮红
+    BLUSH_COOL:'rgba(96,198,255,0.62)',   // 寒冰腮蓝
+    BLUSH_ZOMBIE:'rgba(255,110,150,0.72)',// 僵尸爱心腮红
+    // 豌豆 Shooter（v65 鲜嫩豆绿系）
+    S_LEAF_DARK:  '#9CCC65',
+    S_LEAF_MID:   '#83C641',
+    S_LEAF_LIGHT: '#CFE98C',
+    S_STEM:       '#7DBE33',
     S_PEA_LIGHT:  '#C5E1A5',
     S_MOUTH_OUT:  '#558B2F',
     S_MOUTH_IN:   '#33691E',
     S_PEA_SHINE:  '#F1F8E9',
     // 坚果 Wall
-    W_SPROUT_DARK:'#66BB6A',
-    W_SPROUT_LIGHT:'#81C784',
+    W_SPROUT_DARK:'#58C05C',
+    W_SPROUT_LIGHT:'#7ED684',
     W_RIND:       'rgba(109,76,65,0.35)',  // 坚果壳纹
-    // 寒冰 Freezer v22（参照附件 plant_freezer.png：薄荷青冰晶系 + 鲜绿底座叶）
-    F_LEAF_DARK:  '#4CAF50',   // 后层大叶 深鲜绿
-    F_LEAF_MID:   '#66BB6A',   // 前层小叶 鲜绿
-    F_STEM:       '#43A047',   // 茎 深鲜绿
-    F_HEAD_LIGHT: '#B2F0EA',   // 头部亮部 薄荷青
-    F_HEAD_DARK:  '#2BA8A0',   // 头部暗部 深青
-    F_MOUTH_OUT:  '#2A7A76',   // 炮口外环 深青
-    F_MOUTH_IN:   '#123B38',   // 炮口内腔 近黑青
-    F_CRYSTAL:    '#E0FFFF',   // 冰晶主色 近白冰
-    F_CRYSTAL_2:  '#AEEEEE',   // 冰晶切面暗部
+    // 寒冰 Freezer v22（参照附件 plant_freezer.png：薄荷青冰晶系 + 鲜绿底座叶；v65 提饱和）
+    F_LEAF_DARK:  '#46B84E',   // 后层大叶 深鲜绿
+    F_LEAF_MID:   '#5FC55E',   // 前层小叶 鲜绿
+    F_STEM:       '#3FAE4A',   // 茎 深鲜绿
+    F_HEAD_LIGHT: '#BFF7F1',   // 头部亮部 薄荷青
+    F_HEAD_DARK:  '#21B9AE',   // 头部暗部 深青
+    F_MOUTH_OUT:  '#1F8B85',   // 炮口外环 深青
+    F_MOUTH_IN:   '#0E403C',   // 炮口内腔 近黑青
+    F_CRYSTAL:    '#EAFDFF',   // 冰晶主色 近白冰
+    F_CRYSTAL_2:  '#9FE8EC',   // 冰晶切面暗部
     F_LID:        '#5ECFC2',   // 半垂眼睑色（头中调）
-    F_LID_LINE:   '#1D6E66',   // 眼睑边缘线 深青
+    F_LID_LINE:   '#16726B',   // 眼睑边缘线 深青
     // 僵尸头饰
-    Z_CONE:       '#FFCA28',
+    Z_CONE:       '#FFC93C',
     Z_RIBBON:     '#FF6E40',
     Z_HELMET:     '#B0BEC5',
     Z_HELMET_EAR: '#78909C',
@@ -68,15 +68,15 @@ const RENDER_TOKENS = {
     Z_ARMOR_LIGHT:  '#CFD8DC',  // 金属反光高光
     Z_VISOR:        '#263238',  // 护面缝隙暗色
     Z_BOLT:         '#ECEFF1',  // 铆钉
-    // 樱桃炸弹 Cherry
-    C_BODY:       '#E53935',
-    C_BODY_DARK:  '#C62828',
-    C_LEAF:       '#66BB6A',
-    C_FUSE:       '#7CB342',
-    C_SPARK:      '#FFEB3B',
+    // 樱桃炸弹 Cherry（v65 提饱和鲜红）
+    C_BODY:       '#F44336',
+    C_BODY_DARK:  '#D32F2F',
+    C_LEAF:       '#5FC55E',
+    C_FUSE:       '#7DBE33',
+    C_SPARK:      '#FFF176',
     C_SHINE:      '#FFCDD2',
     // v24 樱桃新增（参照 plant_cherry.png）
-    C_BODY_LIGHT: '#FF7B6B',   // 亮部（渐变起点，高饱和鲜红）
+    C_BODY_LIGHT: '#FF8674',   // 亮部（渐变起点，高饱和鲜红）
     C_BODY_EDGE:  '#A4161A',   // 边缘最深部（后层樱桃渐变终点 #971012 由暗档混出）
     C_TIP:        '#7A3B2E',   // 茎顶蒂头 深红褐
     C_BROW:       '#5B1512',   // 倒八字眉/撇嘴 深红褐
@@ -89,67 +89,67 @@ const RENDER_TOKENS = {
     FIRE_STEM:      '#5D4037',  // 焦糖色茎
     FIRE_MOUTH_OUT: '#3E2723',  // 火焰口外圈（深棕）
     FIRE_MOUTH_IN:  '#1B0F0A',  // 火焰口内黑
-    // v25 食人花 Chomper 新增（按系列风格标准重绘）
-    CH_HEAD_LIGHT: '#E9C6F0',   // 头部亮部 浅紫粉
-    CH_HEAD_DARK:  '#4A148C',   // 头部暗部 深紫
-    CH_SPOT:       '#5E1980',   // 表皮斑点 深紫
-    CH_LIP:        '#6A1B9A',   // 大嘴厚唇 深紫
-    CH_MOUTH:      '#4A0E66',   // 口腔 近黑紫
-    CH_FLASH:      '#B71C1C',   // 咬合瞬间闪光 红
+    // v25 食人花 Chomper 新增（按系列风格标准重绘；v65 葡萄紫提鲜）
+    CH_HEAD_LIGHT: '#F2D3F8',   // 头部亮部 浅紫粉
+    CH_HEAD_DARK:  '#6A1FB8',   // 头部暗部 深紫
+    CH_SPOT:       '#6C2493',   // 表皮斑点 深紫
+    CH_LIP:        '#7B27AA',   // 大嘴厚唇 深紫
+    CH_MOUTH:      '#460C66',   // 口腔 近黑紫
+    CH_FLASH:      '#D32F2F',   // 咬合瞬间闪光 红
     CH_BROW:       '#3B1252',   // 倒八字眉 深紫黑
-    CH_BLUSH:      'rgba(206,147,216,0.50)',  // 淡紫腮红
+    CH_BLUSH:      'rgba(224,144,246,0.62)',  // 淡紫腮红（v65 提亮）
     // v25 火焰射手 Fire 新增（按系列风格标准重绘）
     FR_HEAD_LIGHT: '#FFE0B2',   // 头部亮部 浅杏橙
     FR_HEAD_DARK:  '#D84315',   // 头部暗部 深橙红
     FR_CANNON_RIM: '#BF360C',   // 炮口外环 深红
     FR_CANNON_IN:  '#3E0F0A',   // 炮口内腔 近黑红
     FR_BROW:       '#8D2819',   // 倒八字眉 深红棕
-    // v26 铁桶僵尸 Bucket 新增（参照 zombie_imp.png 设定图：金属桶+破衬衫）
-    Z_BUCKET_LIGHT: '#DDE3E7',  // 铁桶亮部 银灰高光带
-    Z_BUCKET:       '#9BA1A7',  // 铁桶基色 中灰
-    Z_BUCKET_DARK:  '#5F676E',  // 铁桶暗部 底缘/侧影
-    Z_RUST:         '#8B5A2B',  // 锈斑/锈屑 棕褐
-    Z_SHIRT:        '#A7BCCB',  // 破衬衫 灰蓝
-    Z_SHIRT_DARK:   '#7E93A4',  // 衣影/口袋/撕裂内衬
+    // v26 铁桶僵尸 Bucket 新增（参照 zombie_imp.png 设定图：金属桶+破衬衫；v65 提亮）
+    Z_BUCKET_LIGHT: '#E8EDF0',  // 铁桶亮部 银灰高光带
+    Z_BUCKET:       '#A9B4BC',  // 铁桶基色 中灰
+    Z_BUCKET_DARK:  '#667077',  // 铁桶暗部 底缘/侧影
+    Z_RUST:         '#A8672F',  // 锈斑/锈屑 棕褐
+    Z_SHIRT:        '#9EC6E0',  // 破衬衫 亮天蓝（v65 提鲜）
+    Z_SHIRT_DARK:   '#74A0BC',  // 衣影/口袋/撕裂内衬
     Z_PANTS:        '#4A4F54',  // 破旧长裤 深灰
     Z_BOOT:         '#6B6356',  // 工装靴 暗棕
-    Z_MOUTH:        '#7E3538',  // 僵尸口腔 暗红
-    // v27 小鬼僵尸 Imp 新增（参照 zombie_extra_1.png 设定图：兜帽破袍+麻袋+棕靴）
-    Z_HOOD_LIGHT:  '#8C8279',  // 兜帽亮部 浅灰褐（左上受光）
-    Z_HOOD:        '#5C5750',  // 兜帽/破长袍基色 中灰
-    Z_HOOD_DARK:   '#3A352F',  // 兜帽暗部/撕裂内衬/短靴 深灰
-    Z_SACK:        '#C4A265',  // 麻袋 粗麻黄
-    Z_SACK_DARK:   '#8F7040',  // 麻袋束绳/补丁/暗部 深麻褐
-    Z_EYE_YELLOW:  '#F5EDB5',  // 小鬼眼白 浑浊淡黄
-    // v28 橄榄球僵尸 Football 新增（参照 zombie_football.png 设定图：红盔+面罩+绿球衣）
-    Z_FH_RED:        '#D03A29',  // 头盔/护肩基色 足球红
-    Z_FH_RED_LIGHT:  '#E4604A',  // 盔体/护肩左上受光
+    Z_MOUTH:        '#8A3A3E',  // 僵尸口腔 暗红
+    // v27 小鬼僵尸 Imp 新增（参照 zombie_extra_1.png 设定图：兜帽破袍+麻袋+棕靴；v65 微提亮）
+    Z_HOOD_LIGHT:  '#948A80',  // 兜帽亮部 浅灰褐（左上受光）
+    Z_HOOD:        '#63605A',  // 兜帽/破长袍基色 中灰
+    Z_HOOD_DARK:   '#403B34',  // 兜帽暗部/撕裂内衬/短靴 深灰
+    Z_SACK:        '#D2AF6B',  // 麻袋 粗麻黄（v65 提鲜）
+    Z_SACK_DARK:   '#9A7A44',  // 麻袋束绳/补丁/暗部 深麻褐
+    Z_EYE_YELLOW:  '#FBF3BC',  // 小鬼眼白 浑浊淡黄
+    // v28 橄榄球僵尸 Football 新增（参照 zombie_football.png 设定图：红盔+面罩+绿球衣；v65 提鲜）
+    Z_FH_RED:        '#E8452F',  // 头盔/护肩基色 足球红
+    Z_FH_RED_LIGHT:  '#F06A4F',  // 盔体/护肩左上受光
     Z_FH_RED_DARK:   '#A3231B',  // 盔体右下暗部/眉缘缓冲条/甲缝
-    Z_FH_STRIPE:     '#F2E6CE',  // 盔顶中条纹/裤侧条纹 奶油白
-    Z_FH_CAGE:       '#C9C2B0',  // 面罩格栅 暖银
-    Z_FH_JERSEY:     '#3A5C39',  // 球衣/短裤 森林绿
-    Z_FH_JERSEY_DARK:'#2C472C',  // 球衣衣影/下摆撕裂内衬
+    Z_FH_STRIPE:     '#F7EDD6',  // 盔顶中条纹/裤侧条纹 奶油白
+    Z_FH_CAGE:       '#D5CEBB',  // 面罩格栅 暖银
+    Z_FH_JERSEY:     '#3F7038',  // 球衣/短裤 森林绿
+    Z_FH_JERSEY_DARK:'#2E5729',  // 球衣衣影/下摆撕裂内衬
     Z_FH_WRIST:      '#2E4A32',  // 护腕/袖口 深绿
     Z_FH_CLEAT:      '#6B4C3A',  // 橄榄球鞋 棕褐
-    // v29 舞王僵尸 Dancer 新增（参照 zombie_dancer.png 设定图：黑礼帽+紫西装+领带+音符）
+    // v29 舞王僵尸 Dancer 新增（参照 zombie_dancer.png 设定图：黑礼帽+紫西装+领带+音符；v65 紫罗兰提鲜）
     Z_DN_HAT:        '#23232B',  // 礼帽帽冠 近黑碳灰
     Z_DN_HAT_DARK:   '#0F0F15',  // 帽檐/冠底接缝暗部
     Z_DN_HAT_LIGHT:  '#3A3A46',  // 帽冠左上受光带（v29.3 减对比柔和）
-    Z_DN_SUIT:       '#6B3D74',  // 西装/西裤 品紫（像素取样 #603060 区间）
-    Z_DN_SUIT_DARK:  '#4A2550',  // 衣影/驳领/下摆撕裂内衬 深紫
-    Z_DN_SUIT_LIGHT: '#8A5590',  // 西装受光浅紫（音符用）
-    Z_DN_SHIRT:      '#EDEBD2',  // 衬衫/袖口/领带条纹 米白
-    Z_DN_TIE:        '#3D1F44',  // 领带 深紫黑
+    Z_DN_SUIT:       '#7C3FA0',  // 西装/西裤 紫罗兰
+    Z_DN_SUIT_DARK:  '#5A2B78',  // 衣影/驳领/下摆撕裂内衬 深紫
+    Z_DN_SUIT_LIGHT: '#9C64C4',  // 西装受光浅紫（音符用）
+    Z_DN_SHIRT:      '#F2F0DC',  // 衬衫/袖口/领带条纹 米白
+    Z_DN_TIE:        '#4A2460',  // 领带 深紫黑
     Z_DN_SHOE:       '#5C4033',  // 圆头皮鞋 深棕
-    Z_DN_TONGUE:     '#D9534F',  // 舌头 鲜红
-    // v51 僵尸王 King 新增（金冠 + 深红斗篷 + 暗紫王袍 = 压轴终局大波之王）
-    Z_KING_GOLD:       '#F5C542',  // 王冠/腰带/袖口/肩扣 亮金
-    Z_KING_GOLD_DARK:  '#B8860B',  // 冠底带/冠尖描影 深金
-    Z_KING_GEM:        '#C62828',  // 冠身红宝石/腰带扣 深红
-    Z_KING_CAPE:       '#7B1E2B',  // 斗篷 皇家深红
-    Z_KING_CAPE_DARK:  '#54121C',  // 斗篷右暗部/战靴 暗红
-    Z_KING_ROBE:       '#3E2A5A',  // 王袍/袍袖 暗紫
-    Z_KING_ROBE_DARK:  '#2C1E42',  // 王袍衣影/袍摆内衬 深紫
+    Z_DN_TONGUE:     '#FF5A5F',  // 舌头 鲜红
+    // v51 僵尸王 King 新增（金冠 + 深红斗篷 + 暗紫王袍 = 压轴终局大波之王；v65 提鲜）
+    Z_KING_GOLD:       '#FFCB47',  // 王冠/腰带/袖口/肩扣 亮金
+    Z_KING_GOLD_DARK:  '#C08A0D',  // 冠底带/冠尖描影 深金
+    Z_KING_GEM:        '#E53935',  // 冠身红宝石/腰带扣 深红
+    Z_KING_CAPE:       '#9E2438',  // 斗篷 皇家深红
+    Z_KING_CAPE_DARK:  '#701626',  // 斗篷右暗部/战靴 暗红
+    Z_KING_ROBE:       '#4A3272',  // 王袍/袍袖 暗紫
+    Z_KING_ROBE_DARK:  '#362554',  // 王袍衣影/袍摆内衬 深紫
     // 通用
     SHADOW:       'rgba(0,0,0,0.14)',   // 阴影地面椭圆
     HIGHLIGHT_BASE: 'rgba(255,255,255,',  // 高光拼接用：+ "0.35)"
@@ -185,18 +185,19 @@ const RENDER_TOKENS = {
   },
 
   // ---------- 表情比例（与 _drawCuteFace + shop-avatar 严格 1:1） ----------
+  // v65 萌化：眼睛/腮红同步微放大，更活泼
   FACE: {
     EYE_DX_RATIO:  0.36,   // 眼距 = 头半径 × 0.36（僵尸原 0.33 → 统一到 0.36）
-    EYE_R_RATIO:   0.24,   // 眼半径 × 0.24（僵尸原 0.27 → 统一）
+    EYE_R_RATIO:   0.26,   // 眼半径 × 0.26（v65 0.24→0.26 大眼萌）
     EYE_Y_OFFSET:  0.08,   // 眼 Y 相对头中心：+ 0.08 × headR
-    PUPIL_R_RATIO: 0.56,   // 瞳孔 = 眼半径 × 0.56
+    PUPIL_R_RATIO: 0.58,   // 瞳孔 = 眼半径 × 0.58（v65 0.56→0.58）
     PUPIL_OFF_X:   0.16,   // 瞳孔右下偏位：× eyeR
     PUPIL_OFF_Y:   0.14,
     PUPIL_SHINE1:  0.42,   // 大高光 = 瞳孔 × 0.42
     PUPIL_SHINE2:  0.18,   // 小高光 = 瞳孔 × 0.18
     BLUSH_CX:      0.62,   // 腮红中心 X = × headR
     BLUSH_CY:      0.38,   // 腮红中心 Y 相对 eyeY：+ 0.38 × headR
-    BLUSH_SIZE:    0.15,   // 爱心大小 × headR
+    BLUSH_SIZE:    0.165,  // 爱心大小 × headR（v65 0.15→0.165）
     BLUSH_ZOMBIE:  0.22,   // 僵尸爱心更大 × eyeR
     // 嘴
     MOUTH_Y_OFFSET: 0.50,  // 嘴 Y 相对 eyeY：+ 0.50 × headR
@@ -221,14 +222,14 @@ const RENDER_TOKENS = {
   // ---------- 僵尸阵营专属比例（v3 阵营区分：与植物 FACE/HEAD 完全独立）----------
   Z_FACE: {
     EYE_DX_RATIO:  0.42,   // 眼距更宽（畏缩/无神感，植物=0.36）
-    EYE_R_RATIO:   0.20,   // 眼更小（植物=0.24）
+    EYE_R_RATIO:   0.215,  // 眼更小（植物=0.26；v65 0.20→0.215 提高可读性）
     EYE_Y_OFFSET:  0.10,   // 眼位略低
-    PUPIL_R_RATIO: 0.48,   // 瞳孔更小（植物=0.56）
+    PUPIL_R_RATIO: 0.50,   // 瞳孔更小（植物=0.58；v65 0.48→0.50）
     PUPIL_OFF_X:   0.14,   // 瞳孔偏位
     PUPIL_OFF_Y:   0.12,
     BLUSH_CX:      0.62,   // 腮红中心 X
     BLUSH_CY:      0.42,   // 腮红中心 Y（僵尸腮红略低）
-    BLUSH_SIZE:    0.18,   // 腮红大小（僵尸更大=病态红晕）
+    BLUSH_SIZE:    0.19,   // 腮红大小（僵尸更大=病态红晕；v65 0.18→0.19）
     MOUTH_Y_OFFSET: 0.52,  // 嘴 Y 偏移
   },
   Z_BODY: {
@@ -419,16 +420,16 @@ class Renderer {
     const H = this.height * this.dpr;
     ctx.scale(this.dpr, this.dpr);
 
-    // 天空渐变
+    // 天空渐变（v65 缤纷晴空：鲜亮蓝天 → 云白 → 暖阳地平线）
     const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
-    skyGrad.addColorStop(0, '#FFF0F5');
-    skyGrad.addColorStop(0.5, '#FFD6E6');
-    skyGrad.addColorStop(1, '#E7DCFF');
+    skyGrad.addColorStop(0, '#9ED9FF');
+    skyGrad.addColorStop(0.5, '#C9EEFF');
+    skyGrad.addColorStop(1, '#FFF6CF');
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, this.width, this.height);
 
-    // 远山
-    ctx.fillStyle = 'rgba(212, 197, 249, 0.55)';
+    // 远山（v65 青翠丘陵，替换旧薰衣草紫）
+    ctx.fillStyle = 'rgba(150, 214, 130, 0.70)';
     ctx.beginPath();
     ctx.moveTo(0, this.height * 0.4);
     ctx.quadraticCurveTo(this.width * 0.25, this.height * 0.25, this.width * 0.5, this.height * 0.4);
@@ -438,10 +439,10 @@ class Renderer {
     ctx.closePath();
     ctx.fill();
 
-    // 草地渐变
+    // 草地渐变（v65 鲜嫩草甸，饱和度提升）
     const grassGrad = ctx.createLinearGradient(0, this.height * 0.65, 0, this.height);
-    grassGrad.addColorStop(0, '#D6F5E4');
-    grassGrad.addColorStop(1, '#9FDEBD');
+    grassGrad.addColorStop(0, '#C9F09A');
+    grassGrad.addColorStop(1, '#7FCB54');
     ctx.fillStyle = grassGrad;
     ctx.beginPath();
     ctx.moveTo(0, this.height * 0.7);
@@ -473,8 +474,8 @@ class Renderer {
         const x = b.left + lane * cs.w;
         const y = b.top + slot * cs.h;
         ctx.fillStyle = (lane + slot) % 2 === 0
-          ? 'rgba(255,255,255,0.18)'
-          : 'rgba(124,179,66,0.10)';
+          ? 'rgba(255,255,255,0.22)'
+          : 'rgba(88, 152, 38, 0.16)';
         ctx.fillRect(x, y, cs.w, cs.h);
       }
     }
@@ -503,8 +504,8 @@ class Renderer {
     const w = 90, h = 70;
     ctx.save();
     ctx.translate(cx, by);
-    // 屋顶
-    ctx.fillStyle = '#F48FB1';
+    // 屋顶（v65 农舍珊瑚红瓦）
+    ctx.fillStyle = '#FF6B57';
     ctx.strokeStyle = '#FFFFFF';
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -527,7 +528,7 @@ class Renderer {
     ctx.rect(-10, -2, 20, 12);
     ctx.fill();
     // 窗
-    ctx.fillStyle = '#C7E9FF';
+    ctx.fillStyle = '#8EDCFF';
     ctx.beginPath();
     ctx.arc(-25, -10, 6, 0, Math.PI * 2);
     ctx.fill();
@@ -653,17 +654,17 @@ class Renderer {
    * 实时绘制背景（离屏缓存不可用时的降级方案）
    */
   _drawBackgroundRealtime(ctx) {
-    // 天空渐变
+    // 天空渐变（v65 与离屏版同步：缤纷晴空）
     const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
-    skyGrad.addColorStop(0, '#FFF0F5');
-    skyGrad.addColorStop(0.5, '#FFD6E6');
-    skyGrad.addColorStop(1, '#E7DCFF');
+    skyGrad.addColorStop(0, '#9ED9FF');
+    skyGrad.addColorStop(0.5, '#C9EEFF');
+    skyGrad.addColorStop(1, '#FFF6CF');
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, this.width, this.height);
-    // 草地
+    // 草地（v65 鲜嫩草甸）
     const grassGrad = ctx.createLinearGradient(0, this.height * 0.7, 0, this.height);
-    grassGrad.addColorStop(0, '#D6F5E4');
-    grassGrad.addColorStop(1, '#9FDEBD');
+    grassGrad.addColorStop(0, '#C9F09A');
+    grassGrad.addColorStop(1, '#7FCB54');
     ctx.fillStyle = grassGrad;
     ctx.fillRect(0, this.height * 0.7, this.width, this.height * 0.3);
     // 网格
@@ -1394,6 +1395,13 @@ class Renderer {
     ctx.beginPath();
     ctx.moveTo(0, -headR * 0.04);
     ctx.lineTo(0, -headR * 0.54);
+    ctx.stroke();
+    // v65 新增：叶尖小卷须（农场藤蔓感，S 弯钩一笔画）
+    this._setStroke(ctx, '#558B2F', this._strokeW(T.STROKE.THIN) * 0.85);
+    ctx.beginPath();
+    ctx.moveTo(0, -headR * 0.56);
+    ctx.quadraticCurveTo(headR * 0.18, -headR * 0.74, headR * 0.12, -headR * 0.88);
+    ctx.quadraticCurveTo(headR * 0.07, -headR * 0.99, headR * 0.16, -headR * 1.00);
     ctx.stroke();
     ctx.restore();
 
@@ -2484,6 +2492,24 @@ class Renderer {
     ctx.stroke();
     // 恢复默认线宽
     ctx.lineWidth = Math.max(1, r * 0.04);
+
+    // === v65 中环花瓣 ×8（暖橙 #FFB74D，填补花盘与外环间的空隙，花型更饱满） ===
+    ctx.fillStyle = '#FFB74D';
+    ctx.strokeStyle = '#E65100';
+    ctx.lineWidth = Math.max(0.8, r * 0.03);
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2 + Math.PI / 8 + wobble;
+      const px = Math.cos(angle) * headR * 0.63;
+      const py = headY + Math.sin(angle) * headR * 0.63;
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(angle + Math.PI / 2);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, headR * 0.15, headR * 0.27, 0, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.lineWidth = Math.max(1, r * 0.04);  // 恢复默认线宽（外层花瓣沿用）
 
     // === 12 片外层水滴形花瓣（柠檬黄 #FFD54F） ===
     // 外层描边：深橙 #E65100，强化立体感

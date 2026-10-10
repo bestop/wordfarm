@@ -50,7 +50,7 @@
       <view
         wx:for="{{shopItems}}"
         wx:key="type"
-        class="shop-item {{selectedPlant === item.type ? 'selected' : ''}} {{!item.affordable ? 'disabled' : ''}}"
+        class="shop-item shop-item-{{item.type}} {{selectedPlant === item.type ? 'selected' : ''}} {{!item.affordable ? 'disabled' : ''}}"
         data-type="{{item.type}}"
         bindtap="onShopSelect"
       >

@@ -6,10 +6,10 @@
   ],
   "window": {
     "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#8B5A3C",
+    "navigationBarBackgroundColor": "#43A047",
     "navigationBarTitleText": "单词农场",
     "navigationBarTextStyle": "white",
-    "backgroundColor": "#FBF3E2",
+    "backgroundColor": "#FFF9EA",
     "enablePullDownRefresh": false,
     "navigationStyle": "default"
   },

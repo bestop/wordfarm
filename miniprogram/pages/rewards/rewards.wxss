@@ -9,7 +9,7 @@
   flex-direction: column;
   background:
     radial-gradient(120% 60% at 50% -6%, #FFF7D6 0%, rgba(255,247,214,0) 55%),
-    linear-gradient(180deg, #CDEBF7 0%, #E8F3D9 30%, #F3ECD3 62%, #FBF3E2 100%);
+    linear-gradient(180deg, #B8E6FF 0%, #DDF3C8 30%, #F7EFCF 62%, #FFF9EA 100%);
   overflow: hidden;
 }
 .rp-scroll {
@@ -33,8 +33,8 @@
       rgba(255, 235, 200, 0.20) 0%,
       rgba(255, 235, 200, 0) 40%,
       rgba(42, 24, 12, 0.18) 100%),
-    linear-gradient(160deg, #B0794E 0%, #8B5A3C 55%, #6B4423 100%);
-  border: 4rpx solid #5F3B22;
+    linear-gradient(160deg, #C68A58 0%, #9A6238 55%, #74492A 100%);
+  border: 4rpx solid #6B4224;
   box-shadow:
     0 10rpx 0 rgba(63, 38, 20, 0.35),
     0 16rpx 32rpx rgba(74, 52, 42, 0.35),
@@ -174,7 +174,7 @@
     repeating-linear-gradient(180deg,
       rgba(122, 100, 80, 0.04) 0 1rpx,
       rgba(122, 100, 80, 0) 1rpx 26rpx),
-    linear-gradient(180deg, #FFFDF5 0%, #F6EDD6 100%);
+    linear-gradient(180deg, #FFFDF7 0%, #FFF6E0 100%);
   border: 2rpx solid rgba(74, 52, 42, 0.45);
   box-shadow: 2rpx 3rpx 0 rgba(74, 52, 42, 0.10),
               0 8rpx 18rpx rgba(74, 52, 42, 0.12);
@@ -185,7 +185,7 @@
 .tier-weekend { animation-delay: 0.10s; }
 .tier-grand   { animation-delay: 0.18s; }
 /* 各档主题色（左缘厚压条 + 标题色，v63 保留识别色） */
-.tier-instant { border-left: 10rpx solid #66BB6A; }
+.tier-instant { border-left: 10rpx solid #5FC55E; }
 .tier-weekend { border-left: 10rpx solid #FFB300; }
 .tier-grand   { border-left: 10rpx solid #42A5F5; }
 
@@ -229,7 +229,7 @@
 }
 .rp-tier-chip.off {
   color: #7A6450;
-  background: #FBF3E2;                    /* v63: 纸底 */
+  background: #FFF9EA;                    /* v63: 纸底 */
   border: 2rpx dashed rgba(74, 52, 42, 0.4);  /* v63: 虚线墨框 = 待解锁印记 */
   box-shadow: none;
 }
@@ -259,7 +259,7 @@
   border-radius: 12rpx 18rpx 14rpx 20rpx / 16rpx 12rpx 20rpx 14rpx;
   background:
     radial-gradient(circle at calc(100% - 12rpx) 12rpx, #FBF3E2 0 5rpx, rgba(74, 52, 42, 0.55) 5rpx 7rpx, rgba(74, 52, 42, 0) 8rpx),
-    linear-gradient(180deg, #FFFDF5 0%, #F6EDD6 100%);
+    linear-gradient(180deg, #FFFDF7 0%, #FFF6E0 100%);
   border: 2rpx solid rgba(74, 52, 42, 0.45);
   box-shadow: 1rpx 2rpx 0 rgba(74, 52, 42, 0.08),
               0 4rpx 10rpx rgba(74, 52, 42, 0.10);
@@ -329,19 +329,19 @@
       rgba(43, 74, 21, 0.10) 0 2rpx,
       rgba(255, 255, 255, 0.05) 2rpx 4rpx,
       rgba(43, 74, 21, 0) 4rpx 30rpx),
-    linear-gradient(180deg, #9CCC65 0%, #7CB342 55%, #558B2F 100%);
-  border: 2rpx solid #33691E;
-  box-shadow: 0 5rpx 0 #33691E, 0 8rpx 14rpx rgba(85, 139, 47, 0.30);
+    linear-gradient(180deg, #8ED44E 0%, #6FBF2E 55%, #4E9321 100%);
+  border: 2rpx solid #2E7D14;
+  box-shadow: 0 5rpx 0 #2E7D14, 0 8rpx 14rpx rgba(85, 160, 47, 0.35);
 }
 .rp-item-btn.nope {
   color: #A9927D;
-  background: #FBF3E2;            /* v63: 纸底 */
+  background: #FFF9EA;            /* v63: 纸底 */
   border: 2rpx dashed rgba(74, 52, 42, 0.4);    /* v63: 虚线墨框 = 未开印记 */
   box-shadow: none;
 }
 .rp-btn-hover {
   transform: translateY(3rpx);
-  box-shadow: 0 2rpx 0 #33691E, 0 4rpx 8rpx rgba(85, 139, 47, 0.25);
+  box-shadow: 0 2rpx 0 #2E7D14, 0 4rpx 8rpx rgba(85, 160, 47, 0.28);
 }
 
 /* ============ 家长确认长按条 ============ */
@@ -405,7 +405,7 @@
     repeating-linear-gradient(180deg,
       rgba(122, 100, 80, 0.05) 0 1rpx,
       rgba(122, 100, 80, 0) 1rpx 24rpx),
-    linear-gradient(180deg, #FFFDF5 0%, #F6EDD6 100%);
+    linear-gradient(180deg, #FFFDF7 0%, #FFF6E0 100%);
   border: 2rpx solid rgba(74, 52, 42, 0.45);
   box-shadow: 2rpx 2rpx 0 rgba(74, 52, 42, 0.08);
 }

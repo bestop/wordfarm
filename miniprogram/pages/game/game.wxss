@@ -37,8 +37,8 @@
       rgba(255, 255, 255, 0.22) 0%,
       rgba(255, 255, 255, 0) 40%,
       rgba(63, 38, 20, 0.12) 100%),
-    linear-gradient(180deg, #C89B72 0%, #A9714B 55%, #8B5A3C 100%);
-  border-bottom: 4rpx solid #5F3B22;
+    linear-gradient(180deg, #D8AC74 0%, #BC8048 55%, #9A6238 100%);
+  border-bottom: 4rpx solid #6B4224;
   box-shadow: 0 6rpx 14rpx rgba(63, 38, 20, 0.3);
   padding: 6rpx 20rpx 10rpx;
 }
@@ -83,11 +83,15 @@
 .hud-defense { flex: 1.4; }
 .hud-combo { flex: 1; }
 .hud-sunlight { flex: 1.1; }
+/* v65：HUD 每格专属糖果色凹槽（阳光琥珀/分数天蓝/防线莓粉），一眼分辨信息类型 */
+.hud-sunlight { background: rgba(140, 84, 0, 0.38); border-color: rgba(255, 183, 28, 0.65); }
+.hud-score    { background: rgba(15, 74, 118, 0.42); border-color: rgba(79, 195, 247, 0.55); }
+.hud-defense  { background: rgba(120, 22, 60, 0.36); border-color: rgba(255, 128, 171, 0.58); }
 .hud-sunlight .hud-value {
   display: flex;
   align-items: center;
   gap: 3rpx;
-  color: #FFD54F;
+  color: #FFE082;
 }
 .sun-icon { font-size: 24rpx; }
 /* v52: 关卡徽章补缺 — level-badge 自 v2 起被 wxml 引用但样式缺失(裸默认文本)。
@@ -101,7 +105,7 @@
   font-size: 20rpx;
   font-weight: 800;
   color: #5A3A10;
-  background: linear-gradient(180deg, #FFE082, #FFC940);
+  background: linear-gradient(180deg, #FFD54F, #FFB300);
   border: 2rpx solid rgba(95, 59, 34, 0.65);
   border-radius: 10rpx 14rpx 12rpx 16rpx / 14rpx 10rpx 16rpx 12rpx;
   padding: 2rpx 10rpx;
@@ -132,10 +136,10 @@
   width: 60rpx;
   height: 60rpx;
   border-radius: 50%;
-  /* v63：圆木图钉按钮 */
+  /* v63：圆木图钉按钮（v65 提亮蜜色橡木） */
   background-image:
     radial-gradient(circle at 32% 30%, rgba(255,255,255,0.55) 0 12rpx, rgba(255,255,255,0) 16rpx),
-    linear-gradient(180deg, #C89B72 0%, #A9714B 60%, #8B5A3C 100%);
+    linear-gradient(180deg, #D8AC74 0%, #BC8048 60%, #9A6238 100%);
   border: 3rpx solid rgba(63, 38, 20, 0.8);
   display: flex;
   align-items: center;
@@ -159,7 +163,7 @@
   min-height: 160rpx;     /* v17: 200→160 再释放 40rpx 给 quiz 兜底 */
   position: relative;
   /* v63：Canvas 透出区 → 农场天空兜底（与 Canvas 内草地场景衔接） */
-  background: linear-gradient(180deg, #CDEBF7 0%, #DDEEDC 100%);
+  background: linear-gradient(180deg, #9ED9FF 0%, #B9E88B 100%);
   width: 100%;
 }
 .game-canvas {
@@ -194,8 +198,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #FFF6C7 0%, #FFD95A 55%, #F0A830 100%);
-  box-shadow: 0 6rpx 14rpx rgba(230, 160, 40, 0.35), inset 0 -4rpx 10rpx rgba(180, 110, 10, 0.3), inset 0 4rpx 10rpx rgba(255,255,255,0.55);
+  background: radial-gradient(circle at 35% 35%, #FFFBE0 0%, #FFD84D 55%, #FFA000 100%);
+  box-shadow: 0 6rpx 14rpx rgba(255, 168, 0, 0.42), inset 0 -4rpx 10rpx rgba(180, 110, 10, 0.3), inset 0 4rpx 10rpx rgba(255,255,255,0.55);
   border: 2rpx solid rgba(255, 255, 255, 0.8);
 }
 .sun-emoji {
@@ -210,8 +214,8 @@
   transform: translateX(-50%);
   font-size: 22rpx;
   font-weight: 700;
-  color: #B97918;
-  text-shadow: 0 2rpx 0 rgba(255,255,255,0.6);
+  color: #E08E00;
+  text-shadow: 0 2rpx 0 rgba(255,255,255,0.75);
   white-space: nowrap;
   pointer-events: none;
 }
@@ -306,9 +310,9 @@
       rgba(255, 255, 255, 0.16) 0%,
       rgba(255, 255, 255, 0) 45%,
       rgba(63, 38, 20, 0.14) 100%),
-    linear-gradient(180deg, #C89B72 0%, #A9714B 55%, #8B5A3C 100%);
+    linear-gradient(180deg, #D8AC74 0%, #BC8048 55%, #9A6238 100%);
   border-top: 3rpx solid rgba(255, 244, 214, 0.4);
-  border-bottom: 4rpx solid #5F3B22;
+  border-bottom: 4rpx solid #6B4224;
   box-shadow: 0 6rpx 12rpx rgba(63, 38, 20, 0.22);
   padding: 6rpx 10rpx 4rpx;
   box-sizing: border-box;
@@ -339,20 +343,25 @@
   transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .shop-item.selected {
-  /* v63：选中 = 叶绿印戳纸包 + 抬起 */
-  border-color: #33691E;
-  background:
-    repeating-linear-gradient(90deg,
-      rgba(43, 74, 21, 0.07) 0 2rpx,
-      rgba(255, 255, 255, 0) 2rpx 10rpx),
-    linear-gradient(180deg, #F0F7E2 0%, #E2F0CC 100%);
+  /* v65：选中 = 墨线/落影转为本卡植物本命色（currentColor）+ 抬起 */
+  border-color: currentColor;
   transform: translateY(-4rpx);
-  box-shadow: 0 7rpx 0 #33691E, 0 10rpx 14rpx rgba(63, 38, 20, 0.3);
+  box-shadow: 0 7rpx 0 currentColor, 0 10rpx 14rpx rgba(63, 38, 20, 0.3);
 }
 .shop-item.disabled {
   opacity: 0.45;
   filter: grayscale(0.4);
 }
+/* ===== v65：每株植物专属「彩色种子纸包」=====
+   顶部 5rpx 本命色带（inset shadow）+ 纸色染（与 Canvas 角色主色 1:1）
+   color 即本命色 → 选中态 border/落影自动跟随（currentColor） */
+.shop-item-sunflower { color: #E68900; background: linear-gradient(180deg, #FFFBE8 0%, #FFF1BF 100%); box-shadow: inset 0 5rpx 0 rgba(255, 193, 7, 0.40), 0 3rpx 0 rgba(63, 38, 20, 0.35); }
+.shop-item-shooter   { color: #4E8C1F; background: linear-gradient(180deg, #F6FBE6 0%, #E4F3C6 100%); box-shadow: inset 0 5rpx 0 rgba(131, 198, 65, 0.38), 0 3rpx 0 rgba(63, 38, 20, 0.35); }
+.shop-item-wall      { color: #8C5A34; background: linear-gradient(180deg, #FBF1E6 0%, #F0DEC8 100%); box-shadow: inset 0 5rpx 0 rgba(184, 90, 24, 0.32), 0 3rpx 0 rgba(63, 38, 20, 0.35); }
+.shop-item-freezer   { color: #17837E; background: linear-gradient(180deg, #EDFBFD 0%, #D6F3F6 100%); box-shadow: inset 0 5rpx 0 rgba(33, 185, 174, 0.34), 0 3rpx 0 rgba(63, 38, 20, 0.35); }
+.shop-item-cherry    { color: #C62828; background: linear-gradient(180deg, #FFF1EE 0%, #FFDAD6 100%); box-shadow: inset 0 5rpx 0 rgba(244, 67, 54, 0.32), 0 3rpx 0 rgba(63, 38, 20, 0.35); }
+.shop-item-chomper   { color: #751F99; background: linear-gradient(180deg, #F9EFFB 0%, #ECD8F4 100%); box-shadow: inset 0 5rpx 0 rgba(156, 52, 198, 0.30), 0 3rpx 0 rgba(63, 38, 20, 0.35); }
+.shop-item-fire      { color: #C74B1D; background: linear-gradient(180deg, #FFF4EC 0%, #FFE0CC 100%); box-shadow: inset 0 5rpx 0 rgba(255, 110, 64, 0.32), 0 3rpx 0 rgba(63, 38, 20, 0.35); }
 /* ===== 商店栏：纯 CSS 萌系植物头像（设计系统 Tokens v2 - 与 Canvas 1:1 对齐）
    - 眼睛比例：eyeDX=36% headR · eyeR=24% headR（精确 RENDER_TOKENS.FACE）
    - 瞳孔位置：右下 16/12%（Canvas pOffX/Y 同）
@@ -371,10 +380,10 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: #7CB342;
+  background: #7DBE33;
   border: 2rpx solid #FFFFFF;
   box-shadow: inset -7rpx -7rpx 0 rgba(0,0,0,0.10),
-              0 2rpx 4rpx rgba(124,179,66,0.40);
+              0 2rpx 4rpx rgba(125,190,51,0.45);
 }
 /* 统一高光：左上 45°，与 Canvas HEAD.HLIGHT_X/Y/W/H/ROT 精确对应（比例相同） */
 .shop-avatar .sa-head::after {
@@ -410,7 +419,7 @@
   width: 56%;
   height: 90%;
   border-radius: 50%;
-  background: #C5E1A5;       /* S_PEA_LIGHT */
+  background: #CFE98C;       /* S_PEA_LIGHT (v65) */
   border: 2.5rpx solid #FFFFFF;  /* v3 加粗 */
   box-shadow: inset -3rpx -3rpx 0 rgba(255,255,255,0.35);
 }
@@ -482,7 +491,7 @@
   width: 18%;            /* v3 16% → 18% 略放大（圆比爱心面积小） */
   height: 14%;           /* v3 10% → 14% 正圆直径 */
   border-radius: 50%;    /* v3 爱心贝塞尔 → 纯圆 */
-  background: rgba(255,150,170,0.70);   /* v3 0.65→0.70 小尺寸对比更强 */
+  background: rgba(255,141,163,0.78);   /* v65 提饱和（=BLUSH_PINK） */
 }
 /* 删除 before/after 双爱心伪元素（56rpx 下糊） */
 .shop-avatar .sa-blush::before,
@@ -508,11 +517,11 @@
 
 /* ===== 3 种植物差异化（色板严格取自 RENDER_TOKENS.COLORS） ===== */
 /* 豌豆 shooter (v17 参照附件图：头顶改嫩叶色) */
-.shop-avatar.shop-avatar-shooter .sa-head { background: radial-gradient(circle at 35% 30%, #C5E1A5 0%, #8BC34A 55%, #558B2F 100%); box-shadow: inset -8rpx -8rpx 0 rgba(0,0,0,0.08),0 2rpx 6rpx rgba(124,179,66,0.35); }
-.shop-avatar.shop-avatar-shooter .sa-deco-top         { background: #AED581; }  /* S_LEAF_DARK 顶嫩叶 */
-.shop-avatar.shop-avatar-shooter .sa-deco-top::after   { background: #DCEDC8; }  /* 嫩叶高光 */
+.shop-avatar.shop-avatar-shooter .sa-head { background: radial-gradient(circle at 35% 30%, #CFE98C 0%, #7DBE33 55%, #558B2F 100%); box-shadow: inset -8rpx -8rpx 0 rgba(0,0,0,0.08),0 2rpx 6rpx rgba(125,190,51,0.42); }
+.shop-avatar.shop-avatar-shooter .sa-deco-top         { background: #9CCC65; }  /* S_LEAF_DARK 顶嫩叶 (v65) */
+.shop-avatar.shop-avatar-shooter .sa-deco-top::after   { background: #CFE98C; }  /* 嫩叶高光 (v65) */
 .shop-avatar.shop-avatar-shooter .sa-deco-left,
-.shop-avatar.shop-avatar-shooter .sa-deco-right { background: #AED581; }         /* S_LEAF_DARK */
+.shop-avatar.shop-avatar-shooter .sa-deco-right { background: #9CCC65; }         /* S_LEAF_DARK (v65) */
 .shop-avatar.shop-avatar-shooter .sa-mouth { /* grin 露齿笑 */
   background: #E91E63;                  /* T.COLORS.MOUTH_PINK */
   border-top: none;
@@ -537,7 +546,7 @@
 
 /* 坚果 wall (v20 参照附件图：暖棕径向渐变 + 倒水滴形 + 纵向弧纹) */
 .shop-avatar.shop-avatar-wall .sa-head {
-  background: radial-gradient(circle at 35% 30%, #E89B4D 0%, #B85A18 55%, #6E3510 100%);
+  background: radial-gradient(circle at 35% 30%, #F2A854 0%, #C46320 55%, #7A3E12 100%);
   border-radius: 46% 46% 50% 50% / 50% 50% 50% 50%;  /* 略尖底，倒水滴感 */
   box-shadow: inset -8rpx -8rpx 0 rgba(0,0,0,0.18),
               inset 4rpx 4rpx 0 rgba(255,255,255,0.18),
@@ -582,7 +591,7 @@
 /* 坚果浓腮红 */
 .shop-avatar.shop-avatar-wall .sa-blush-l,
 .shop-avatar.shop-avatar-wall .sa-blush-r {
-  background: rgba(244,143,177,0.82);   /* T.COLORS.BLUSH_RICH · v3 α 0.78→0.82 */
+  background: rgba(248,124,160,0.85);   /* T.COLORS.BLUSH_RICH (v65 提饱和) */
 }
 /* 倒八字眉（v20 附件图核心特征：怒目坚定）—— 在 sa-eye-l/r 上加 ::before 粗短斜线 */
 .shop-avatar.shop-avatar-wall .sa-eye-l::before,
@@ -612,8 +621,8 @@
    薄荷青宝石头(径向渐变+冰壳内环+霜点) + 顶三叉冰晶簇(主晶+左右短晶) +
    鲜绿侧叶(底座叶参照附件鲜绿色) + 半垂冷酷眼睑 + 抿嘴直线 + 冰蓝腮红 */
 .shop-avatar.shop-avatar-freezer .sa-head {
-  background: radial-gradient(circle at 35% 30%, #B2F0EA 0%, #6FD9CE 55%, #2BA8A0 100%);
-  box-shadow: inset 0 0 0 2rpx rgba(255,255,255,0.45), inset -8rpx -8rpx 0 rgba(0,0,0,0.06), 0 2rpx 6rpx rgba(111,217,206,0.35);  /* 内白环=冰壳厚度感 */
+  background: radial-gradient(circle at 35% 30%, #BFF7F1 0%, #67E0D4 55%, #21B9AE 100%);
+  box-shadow: inset 0 0 0 2rpx rgba(255,255,255,0.45), inset -8rpx -8rpx 0 rgba(0,0,0,0.06), 0 2rpx 6rpx rgba(103,224,212,0.42);  /* 内白环=冰壳厚度感 */
   border-radius: 46% 46% 42% 42% / 54% 54% 40% 40%;  /* 上宽下窄宝石感（与 Canvas 宝石头一致） */
 }
 /* 头部冰霜小白点（雪落冰面，冰晶质感细节） */
@@ -631,10 +640,10 @@
 }
 /* 侧叶：鲜绿色（参照附件底座 4 片鲜绿叶） */
 .shop-avatar.shop-avatar-freezer .sa-deco-left,
-.shop-avatar.shop-avatar-freezer .sa-deco-right { background: #66BB6A; }  /* F_LEAF_MID v22 鲜绿 */
+.shop-avatar.shop-avatar-freezer .sa-deco-right { background: #5FC55E; }  /* F_LEAF_MID (v65 鲜绿) */
 /* 顶部装饰 = 冰晶簇中央主晶（正方形转 45° = 竖直菱形，边框均匀锐利） */
 .shop-avatar.shop-avatar-freezer .sa-deco-top {
-  background: #E0FFFF;                  /* F_CRYSTAL v22 近白冰 */
+  background: #EAFDFF;                  /* F_CRYSTAL 近白冰 (v65) */
   width: 26%;
   height: 26%;
   top: -26%;
@@ -674,7 +683,7 @@
 /* 冰蓝腮红（冷色环境光晕代替粉腮，寒冰属性） */
 .shop-avatar.shop-avatar-freezer .sa-blush-l,
 .shop-avatar.shop-avatar-freezer .sa-blush-r {
-  background: rgba(120,200,255,0.62);   /* T.COLORS.BLUSH_COOL */
+  background: rgba(96,198,255,0.62);   /* T.COLORS.BLUSH_COOL (v65) */
 }
 /* 半垂冷酷眼睑（盖住眼上部 ~40%，冷傲"拽"感参照附件） */
 .shop-avatar.shop-avatar-freezer .sa-eye::after {
@@ -685,7 +694,7 @@
   top: -8%;
   height: 46%;
   background: #5ECFC2;                  /* F_LID 头中调色 */
-  border-bottom: 2rpx solid #1D6E66;    /* F_LID_LINE 眼睑边缘 */
+  border-bottom: 2rpx solid #16726B;    /* F_LID_LINE 眼睑边缘 (v65) */
   border-radius: 50% 50% 12% 12% / 90% 90% 20% 20%;
 }
 /* 抿嘴直线（冷酷表情，替代 O 型张嘴） */
@@ -707,8 +716,8 @@
    核心识别：双红樱桃(前大后小) + 双绿茎(左完好蒂头/右点燃火花) + 侧叶 + 斜视怒脸
    色板严格取自 T.COLORS.C_*（v24 新增 C_BODY_LIGHT/C_BODY_EDGE/C_TIP/C_BROW） */
 .shop-avatar.shop-avatar-cherry .sa-head {
-  background: radial-gradient(circle at 35% 32%, #FF7B6B 0%, #E53935 52%, #C62828 78%, #A4161A 100%);
-  box-shadow: inset -8rpx -8rpx 0 rgba(0,0,0,0.14), 0 2rpx 6rpx rgba(229,57,53,0.40);
+  background: radial-gradient(circle at 35% 32%, #FF8674 0%, #F44336 52%, #D32F2F 78%, #A4161A 100%);
+  box-shadow: inset -8rpx -8rpx 0 rgba(0,0,0,0.14), 0 2rpx 6rpx rgba(244,67,54,0.45);
 }
 /* 左上主高光月牙：恢复默认 sa-head::after（v23 前被 display:none，v24 参考图有明显高光） */
 /* 右下次反光小点（果皮镜面反射细节） */
@@ -732,7 +741,7 @@
   width: 62%;
   height: 62%;
   border-radius: 50%;
-  background: radial-gradient(circle at 38% 32%, #E53935 0%, #C62828 55%, #971012 100%);
+  background: radial-gradient(circle at 38% 32%, #F44336 0%, #D32F2F 55%, #971012 100%);
   border: 3rpx solid #FFFFFF;
   transform: none;
   box-shadow: inset -6rpx -6rpx 0 rgba(0,0,0,0.12);
@@ -959,13 +968,13 @@
    唇 #6A1B9A，腔 #4A0E66，叶 #558B2F，眉 #3B1252，腮 rgba(206,147,216,0.50) */
 .shop-avatar.shop-avatar-chomper .sa-head {
   background:
-    radial-gradient(circle at 78% 26%, #5E1980 0 5.5%, transparent 6.5%),
-    radial-gradient(circle at 24% 20%, #5E1980 0 4.5%, transparent 5.5%),
-    radial-gradient(circle at 84% 62%, #5E1980 0 5%, transparent 6%),
-    radial-gradient(circle at 14% 60%, #5E1980 0 4%, transparent 5%),
-    radial-gradient(circle at 56% 9%,  #5E1980 0 3.5%, transparent 4.5%),
-    radial-gradient(circle at 35% 30%, #E9C6F0 0%, #8E24AA 55%, #4A148C 100%);
-  box-shadow: inset -8rpx -8rpx 0 rgba(74,20,110,0.30), 0 2rpx 6rpx rgba(142,36,170,0.40);
+    radial-gradient(circle at 78% 26%, #6C2493 0 5.5%, transparent 6.5%),
+    radial-gradient(circle at 24% 20%, #6C2493 0 4.5%, transparent 5.5%),
+    radial-gradient(circle at 84% 62%, #6C2493 0 5%, transparent 6%),
+    radial-gradient(circle at 14% 60%, #6C2493 0 4%, transparent 5%),
+    radial-gradient(circle at 56% 9%,  #6C2493 0 3.5%, transparent 4.5%),
+    radial-gradient(circle at 35% 30%, #F2D3F8 0%, #9C34C6 55%, #6A1FB8 100%);
+  box-shadow: inset -8rpx -8rpx 0 rgba(74,20,110,0.30), 0 2rpx 6rpx rgba(156,52,198,0.45);
 }
 /* 头顶装饰隐藏（大嘴 + 斑点是识别核心，去掉旧版尖刺更贴经典造型） */
 .shop-avatar.shop-avatar-chomper .sa-deco-top { display: none; }
@@ -1001,8 +1010,8 @@
   bottom: auto;
   width: 54%;
   height: 30%;
-  background: #4A0E66;
-  border: 4rpx solid #6A1B9A;
+  background: #460C66;
+  border: 4rpx solid #7B27AA;
   box-shadow: 0 0 0 2rpx #FFFFFF;
   border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
 }
@@ -1035,7 +1044,7 @@
 /* 淡紫腮红（凶萌调性，随眼睛上移） */
 .shop-avatar.shop-avatar-chomper .sa-blush-l,
 .shop-avatar.shop-avatar-chomper .sa-blush-r {
-  background: rgba(206,147,216,0.55);
+  background: rgba(224,144,246,0.62);
   bottom: 38%;
 }
 
@@ -1132,7 +1141,7 @@
 /* 暖橙腮红（火系暖调） */
 .shop-avatar.shop-avatar-fire .sa-blush-l,
 .shop-avatar.shop-avatar-fire .sa-blush-r {
-  background: rgba(255,112,67,0.50);
+  background: rgba(255,112,67,0.58);
 }
 
 /* 选中/禁用 状态（与 Tokens 联动） */
@@ -1184,7 +1193,7 @@
       rgba(122, 100, 80, 0.04) 0 1rpx,
       rgba(122, 100, 80, 0) 1rpx 22rpx),
     rgba(255, 253, 245, 0.94);
-  border: 2rpx solid rgba(74, 52, 42, 0.45);
+  border: 2.5rpx solid rgba(101, 155, 46, 0.62);
   border-radius: 18rpx 26rpx 20rpx 28rpx / 24rpx 18rpx 28rpx 20rpx;
   box-shadow: 2rpx 3rpx 0 rgba(74, 52, 42, 0.12),
               0 6rpx 14rpx rgba(63, 71, 55, 0.16);
@@ -1258,7 +1267,7 @@
       rgba(122, 100, 80, 0) 1rpx 28rpx),
     linear-gradient(180deg, #FFFDF5 0%, #F6EDD6 100%);
   border-radius: 34rpx 26rpx 38rpx 28rpx / 28rpx 36rpx 26rpx 38rpx;
-  border: 6rpx solid #5F3B22;
+  border: 6rpx solid #6B4224;
   box-shadow:
     0 10rpx 0 rgba(63, 38, 20, 0.3),
     0 22rpx 44rpx rgba(42, 30, 20, 0.4),
@@ -1299,8 +1308,8 @@
 .go-record {
   margin-top: 4rpx;
   padding: 6rpx 20rpx;
-  /* v63：新纪录 = 琥珀火漆邮票章 */
-  background: linear-gradient(180deg, #FFE082, #FFC940);
+  /* v63 新纪录火漆章（v65 提亮） */
+  background: linear-gradient(180deg, #FFD54F, #FFB300);
   color: #5A3A10;
   font-size: 20rpx;
   font-weight: 800;
@@ -1356,7 +1365,7 @@
   font-weight: 900;
   line-height: 1.05;
   /* v63：墨绿烙印分数 */
-  background: linear-gradient(180deg, #3F5E1E 0%, #4E8C2F 55%, #7CB342 100%);
+  background: linear-gradient(180deg, #2E6C12 0%, #3F9420 55%, #66C23A 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1511,8 +1520,8 @@
   font-size: 16rpx;
   font-weight: 700;
   text-align: center;
-  color: #7B5E07;
-  background: rgba(255,224,130,0.45);
+  color: #8A5B00;
+  background: rgba(255,224,130,0.55);
   border-radius: 10rpx;
   line-height: 1.3;
 }

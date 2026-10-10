@@ -1,40 +1,46 @@
-/* app.wxss - 全局样式：「木语农场」木质手账拟物主题 (v63 深度重设计)
+/* app.wxss - 全局样式：「木语农场」木质手账拟物主题 (v63 基底 + v65 缤纷鲜化)
  *
  * 设计语言：
  *   · 农场木质纹理 —— 板条木纹（repeating-linear-gradient 拼缝 + 顺纹丝缕 + 顶部光泽）
  *   · 手绘感描边 —— 有机抖动圆角（不等半径 border-radius）+ 咖啡墨线描边
  *   · 拟物卡片 —— 牛皮纸卡 + 和纸胶带 + 火漆徽章 + 皮革缝线
  *   · 丰富微动效 —— 入场错峰浮现 / 木牌摇摆 / 火漆盖章 / 呼吸浮动 / 按压下沉
+ *   · v65 缤纷鲜化 —— 全局色板提饱和提亮：蜜色橡木、鲜绿草甸、糖果点缀四色新增
  *
  * 兼容性策略（高配机优先）：毛玻璃 backdrop-filter 大胆使用；纹理全部为
  * 纯 CSS 渐变（零图片资源，不增加包体积）；老机型仅丢失模糊层不丢布局。
  */
 
-/* ============ 颜色变量（木语农场色系） ============ */
+/* ============ 颜色变量（木语农场色系 · v65 缤纷版） ============ */
 page {
-  /* 纸张 */
-  --farm-paper: #FBF3E2;
-  --farm-paper-light: #FFFDF5;
-  --farm-kraft: #F3E5C8;
-  /* 木材 */
-  --wood-light: #C89B72;
-  --wood-mid: #A9714B;
-  --wood-deep: #8B5A3C;
-  --wood-edge: #5F3B22;
+  /* 纸张（v65 提亮一档，更通透） */
+  --farm-paper: #FFF9EA;
+  --farm-paper-light: #FFFDF7;
+  --farm-kraft: #FBEFD2;
+  /* 木材（v65 蜜色橡木：比旧版亮一档） */
+  --wood-light: #D8AC74;
+  --wood-mid: #BC8048;
+  --wood-deep: #9A6238;
+  --wood-edge: #6B4224;
   /* 墨色（手绘线稿） */
   --farm-ink: #4A342A;
   --farm-ink-soft: #7A6450;
   --farm-ink-faint: #A9927D;
-  /* 点缀 */
-  --farm-leaf: #7CB342;
-  --farm-leaf-deep: #4E8C2F;
-  --farm-sun: #F5B301;
-  --farm-sky: #C9E8F5;
-  --farm-rust: #D9534F;
+  /* 点缀（v65 鲜化：叶绿/阳光/天空/珊瑚红全部提饱和） */
+  --farm-leaf: #5FC23A;
+  --farm-leaf-deep: #3F9420;
+  --farm-sun: #FFB300;
+  --farm-sky: #A5E3FF;
+  --farm-rust: #FF5252;
+  /* v65 新增糖果点缀色（胶带/徽章/强调） */
+  --farm-berry: #FF6E9C;
+  --farm-grape: #9C4DCC;
+  --farm-mint: #26BFA6;
+  --farm-coral: #FF7043;
 
   /* 兼容旧变量名（部分页面 wxss 仍引用） */
-  --color-bg: #FBF3E2;
-  --color-card: #FFFDF5;
+  --color-bg: #FFF9EA;
+  --color-card: #FFFDF7;
   --color-text: var(--farm-ink);
   --color-text-muted: var(--farm-ink-soft);
   --color-text-light: var(--farm-ink-faint);
@@ -140,7 +146,7 @@ view, text { box-sizing: border-box; }
     0 6rpx 14rpx rgba(74, 52, 42, 0.28),
     inset 0 2rpx 0 rgba(255, 255, 255, 0.35);
 }
-/* 主按钮：阳光漆木（暖琥珀木） */
+/* 主按钮：阳光漆木（v65 亮琥珀） */
 .kawaii-btn-primary {
   color: #5A3A10;
   text-shadow: 0 1rpx 0 rgba(255, 255, 255, 0.4);
@@ -157,7 +163,7 @@ view, text { box-sizing: border-box; }
     inset 0 2rpx 0 rgba(255, 255, 255, 0.6);
 }
 .kawaii-btn-primary:active { box-shadow: 0 2rpx 0 #A96A00, 0 6rpx 14rpx rgba(240,168,0,0.28), inset 0 2rpx 0 rgba(255,255,255,0.5); }
-/* 薄荷→叶绿漆木（继续/再来一局） */
+/* 薄荷→鲜叶绿漆木（继续/再来一局；v65 提鲜） */
 .kawaii-btn-mint {
   color: #FFFFFF;
   background-image:
@@ -166,7 +172,7 @@ view, text { box-sizing: border-box; }
       rgba(255, 255, 255, 0.06) 3rpx 6rpx,
       rgba(43, 74, 21, 0) 6rpx 64rpx),
     linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0) 38%, rgba(43,74,21,0.16) 100%),
-    linear-gradient(180deg, #9CCC65 0%, #7CB342 52%, #558B2F 100%);
+    linear-gradient(180deg, #9CCC65 0%, #7DBE33 52%, #558B2F 100%);
   border-color: #33691E;
   box-shadow:
     0 8rpx 0 #33691E,
@@ -206,13 +212,13 @@ view, text { box-sizing: border-box; }
   box-shadow: 0 2rpx 0 rgba(74, 52, 42, 0.22), 0 4rpx 10rpx rgba(74, 52, 42, 0.10);
 }
 
-/* ============ 拟物卡片（米黄纸卡 + 抖动墨线描边） ============ */
+/* ============ 拟物卡片（亮米黄纸卡 + 抖动墨线描边；v65 纸色提亮） ============ */
 .kawaii-card {
   background:
     repeating-linear-gradient(180deg,
       rgba(122, 100, 80, 0.04) 0 1rpx,
       rgba(122, 100, 80, 0) 1rpx 26rpx),
-    linear-gradient(180deg, #FFFDF5 0%, #FBF3E2 100%);
+    linear-gradient(180deg, #FFFDF7 0%, #FFF9EA 100%);
   border-radius: 40rpx 30rpx 42rpx 28rpx / 30rpx 40rpx 28rpx 42rpx;
   border: 4rpx solid rgba(74, 52, 42, 0.55);
   box-shadow:
@@ -221,9 +227,9 @@ view, text { box-sizing: border-box; }
   padding: 32rpx;
 }
 
-/* ============ 渐变文字（麦田绿金渐变） ============ */
+/* ============ 渐变文字（v65 鲜果蜜语渐变） ============ */
 .kawaii-gradient-text {
-  background: linear-gradient(120deg, #E8A13D, #4E8C2F 45%, #F5B301 80%);
+  background: linear-gradient(120deg, #FFA726, #3F9420 45%, #FFC400 80%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

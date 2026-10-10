@@ -1,8 +1,8 @@
 {
   "navigationBarTitleText": "游戏中",
-  "navigationBarBackgroundColor": "#8B5A3C",
+  "navigationBarBackgroundColor": "#43A047",
   "navigationBarTextStyle": "white",
-  "backgroundColor": "#FBF3E2",
+  "backgroundColor": "#FFF9EA",
   "usingComponents": {
     "quiz-panel": "/components/quiz-panel/quiz-panel"
   },

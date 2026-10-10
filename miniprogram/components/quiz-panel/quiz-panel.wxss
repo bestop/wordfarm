@@ -25,7 +25,7 @@
     repeating-linear-gradient(180deg,
       rgba(122, 100, 80, 0.045) 0 1rpx,
       rgba(122, 100, 80, 0) 1rpx 26rpx),
-    linear-gradient(180deg, #FFFDF5 0%, #FBF3E2 100%);
+    linear-gradient(180deg, #FFFDF7 0%, #FFF9EA 100%);
   border-radius: 38rpx 38rpx 0 0;
   box-shadow: 0 -10rpx 28rpx rgba(63, 38, 20, 0.28);
   overflow: visible;
@@ -46,8 +46,8 @@
       rgba(63, 38, 20, 0.12) 0 2rpx,
       rgba(255, 255, 255, 0.05) 2rpx 4rpx,
       rgba(63, 38, 20, 0) 4rpx 52rpx),
-    linear-gradient(180deg, #C89B72 0%, #A9714B 70%, #8B5A3C 100%);
-  border-bottom: 3rpx solid #5F3B22;
+    linear-gradient(180deg, #D8AC74 0%, #BC8048 70%, #9A6238 100%);
+  border-bottom: 3rpx solid #6B4224;
   pointer-events: none;
   z-index: 1;
 }
@@ -63,8 +63,8 @@
   position: relative;
   transition: background 0.2s ease;
 }
-.question-area.fb-correct { background: rgba(124, 179, 66, 0.16); }
-.question-area.fb-wrong { background: rgba(217, 83, 79, 0.14); }
+.question-area.fb-correct { background: rgba(111, 191, 46, 0.18); }
+.question-area.fb-wrong { background: rgba(255, 82, 82, 0.15); }
 .question-area.fb-timeout { background: rgba(240, 143, 0, 0.14); }   /* v39: 超时琥珀色 */
 
 .question-label {
@@ -128,7 +128,7 @@
 .q-timer-fill {
   height: 100%;
   width: 100%;
-  background: linear-gradient(90deg, #FFC940, #EF8F00);
+  background: linear-gradient(90deg, #FFD54F, #F59B00);
   border-radius: 999rpx;
   /* 心跳 500ms 一跳，transition 抹平步进 → 视觉连续 */
   transition: width 0.5s linear;
@@ -174,7 +174,7 @@
     repeating-linear-gradient(180deg,
       rgba(122, 100, 80, 0.035) 0 1rpx,
       rgba(122, 100, 80, 0) 1rpx 20rpx),
-    linear-gradient(180deg, #FFFDF5 0%, #F6EDD6 100%);
+    linear-gradient(180deg, #FFFDF7 0%, #F9F0D8 100%);
   border: 3rpx solid rgba(74, 52, 42, 0.55);
   border-radius: 16rpx 24rpx 18rpx 26rpx / 22rpx 16rpx 26rpx 18rpx;
   display: flex;
@@ -187,7 +187,15 @@
               inset 0 2rpx 0 rgba(255, 255, 255, 0.9);
   overflow: hidden;
 }
-/* v40: A/B/C/D 字母徽章 → v63 火漆封印（琥珀蜡 + 墨色字母） */
+/* ===== v65：四选项各配糖果纸色 + 本命色火漆徽章（A 叶绿 / B 琥珀 / C 天蓝 / D 莓粉） ===== */
+.option-0 { background: linear-gradient(180deg, #F6FCEC 0%, #E6F5D2 100%); }
+.option-1 { background: linear-gradient(180deg, #FFFAE8 0%, #FFF0C2 100%); }
+.option-2 { background: linear-gradient(180deg, #F2FAFF 0%, #DDF0FC 100%); }
+.option-3 { background: linear-gradient(180deg, #FFF1F7 0%, #FFDDE9 100%); }
+.option-0 .option-badge { background: radial-gradient(circle at 34% 30%, rgba(255,255,255,0.55) 0 6rpx, rgba(255,255,255,0) 9rpx), linear-gradient(145deg, #8ED44E, #4E9321); color: #FFFFFF; border-color: rgba(46, 125, 20, 0.6); box-shadow: inset 0 -2rpx 0 rgba(30, 84, 12, 0.35), 0 2rpx 4rpx rgba(74, 52, 42, 0.2); }
+.option-2 .option-badge { background: radial-gradient(circle at 34% 30%, rgba(255,255,255,0.55) 0 6rpx, rgba(255,255,255,0) 9rpx), linear-gradient(145deg, #6EC6FF, #2E88B5); color: #FFFFFF; border-color: rgba(21, 101, 152, 0.6); box-shadow: inset 0 -2rpx 0 rgba(12, 66, 100, 0.35), 0 2rpx 4rpx rgba(74, 52, 42, 0.2); }
+.option-3 .option-badge { background: radial-gradient(circle at 34% 30%, rgba(255,255,255,0.55) 0 6rpx, rgba(255,255,255,0) 9rpx), linear-gradient(145deg, #FF8AC2, #D63384); color: #FFFFFF; border-color: rgba(166, 26, 105, 0.6); box-shadow: inset 0 -2rpx 0 rgba(122, 16, 74, 0.35), 0 2rpx 4rpx rgba(74, 52, 42, 0.2); }
+/* v40: A/B/C/D 字母徽章 → v63 火漆封印（琥珀蜡 + 墨色字母；v65 B 保留琥珀） */
 .option-badge {
   flex-shrink: 0;
   margin-right: 8rpx;        /* v42b: 徽章-文本间距, 替代 .option gap(老 iOS 不支持) */
@@ -227,12 +235,12 @@
   transform: translateY(3rpx);   /* v40: 按下位移 — 实底按键压感（替代缩放） */
   box-shadow: 0 1rpx 0 rgba(63, 38, 20, 0.35),
               inset 0 2rpx 0 rgba(255, 255, 255, 0.8);
-  background: #FBF3E2;
+  background: #FFF3DC;
 }
 .option.selected {
   /* v63：选中 = 叶绿火漆印卡 */
-  background: linear-gradient(180deg, #9CCC65 0%, #558B2F 100%);
-  border-color: #33691E;
+  background: linear-gradient(180deg, #8ED44E 0%, #4E9321 100%);
+  border-color: #2E7D14;
   color: #FFFFFF;
   transform: scale(0.97);
 }
@@ -247,8 +255,8 @@
 .option.selected .option-text { color: #FFFFFF; text-shadow: 0 1rpx 0 rgba(43, 74, 21, 0.5); }
 .option.reveal .option-text { color: #FFFFFF; text-shadow: 0 1rpx 0 rgba(43, 74, 21, 0.5); }
 .option.reveal {
-  background: linear-gradient(180deg, #9CCC65 0%, #558B2F 100%);
-  border-color: #33691E;
+  background: linear-gradient(180deg, #8ED44E 0%, #4E9321 100%);
+  border-color: #2E7D14;
   color: #FFFFFF;
 }
 .option.reveal .option-badge {
@@ -276,7 +284,7 @@
   z-index: 10;
 }
 .feedback.correct {
-  background: linear-gradient(180deg, #9CCC65, #558B2F);
+  background: linear-gradient(180deg, #8ED44E, #4E9321);
   box-shadow: 0 8rpx 24rpx rgba(85, 139, 47, 0.45), inset 0 2rpx 0 rgba(255,255,255,0.4);
 }
 .feedback.wrong {

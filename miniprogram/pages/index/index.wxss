@@ -35,7 +35,7 @@
   box-sizing: border-box;
   background:
     radial-gradient(120% 70% at 50% -8%, #FFF7D6 0%, rgba(255,247,214,0) 55%),
-    linear-gradient(180deg, #CDEBF7 0%, #E8F3D9 34%, #F3ECD3 68%, #FBF3E2 100%);
+    linear-gradient(180deg, #B8E6FF 0%, #DDF3C8 34%, #F7EFCF 68%, #FFF9EA 100%);
   overflow: hidden;
   position: relative;
 }
@@ -180,7 +180,7 @@
       rgba(63, 38, 20, 0.10) 0 2rpx,
       rgba(255, 255, 255, 0.045) 2rpx 4rpx,
       rgba(63, 38, 20, 0) 4rpx 22rpx),
-    linear-gradient(180deg, #C89B72 0%, #A9714B 55%, #8B5A3C 100%);
+    linear-gradient(180deg, #D8AC74 0%, #BC8048 55%, #9A6238 100%);
   border: 3rpx solid var(--wood-edge, #5F3B22);
   box-shadow:
     0 8rpx 0 var(--wood-edge, #5F3B22),
@@ -250,7 +250,7 @@
   background:
     radial-gradient(46% 54% at 8% 6%, rgba(255,243,176,0.6) 0%, rgba(255,243,176,0) 62%),
     radial-gradient(60% 70% at 12% 0%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 60%),
-    linear-gradient(180deg, #D6EEFF 0%, #E4F6DC 45%, #CDEBA4 78%, #B8E08C 100%);
+    linear-gradient(180deg, #C9EBFF 0%, #DCF6CC 45%, #C4E990 78%, #ABDD74 100%);
   box-shadow: 0 8rpx 18rpx rgba(102,148,52,0.18),
               0 0 0 3rpx rgba(255,255,255,0.55),
               inset 0 2rpx 0 rgba(255,255,255,0.9);
@@ -266,28 +266,28 @@
 /* 草地（底色 + 双层波浪） */
 .cs-ground {
   position: absolute; left: 0; right: 0; bottom: 0; height: 30rpx;
-  background: linear-gradient(180deg, #8FC95F 0%, #6BA940 100%); z-index: 3;
+  background: linear-gradient(180deg, #85D44A 0%, #5FA82E 100%); z-index: 3;
 }
 .cs-grass { position: absolute; left: 0; right: 0; z-index: 4; pointer-events: none; }
 .cs-grass-back {
   bottom: 24rpx; height: 16rpx; opacity: 0.85;
   background:
-    radial-gradient(ellipse 18rpx 14rpx at 6%  100%, #7CB342 0 50%, transparent 51%),
-    radial-gradient(ellipse 18rpx 14rpx at 21% 100%, #7CB342 0 50%, transparent 51%),
-    radial-gradient(ellipse 18rpx 14rpx at 36% 100%, #7CB342 0 50%, transparent 51%),
-    radial-gradient(ellipse 18rpx 14rpx at 51% 100%, #7CB342 0 50%, transparent 51%),
-    radial-gradient(ellipse 18rpx 14rpx at 66% 100%, #7CB342 0 50%, transparent 51%),
-    radial-gradient(ellipse 18rpx 14rpx at 81% 100%, #7CB342 0 50%, transparent 51%),
-    radial-gradient(ellipse 18rpx 14rpx at 96% 100%, #7CB342 0 50%, transparent 51%);
+    radial-gradient(ellipse 18rpx 14rpx at 6%  100%, #6FC23A 0 50%, transparent 51%),
+    radial-gradient(ellipse 18rpx 14rpx at 21% 100%, #6FC23A 0 50%, transparent 51%),
+    radial-gradient(ellipse 18rpx 14rpx at 36% 100%, #6FC23A 0 50%, transparent 51%),
+    radial-gradient(ellipse 18rpx 14rpx at 51% 100%, #6FC23A 0 50%, transparent 51%),
+    radial-gradient(ellipse 18rpx 14rpx at 66% 100%, #6FC23A 0 50%, transparent 51%),
+    radial-gradient(ellipse 18rpx 14rpx at 81% 100%, #6FC23A 0 50%, transparent 51%),
+    radial-gradient(ellipse 18rpx 14rpx at 96% 100%, #6FC23A 0 50%, transparent 51%);
 }
 .cs-grass-front {
   bottom: 0; height: 12rpx; z-index: 5;
   background:
-    radial-gradient(ellipse 15rpx 11rpx at 8%  100%, #4F8E2E 0 50%, transparent 51%),
-    radial-gradient(ellipse 15rpx 11rpx at 28% 100%, #4F8E2E 0 50%, transparent 51%),
-    radial-gradient(ellipse 15rpx 11rpx at 48% 100%, #4F8E2E 0 50%, transparent 51%),
-    radial-gradient(ellipse 15rpx 11rpx at 68% 100%, #4F8E2E 0 50%, transparent 51%),
-    radial-gradient(ellipse 15rpx 11rpx at 88% 100%, #4F8E2E 0 50%, transparent 51%);
+    radial-gradient(ellipse 15rpx 11rpx at 8%  100%, #47872A 0 50%, transparent 51%),
+    radial-gradient(ellipse 15rpx 11rpx at 28% 100%, #47872A 0 50%, transparent 51%),
+    radial-gradient(ellipse 15rpx 11rpx at 48% 100%, #47872A 0 50%, transparent 51%),
+    radial-gradient(ellipse 15rpx 11rpx at 68% 100%, #47872A 0 50%, transparent 51%),
+    radial-gradient(ellipse 15rpx 11rpx at 88% 100%, #47872A 0 50%, transparent 51%);
 }
 /* 草地小白花 */
 .cs-daisy { position: absolute; width: 8rpx; height: 8rpx; background: #FFFFFF; border-radius: 50%; z-index: 4; }
@@ -504,7 +504,7 @@
 .sht-head { position: absolute; left: 50%; top: 0; width: 44rpx; height: 44rpx; margin-left: -22rpx; }
 .sht-face {
   position: absolute; inset: 0; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #DCEDC8 0%, #8BC34A 52%, #558B2F 100%);
+  background: radial-gradient(circle at 35% 30%, #CFE98C 0%, #7DBE33 52%, #558B2F 100%);
   box-shadow: inset 0 -3rpx 4rpx rgba(0,0,0,0.16), inset 0 2rpx 0 rgba(255,255,255,0.4);
 }
 .sht-face::after {
@@ -558,7 +558,7 @@
 .ice-face {
   position: absolute; inset: 0;
   border-radius: 46% 46% 42% 42% / 54% 54% 40% 40%;
-  background: radial-gradient(circle at 35% 30%, #B2F0EA 0%, #6FD9CE 55%, #2BA8A0 100%);
+  background: radial-gradient(circle at 35% 30%, #BFF7F1 0%, #67E0D4 55%, #21B9AE 100%);
   box-shadow: inset 0 0 0 2rpx rgba(255,255,255,0.5),
               inset 0 -3rpx 4rpx rgba(0,77,82,0.18),
               inset 0 2rpx 0 rgba(255,255,255,0.5);
@@ -571,7 +571,7 @@
 /* 顶部三叉冰晶（主晶带白色高光点） */
 .ice-crystal {
   position: absolute;
-  background: linear-gradient(180deg, #EFFFFF 0%, #A5E8E0 60%, #6FD9CE 100%);
+  background: linear-gradient(180deg, #F2FFFF 0%, #B2F3EC 60%, #67E0D4 100%);
   clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
   z-index: 3;
 }
@@ -589,7 +589,7 @@
   transform: rotate(-40deg);
   transform-origin: 0 50%;
   border-radius: 4rpx 50% 50% 4rpx;
-  background: linear-gradient(90deg, #4DB6AC 0%, #00897B 60%, #00695C 100%);
+  background: linear-gradient(90deg, #3FC9BD 0%, #009B8C 60%, #007A6E 100%);
   box-shadow: inset 0 -1rpx 0 rgba(0,0,0,0.3), inset 3rpx 0 3rpx rgba(0,0,0,0.18);
   z-index: 1;
 }
@@ -625,7 +625,7 @@
 .wall-body {
   position: absolute; inset: 0;
   border-radius: 46% 46% 50% 50% / 42% 42% 54% 54%;
-  background: radial-gradient(circle at 35% 30%, #E89B4D 0%, #B85A18 55%, #6E3510 100%);
+  background: radial-gradient(circle at 35% 30%, #F2A854 0%, #C46320 55%, #7A3E12 100%);
   box-shadow: inset -5rpx -6rpx 0 rgba(0,0,0,0.16),
               inset 3rpx 4rpx 0 rgba(255,255,255,0.2),
               0 3rpx 6rpx rgba(110,53,16,0.35);
@@ -679,7 +679,7 @@
 .chr--zombie { width: 62rpx; height: 96rpx; }
 .zb-leg {
   position: absolute; bottom: 0; width: 9rpx; height: 15rpx;
-  background: linear-gradient(180deg, #4A2550 0%, #3A1C40 100%);
+  background: linear-gradient(180deg, #5A2B78 0%, #421C5C 100%);
   border-radius: 4rpx; z-index: 2;
 }
 .zb-leg--l { left: 16rpx; transform: rotate(9deg); transform-origin: top; }
@@ -693,7 +693,7 @@
 .zb-leg--r::after { right: -2rpx; }
 .zb-arm {
   position: absolute; top: 47rpx; width: 21rpx; height: 7rpx;
-  background: linear-gradient(180deg, #8A5590 0%, #4A2550 100%);
+  background: linear-gradient(180deg, #9C64C4 0%, #5A2B78 100%);
   border-radius: 4rpx; z-index: 4;
 }
 .zb-arm--l { left: -13rpx; transform: rotate(-24deg); }
@@ -713,7 +713,7 @@
 .zb-body {
   position: absolute; top: 43rpx; left: 50%; margin-left: -16rpx;
   width: 32rpx; height: 38rpx;
-  background: linear-gradient(180deg, #6B3D74 0%, #4A2550 100%);
+  background: linear-gradient(180deg, #7C3FA0 0%, #5A2B78 100%);
   border-radius: 7rpx 7rpx 3rpx 3rpx; z-index: 3;
 }
 /* 锯齿衣摆 */
@@ -735,7 +735,7 @@
 .zb-head {
   position: absolute; top: 16rpx; left: 50%; margin-left: -16rpx;
   width: 32rpx; height: 29rpx;
-  background: radial-gradient(circle at 35% 30%, #B5C9A0 0%, #9CB383 60%, #7E9272 100%);
+  background: radial-gradient(circle at 35% 30%, #B2C798 0%, #A3BF78 60%, #84A565 100%);
   border-radius: 48% 48% 44% 44%; z-index: 5;
 }
 .zb-eye {
@@ -820,7 +820,7 @@
     repeating-linear-gradient(180deg,
       rgba(122, 100, 80, 0.04) 0 1rpx,
       rgba(122, 100, 80, 0) 1rpx 24rpx),
-    linear-gradient(180deg, #FFFDF5 0%, #FBF3E2 100%);
+    linear-gradient(180deg, #FFFDF7 0%, #FFF9EA 100%);
   border-radius: 18rpx 24rpx 20rpx 26rpx / 22rpx 18rpx 26rpx 20rpx;
   border: 2rpx solid rgba(74, 52, 42, 0.5);
   box-shadow: 2rpx 3rpx 0 rgba(74, 52, 42, 0.10),
@@ -850,7 +850,7 @@
   width: 60%;
   height: 3rpx;
   margin-top: 5rpx;
-  background: linear-gradient(90deg, rgba(126,198,106,0), rgba(126,198,106,0.85), rgba(126,198,106,0));
+  background: linear-gradient(90deg, rgba(126,208,80,0), rgba(126,208,80,0.9), rgba(126,208,80,0));
   border-radius: 2rpx;
 }
 .sound-card {
@@ -902,7 +902,7 @@
     repeating-linear-gradient(180deg,
       rgba(122, 100, 80, 0.035) 0 1rpx,
       rgba(122, 100, 80, 0) 1rpx 20rpx),
-    linear-gradient(180deg, #FFFDF5 0%, #FBF3E2 100%);
+    linear-gradient(180deg, #FFFDF7 0%, #FFF9EA 100%);
   color: var(--farm-ink-soft, #7A6450);
   text-align: center;
   font-size: 20rpx;          /* v50 22→20rpx：六胶囊单行（「导入词库」4 字裕量充足） */
@@ -924,8 +924,8 @@
       rgba(43, 74, 21, 0.10) 0 2rpx,
       rgba(255, 255, 255, 0.05) 2rpx 4rpx,
       rgba(43, 74, 21, 0) 4rpx 48rpx),
-    linear-gradient(180deg, #9CCC65 0%, #7CB342 52%, #558B2F 100%);
-  border-color: #33691E;
+    linear-gradient(180deg, #8ED44E 0%, #6FBF2E 52%, #4E9321 100%);
+  border-color: #2E7D14;
   color: #FFFFFF;
   text-shadow: 0 2rpx 0 rgba(43, 74, 21, 0.4);
   box-shadow: 0 6rpx 0 #33691E, 0 10rpx 16rpx rgba(85, 139, 47, 0.3),
@@ -971,7 +971,7 @@
   height: 22rpx;
   border-radius: 3rpx;
   /* v63：木条压杆 */
-  background: linear-gradient(180deg, #C89B72, #8B5A3C);
+  background: linear-gradient(180deg, #D8AC74, #9A6238);
   box-shadow: 0 2rpx 4rpx rgba(95, 59, 34, 0.35);
 }
 .howto-title {
@@ -1080,7 +1080,7 @@
   border: 8rpx solid var(--wood-edge, #5F3B22);
   background:
     radial-gradient(85% 110% at 0% 0%, #FFF9C4 0%, rgba(255,249,196,0) 58%),
-    linear-gradient(125deg, #FFF9D6 0%, #F2F0CE 32%, #E4E5B8 66%, #CCE0A2 100%);
+    linear-gradient(125deg, #FFFBD9 0%, #F6F4D4 32%, #EAECC2 66%, #C8E4A0 100%);
   box-shadow:
     0 12rpx 0 rgba(63, 38, 20, 0.28),
     0 18rpx 32rpx rgba(74, 52, 42, 0.26),
@@ -1150,7 +1150,7 @@
   height: 100%;
   overflow: hidden;
   border-radius: 18rpx;
-  background: linear-gradient(180deg, #AEE3FF 0%, #D5EFC0 62%, #BFE49A 100%);
+  background: linear-gradient(180deg, #A5E3FF 0%, #CDEF9A 62%, #A8DB74 100%);
   box-shadow: inset 0 2rpx 0 rgba(255,255,255,0.6),
               inset 0 -2rpx 0 rgba(60, 110, 30, 0.18);
 }
@@ -1287,7 +1287,7 @@
   position: absolute;
   left: 0; right: 0; bottom: 0;
   height: 46rpx;
-  background: linear-gradient(180deg, #8FC95F 0%, #6BA940 100%);
+  background: linear-gradient(180deg, #85D44A 0%, #5FA82E 100%);
   z-index: 3;
 }
 .scene-grass {
@@ -1790,7 +1790,7 @@
       rgba(255, 255, 255, 0.25) 0%,
       rgba(255, 255, 255, 0) 40%,
       rgba(63, 38, 20, 0.12) 100%),
-    linear-gradient(180deg, #C89B72 0%, #A9714B 50%, #8B5A3C 100%);
+    linear-gradient(180deg, #D8AC74 0%, #BC8048 50%, #9A6238 100%);
   color: #FFF8EA;
   font-size: 30rpx;                    /* v58 28→30：主次按钮字号拉开层级 */
   font-weight: 900;

@@ -23,7 +23,7 @@
       <view
         wx:for="{{question.options}}"
         wx:key="*this"
-        class="option {{selectedOption === index ? 'selected' : ''}} {{disabled && index === question.correctAnswer ? 'reveal' : ''}}"
+        class="option option-{{index}} {{selectedOption === index ? 'selected' : ''}} {{disabled && index === question.correctAnswer ? 'reveal' : ''}}"
         data-index="{{index}}"
         bindtap="onTapOption"
       >
