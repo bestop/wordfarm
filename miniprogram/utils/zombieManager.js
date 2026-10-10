@@ -247,6 +247,29 @@ class ZombieSpawner {
   }
 
   /**
+   * v66: 车道软负载均衡选路 — 按各车道可攻击僵尸数加权随机
+   * 权重 = 1/(1+laneCount)：空车道权重 1, 已有 1 只 → 0.5, 2 只 → 0.33…
+   * 保留随机性（非硬轮转）, 但显著降低同车道连续扎堆概率;
+   * laneCounts 缺省/长度不符时退化为均匀随机（向后兼容）
+   * @param {Array<number>} [laneCounts]
+   * @returns {number} 车道索引
+   */
+  _pickLane(laneCounts) {
+    const n = pathManager.getPathCount();
+    if (!Array.isArray(laneCounts) || laneCounts.length < n) {
+      return Math.floor(Math.random() * n);
+    }
+    let total = 0;
+    for (let i = 0; i < n; i++) total += 1 / (1 + (laneCounts[i] || 0));
+    let r = Math.random() * total;
+    for (let i = 0; i < n; i++) {
+      r -= 1 / (1 + (laneCounts[i] || 0));
+      if (r <= 0) return i;
+    }
+    return n - 1;
+  }
+
+  /**
    * 抽取僵尸类型（按权重），带权重归一化容错：如果累计概率<1则补bucket兜底
    */
   _rollType() {
@@ -273,11 +296,15 @@ class ZombieSpawner {
    * 加固措施（v4）：
    *   1. 超过 2.5×interval 未生成时强制触发（防暂停后停摆）
    *   2. 超过 15s 无任何僵尸生成 → 强制清除最早僵尸释放名额（防止全部卡 eating）
+   * v66: 车道软负载均衡 — 旧版纯随机选路, 连续同车道扎堆（连来 3 只同路
+   *   在低关卡几乎必破一线）; 现按各车道可攻击僵尸数加权随机
+   *   （weight = 1/(1+count)），空场时退化为均匀随机（行为不变）
    * @param {number} dt - 帧间隔(ms)
    * @param {number} activeCount - 当前活跃数
+   * @param {Array<number>} [laneCounts] - v66 各车道可攻击僵尸数（防扎堆选路用）
    * @returns {Object|null} 新僵尸配置 {type, pathIndex, baseSpeed} or null
    */
-  update(dt, activeCount) {
+  update(dt, activeCount, laneCounts) {
     if (this._spawnStopped) return null;   // v38: 末关收官，不再生成
     this.spawnTimer += dt;
     const now = Date.now();
@@ -296,7 +323,7 @@ class ZombieSpawner {
     if ((this.spawnTimer >= interval || overshoot) && canSpawn) {
       this.spawnTimer = overshoot ? 0 : (this.spawnTimer - interval);
       const type = this._rollType();
-      const pathIndex = Math.floor(Math.random() * pathManager.getPathCount());
+      const pathIndex = this._pickLane(laneCounts);
       this._lastSpawnTime = now;
       this._totalSpawned++;
       return { type, pathIndex, baseSpeed: this.baseSpeed, hpMult: this._hpMult };  // v44: speedMult 随时间窗退役
@@ -323,6 +350,12 @@ class ZombieManager {
     this.pool = new ZombiePool();
     this.spawner = new ZombieSpawner();
     this.zombies = [];   // 当前活跃僵尸数组（用于渲染/逻辑）
+    // v66 性能优化: 车道僵尸索引缓存（惰性构建）— 旧版 getZombiesInLane
+    //   每次 filter 全量 zombies, 而投射物碰撞/目标查找每帧调用数十次。
+    //   缓存按车道分组仅含 walking/eating（可被攻击集合）；任何改变
+    //   「数组成员或可攻击状态」的变动点必须调 _dirtyLaneCache()。
+    //   注意: walking↔eating 互转(combatResolver)不改变集合成员, 无需失效。
+    this._laneCache = null;   // null=脏; [ [z,...], [z,...], [z,...] ]
     // v51: 终局大波队列 — launchFinalWave 填充, update 按节奏释放
     this._waveQueue = null;    // null=无大波; [{type, lane, hpMult}] 待入场
     this._waveTimer = 0;       // 下一只入场倒计时(ms)
@@ -334,6 +367,7 @@ class ZombieManager {
     this.pool.onForceRelease = (z) => {
       const idx = this.zombies.indexOf(z);
       if (idx >= 0) this.zombies.splice(idx, 1);
+      this._dirtyLaneCache();   // v66: 车道缓存置脏
     };
   }
 
@@ -343,11 +377,19 @@ class ZombieManager {
   reset(cfg, difficulty) {
     this.pool.clearAll();
     this.zombies = [];
+    this._dirtyLaneCache();    // v66: 车道缓存置脏
     this._waveQueue = null;    // v51: 清终局大波残留（防上局未放完的队列泄入新局）
     this._waveTimer = 0;
     this._midWaveQueue = null;   // v60: 清中场波残留（同上, 防泄入新局）
     this._midWaveTimer = 0;
     this.spawner.configure(cfg, difficulty);
+  }
+
+  /**
+   * v66: 车道缓存置脏 — 所有 zombies 数组成员/可攻击状态变动点必须调用
+   */
+  _dirtyLaneCache() {
+    this._laneCache = null;
   }
 
   /**
@@ -434,8 +476,9 @@ class ZombieManager {
    * @param {Function} [onSummon] - v49 舞王召唤回调 (intent, minions) => void（粒子/振动反馈）
    */
   update(dt, onReachEnd, onSummon) {
-    // 1. 尝试生成
-    const spawnCfg = this.spawner.update(dt, this.zombies.length);
+    // 1. 尝试生成（v66: 附带车道负载统计, 供 spawner 软均衡选路防扎堆）
+    const laneCounts = this._countLanes();
+    const spawnCfg = this.spawner.update(dt, this.zombies.length, laneCounts);
     if (spawnCfg) {
       if (spawnCfg._forceRelease) {
         // v4: 心跳强制释放 — 清除最早僵尸释放名额，下一帧自动尝试生成
@@ -446,6 +489,7 @@ class ZombieManager {
             ' progress=' + victim.progress.toFixed(3));
           this.pool.release(victim);
           this.zombies.shift();
+          this._dirtyLaneCache();   // v66: 车道缓存置脏
         }
       } else {
         const z = this.pool.acquire(createZombie(
@@ -453,6 +497,7 @@ class ZombieManager {
         ));
         if (z) {
           this.zombies.push(z);
+          this._dirtyLaneCache();   // v66: 车道缓存置脏
           this.spawner._spawnFailCount = 0;  // 成功，重置失败计数
         } else {
           // v4: acquire 返回 null — 记录失败，spawner 心跳机制会兜底
@@ -476,6 +521,7 @@ class ZombieManager {
         ));
         if (z) {
           this.zombies.push(z);
+          this._dirtyLaneCache();   // v66: 车道缓存置脏
         } else {
           // pool 满兜底: 丢弃该护卫不阻塞队列（现实并发: 场上+队列 > POOL_MAX 30 极罕见）
           console.warn('[ZombieManager] 终局大波入场失败(pool 满), 丢弃 type=' + entry.type);
@@ -495,6 +541,7 @@ class ZombieManager {
         ));
         if (z) {
           this.zombies.push(z);
+          this._dirtyLaneCache();   // v66: 车道缓存置脏
         } else {
           console.warn('[ZombieManager] 中场波入场失败(pool 满), 丢弃 type=' + entry.type);
         }
@@ -512,6 +559,7 @@ class ZombieManager {
       const z = this.zombies[i];
       if (!z.active) {
         this.zombies.splice(i, 1);
+        this._dirtyLaneCache();   // v66: 车道缓存置脏
         continue;
       }
 
@@ -549,6 +597,7 @@ class ZombieManager {
           if (onReachEnd) onReachEnd(z);
           z.state = 'dying';
           z.stateTimer = 0;
+          this._dirtyLaneCache();   // v66: 可攻击集合移除该僵尸, 缓存置脏
         }
       } else if (z.state === 'eating') {
         // 啃食中不前进，仅摇摆动画
@@ -568,6 +617,7 @@ class ZombieManager {
       if (z.state === 'dead') {
         this.pool.release(z);
         this.zombies.splice(i, 1);
+        this._dirtyLaneCache();   // v66: 车道缓存置脏
       }
     }
 
@@ -593,6 +643,7 @@ class ZombieManager {
         if (m) {
           m.progress = intent.progress;
           this.zombies.push(m);
+          this._dirtyLaneCache();   // v66: 车道缓存置脏
           minions.push(m);
         }
       }
@@ -620,13 +671,41 @@ class ZombieManager {
   // v6 修复 (Task 11 F8): 删除零调用 findById 方法
 
   /**
+   * v66: 统计各车道当前可攻击僵尸数（walking/eating）— spawner 软均衡输入
+   * @returns {Array<number>} 每车道计数
+   */
+  _countLanes() {
+    const n = pathManager.getPathCount();
+    const counts = new Array(n).fill(0);
+    for (const z of this.zombies) {
+      if ((z.state === 'walking' || z.state === 'eating') &&
+          z.pathIndex >= 0 && z.pathIndex < n) {
+        counts[z.pathIndex]++;
+      }
+    }
+    return counts;
+  }
+
+  /**
    * 获取指定车道内可被攻击的僵尸（walking/eating 状态）
+   * v66: 走车道索引缓存（惰性构建, 变动点 _dirtyLaneCache 置脏）;
+   * 返回缓存数组, 调用方只读勿改/勿存（下一帧可能重建）
    * @param {number} lane
    * @returns {Array}
    */
   getZombiesInLane(lane) {
-    return this.zombies.filter(z => z.pathIndex === lane &&
-      (z.state === 'walking' || z.state === 'eating'));
+    if (!this._laneCache) {
+      const n = pathManager.getPathCount();
+      const cache = new Array(n);
+      for (let i = 0; i < n; i++) cache[i] = [];
+      for (const z of this.zombies) {
+        if (z.state === 'walking' || z.state === 'eating') {
+          if (z.pathIndex >= 0 && z.pathIndex < n) cache[z.pathIndex].push(z);
+        }
+      }
+      this._laneCache = cache;
+    }
+    return (lane >= 0 && lane < this._laneCache.length) ? this._laneCache[lane] : [];
   }
 
   /**
@@ -652,6 +731,7 @@ class ZombieManager {
       zombie.state = 'dying';
       zombie.stateTimer = 0;
       zombie.blockedBy = null;
+      this._dirtyLaneCache();   // v66: 可攻击集合移除该僵尸, 缓存置脏
       return true;
     }
     return false;
@@ -697,6 +777,7 @@ class ZombieManager {
   clear() {
     this.pool.clearAll();
     this.zombies = [];
+    this._dirtyLaneCache();   // v66: 车道缓存置脏
   }
 }
 

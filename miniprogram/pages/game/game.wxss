@@ -362,6 +362,59 @@
 .shop-item-cherry    { color: #C62828; background: linear-gradient(180deg, #FFF1EE 0%, #FFDAD6 100%); box-shadow: inset 0 5rpx 0 rgba(244, 67, 54, 0.32), 0 3rpx 0 rgba(63, 38, 20, 0.35); }
 .shop-item-chomper   { color: #751F99; background: linear-gradient(180deg, #F9EFFB 0%, #ECD8F4 100%); box-shadow: inset 0 5rpx 0 rgba(156, 52, 198, 0.30), 0 3rpx 0 rgba(63, 38, 20, 0.35); }
 .shop-item-fire      { color: #C74B1D; background: linear-gradient(180deg, #FFF4EC 0%, #FFE0CC 100%); box-shadow: inset 0 5rpx 0 rgba(255, 110, 64, 0.32), 0 3rpx 0 rgba(63, 38, 20, 0.35); }
+/* ===== v66: 铲子工具纸包（工具卡定位 — 灰蓝金属色系, 与植物色系区分） =====
+   选中态复用 .shop-item.selected（currentColor 边线+落影+抬起） */
+.shop-item-shovel    { color: #546E7A; background: linear-gradient(180deg, #F4F7F9 0%, #E3EBEF 100%); box-shadow: inset 0 5rpx 0 rgba(84, 110, 122, 0.28), 0 3rpx 0 rgba(63, 38, 20, 0.35); }
+.shop-cost-shovel    { color: #546E7A; font-size: 11rpx; }
+/* 铲子纯 CSS 图形：木柄 + 握把 + 金属铲头 + 星光（40rpx 画布内） */
+.shop-avatar-shovel .sv-handle {
+  position: absolute;
+  left: 17rpx;
+  top: 4rpx;
+  width: 6rpx;
+  height: 18rpx;
+  border-radius: 3rpx;
+  background: linear-gradient(90deg, #C8894E 0%, #A96B34 100%);
+  box-shadow: inset 0 -2rpx 0 rgba(63, 38, 20, 0.25);
+}
+.shop-avatar-shovel .sv-grip {
+  position: absolute;
+  left: 12rpx;
+  top: 2rpx;
+  width: 16rpx;
+  height: 5rpx;
+  border-radius: 3rpx;
+  background: linear-gradient(180deg, #C8894E 0%, #A96B34 100%);
+}
+.shop-avatar-shovel .sv-blade {
+  position: absolute;
+  left: 13rpx;
+  top: 21rpx;
+  width: 14rpx;
+  height: 13rpx;
+  border-radius: 3rpx 3rpx 8rpx 8rpx;
+  background: linear-gradient(180deg, #B7C9D3 0%, #7E97A5 100%);
+  border: 2rpx solid rgba(63, 38, 20, 0.35);
+  box-shadow: inset -3rpx -3rpx 0 rgba(0, 0, 0, 0.10);
+}
+.shop-avatar-shovel .sv-spark {
+  position: absolute;
+  left: 27rpx;
+  top: 6rpx;
+  width: 7rpx;
+  height: 7rpx;
+  background: #FFC733;
+  border-radius: 2rpx;
+  transform: rotate(45deg);
+  opacity: 0.9;
+}
+.shop-item-shovel.selected .sv-spark {
+  animation: shovel-spark 0.9s ease-in-out infinite alternate;
+}
+@keyframes shovel-spark {
+  from { transform: rotate(45deg) scale(0.8); opacity: 0.55; }
+  to   { transform: rotate(45deg) scale(1.25); opacity: 1; }
+}
 /* ===== 商店栏：纯 CSS 萌系植物头像（设计系统 Tokens v2 - 与 Canvas 1:1 对齐）
    - 眼睛比例：eyeDX=36% headR · eyeR=24% headR（精确 RENDER_TOKENS.FACE）
    - 瞳孔位置：右下 16/12%（Canvas pOffX/Y 同）

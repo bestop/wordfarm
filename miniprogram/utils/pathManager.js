@@ -15,6 +15,12 @@ class PathManager {
     this.pathSamples = [];   // 保留兼容（直线车道无需预采样）
     this.canvasSize = { w: 0, h: 0 };
     this.initialized = false;
+    // v66 性能优化: 网格几何缓存 — 旧版 getGridBounds/getCellSize 每次调用
+    //   都新建对象, 而 getPosition/_drawZombie/_drawPlant/投射物碰撞每帧各调
+    //   数十~数百次 → 稳定 GC 压力。现改为 setCanvasSize 时一次预计算,
+    //   其余方法只读缓存（惰性兜底: 未 setCanvasSize 前调用则按零尺寸构建一次）
+    this._bounds = null;     // {left,right,top,bottom}
+    this._cell = null;       // {w,h}
   }
 
   /**
@@ -25,10 +31,28 @@ class PathManager {
   }
 
   /**
-   * 设置 canvas 尺寸
+   * 设置 canvas 尺寸（v66: 同步重建几何缓存）
    */
   setCanvasSize(w, h) {
     this.canvasSize = { w, h };
+    this._recalcGeometry();
+  }
+
+  /**
+   * v66: 重算网格几何缓存（bounds + cellSize）
+   */
+  _recalcGeometry() {
+    const { w, h } = this.canvasSize;
+    this._bounds = {
+      left: w * GRID.LEFT_RATIO,
+      right: w * (1 - GRID.RIGHT_RATIO),
+      top: h * GRID.TOP_RATIO,
+      bottom: h * (1 - GRID.BOTTOM_RATIO)
+    };
+    this._cell = {
+      w: (this._bounds.right - this._bounds.left) / GRID.ROWS,
+      h: (this._bounds.bottom - this._bounds.top) / GRID.COLS
+    };
   }
 
   /**
@@ -38,37 +62,30 @@ class PathManager {
     return GRID.ROWS;
   }
 
-  // ============ 网格几何 ============
+  // ============ 网格几何（v66: 全部读缓存） ============
 
   /**
-   * 获取网格像素边界
+   * 获取网格像素边界（缓存对象, 调用方只读勿改）
    */
   getGridBounds() {
-    return {
-      left: this.canvasSize.w * GRID.LEFT_RATIO,
-      right: this.canvasSize.w * (1 - GRID.RIGHT_RATIO),
-      top: this.canvasSize.h * GRID.TOP_RATIO,
-      bottom: this.canvasSize.h * (1 - GRID.BOTTOM_RATIO)
-    };
+    if (!this._bounds) this._recalcGeometry();
+    return this._bounds;
   }
 
   /**
    * 网格顶部 Y（spawn 区下沿）
    */
   getGridTop() {
-    return this.canvasSize.h * GRID.TOP_RATIO;
+    return this.getGridBounds().top;
   }
 
   /**
-   * 单元格尺寸
+   * 单元格尺寸（缓存对象, 调用方只读勿改）
    * 注意：横向按 ROWS(车道) 划分，纵向按 COLS(槽位) 划分
    */
   getCellSize() {
-    const b = this.getGridBounds();
-    return {
-      w: (b.right - b.left) / GRID.ROWS,
-      h: (b.bottom - b.top) / GRID.COLS
-    };
+    if (!this._cell) this._recalcGeometry();
+    return this._cell;
   }
 
   /**

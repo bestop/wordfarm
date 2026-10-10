@@ -56,6 +56,7 @@ class GameManager {
       plantsPlaced: 0,       // 已放置植物数
       sunlight: SUNLIGHT.INITIAL,    // 阳光货币
       selectedPlant: null,   // 当前商店选中植物类型
+      shovelSelected: false, // v66: 铲子工具选中态（与 selectedPlant 互斥）
       startTime: 0
     };
 
@@ -71,6 +72,7 @@ class GameManager {
     this.onComboChange = null;      // 连击变化回调
     this.onSunlightChange = null;   // 阳光变化回调
     this.onShopSelect = null;       // 商店选中变化回调
+    this.onShovelSelect = null;     // v66: 铲子选中变化回调
     this.onSunsChange = null;       // v3: 可收集阳光列表变化回调 (sunsView[]) => void
     this.onRenderError = null;      // 渲染致命错误回调
     this.onLevelChange = null;      // v2: 关卡变化回调
@@ -108,6 +110,7 @@ class GameManager {
       plantsPlaced: 0,
       sunlight: SUNLIGHT.INITIAL,
       selectedPlant: null,
+      shovelSelected: false,   // v66: 新局铲子态复位
       startTime: 0
     };
     this._loopErrorCount = 0;
@@ -577,12 +580,50 @@ class GameManager {
 
   /**
    * 选择/取消选择商店植物
+   * v66: 与铲子互斥 — 选中植物时自动收起铲子（反向见 selectShovel）
    * @param {string} type - PLANT_TYPES 键名
    */
   selectPlant(type) {
     if (!PLANT_TYPES[type]) return;
     this.state.selectedPlant = (this.state.selectedPlant === type) ? null : type;
+    if (this.state.selectedPlant && this.state.shovelSelected) {
+      this.state.shovelSelected = false;
+      if (this.onShovelSelect) this.onShovelSelect(false);
+    }
     if (this.onShopSelect) this.onShopSelect(this.state.selectedPlant);
+  }
+
+  /**
+   * v66: 切换铲子工具选中态（移除植物/半价回收）
+   * 与植物选择互斥 — 选中铲子时自动取消植物选中（商店栏/放置提示同步收起）
+   */
+  selectShovel() {
+    this.state.shovelSelected = !this.state.shovelSelected;
+    if (this.state.shovelSelected && this.state.selectedPlant) {
+      this.state.selectedPlant = null;
+      if (this.onShopSelect) this.onShopSelect(null);
+    }
+    if (this.onShovelSelect) this.onShovelSelect(this.state.shovelSelected);
+  }
+
+  /**
+   * v66: 在 canvas 像素坐标处尝试铲除植物（铲子选中态下点击草坪）
+   * @param {number} x - canvas 内 px
+   * @param {number} y - canvas 内 px
+   * @returns {Object} {ok, reason, name, refund}
+   */
+  tryRemovePlantAt(x, y) {
+    if (!this.state.isPlaying) return { ok: false, reason: '游戏未进行', name: '', refund: 0 };
+    if (!this.state.shovelSelected) return { ok: false, reason: '未选择铲子', name: '', refund: 0 };
+    const cell = pathManager.pixelToCell(x, y);
+    if (!cell) return { ok: false, reason: '位置无效', name: '', refund: 0 };
+    const res = plantManager.removePlantAt(cell.lane, cell.slot);
+    if (!res.ok) return { ok: false, reason: res.reason, name: '', refund: 0 };
+    // 半价回收入账（refund=0 的零成本植物也静默成功）
+    if (res.refund > 0) this._addSunlight(res.refund);
+    audioManager.play(ASSET_KEYS.AUDIO.PLACE);   // 复用放置音效（同类确认音）
+    if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
+    return { ok: true, reason: '', name: res.name, refund: res.refund };
   }
 
   /**
@@ -772,7 +813,7 @@ class GameManager {
   _clearUiCallbacks() {
     const names = ['onStateChange', 'onQuestionChange', 'onGameOver', 'onScoreChange',
       'onDefenseChange', 'onComboChange', 'onSunlightChange', 'onShopSelect',
-      'onSunsChange', 'onRenderError', 'onLevelChange', 'onQuizTimeout'];
+      'onShovelSelect', 'onSunsChange', 'onRenderError', 'onLevelChange', 'onQuizTimeout'];
     for (const name of names) this[name] = null;
   }
 }

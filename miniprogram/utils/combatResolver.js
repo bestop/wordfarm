@@ -100,16 +100,30 @@ function resolveZombiePlantCombat(game, dt) {
     }
     return;
   }
-  // 按车道索引植物以加速查找
+  // v66 性能优化: 先按车道一次性索引存活植物 — 旧版每僵尸全量扫描 plants
+  //   (O(zombies×plants)), 现每车道只扫本路植物; 索引/判定规则与旧版逐条
+  //   一致（跳 dead/未激活, 槽位→进度换算同源）
+  const plantsByLane = [];
+  for (const p of plants) {
+    if (p.state === 'dead' || !p.active) continue;
+    (plantsByLane[p.lane] || (plantsByLane[p.lane] = [])).push(p);
+  }
   const EPS = 0.01;
   for (const z of zombieManager.getAll()) {
     if (z.state !== 'walking' && z.state !== 'eating') continue;
+    const lanePlants = plantsByLane[z.pathIndex];
+    if (!lanePlants) {
+      // 本车道无植物：eating 僵尸恢复 walking
+      if (z.state === 'eating') {
+        z.state = 'walking';
+        z.blockedBy = null;
+      }
+      continue;
+    }
     // 查找阻挡植物：同车道、plantProgress >= z.progress - EPS 中最小者
     let blockPlant = null;
     let blockPP = Infinity;
-    for (const p of plants) {
-      if (p.state === 'dead' || !p.active) continue;
-      if (p.lane !== z.pathIndex) continue;
+    for (const p of lanePlants) {
       // v6 修复 (Task 12): 槽位 → 进度 / GRID.COLS（避免硬编码 5）
       const pp = (p.slot + 0.5) / GRID.COLS;
       if (pp >= z.progress - EPS && pp < blockPP) {

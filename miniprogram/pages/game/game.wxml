@@ -78,6 +78,21 @@
           <text>{{item.cost}}</text>
         </view>
       </view>
+
+      <!-- v66: 铲子工具 — 移除植物并半价回收阳光（与植物选择互斥, 可连续铲除） -->
+      <view
+        class="shop-item shop-item-shovel {{shovelSelected ? 'selected' : ''}}"
+        bindtap="onShovelTap"
+      >
+        <view class="shop-avatar shop-avatar-shovel">
+          <view class="sv-handle"></view>
+          <view class="sv-grip"></view>
+          <view class="sv-blade"></view>
+          <view class="sv-spark"></view>
+        </view>
+        <view class="shop-name">铲子</view>
+        <view class="shop-cost shop-cost-shovel"><text>回收50%</text></view>
+      </view>
     </scroll-view>
     </view>
 

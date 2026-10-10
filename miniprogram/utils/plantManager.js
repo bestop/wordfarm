@@ -109,6 +109,26 @@ class PlantManager {
   }
 
   /**
+   * v66: 铲除指定格子的植物（铲子工具）
+   * - 走与被啃死/爆炸同款的死亡链路：state='dead' + active=false →
+   *   下一帧 update 循环 splice 移除, combatResolver 下帧自动查不到阻挡,
+   *   啃食中的僵尸恢复 walking（无需额外联动）
+   * - 回收阳光 = floor(cost × PLANT.REMOVE_REFUND_RATIO)，入账由
+   *   gameManager.tryRemovePlantAt 负责（本方法只管移除与报价）
+   * @param {number} lane
+   * @param {number} slot
+   * @returns {Object} {ok, refund, name, reason}
+   */
+  removePlantAt(lane, slot) {
+    const p = this.getPlantAt(lane, slot);
+    if (!p) return { ok: false, refund: 0, name: '', reason: '这里没有植物' };
+    p.state = 'dead';
+    p.active = false;
+    const refund = Math.floor((p.def.cost || 0) * PLANT.REMOVE_REFUND_RATIO);
+    return { ok: true, refund: refund, name: p.def.name, reason: '' };
+  }
+
+  /**
    * 植物受击（被僵尸啃）
    * @param {Object} plant
    * @param {number} amount

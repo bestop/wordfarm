@@ -55,6 +55,7 @@ Page({
     selectedPlant: null,
     selectedPlantName: '',
     plantTipVisible: false,
+    shovelSelected: false,    // v66: 铲子工具选中态（移除植物/半价回收）
     shopItems: buildShopItems(SUNLIGHT.INITIAL),
     // 题目
     currentQuestion: null,
@@ -127,6 +128,7 @@ Page({
     gameManager.onComboChange = (c) => this._onComboChange(c);
     gameManager.onSunlightChange = (sunlight) => this._onSunlightChange(sunlight);
     gameManager.onShopSelect = (type) => this._onPlantSelectionChanged(type);
+    gameManager.onShovelSelect = (sel) => this.setData({ shovelSelected: !!sel });   // v66: 铲子态同步
     gameManager.onGameOver = (summary) => this._onGameOver(summary);
     gameManager.onSunsChange = (view) => this.setData({ sunsView: view });
   },
@@ -603,6 +605,19 @@ Page({
   },
 
   /**
+   * v66: 商店栏铲子点击 — 切换铲子选中态（移除植物/半价回收）
+   * 与植物选择互斥（gameManager 内部保证双向互清, 页面态经回调同步）
+   */
+  onShovelTap() {
+    const next = !this.data.shovelSelected;
+    gameManager.selectShovel();
+    // 选中时提示用法（铲除不收起铲子, 便于连续修整草坪）
+    if (next) {
+      wx.showToast({ title: '铲子已就位：点击植物回收一半阳光', icon: 'none', duration: 1400 });
+    }
+  },
+
+  /**
    * Canvas 点击放置植物
    * 用 boundingClientRect 将 clientX/Y 转为 canvas 内像素坐标
    * v6 修复 (Task 7-C F2/F3)：父层 bindtouchend 改为 bindtap，使子元素 catchtap 能正确阻止冒泡。
@@ -631,6 +646,17 @@ Page({
       // v23 修复（点击阳光误报错）：DOM 层 catchtap 未接住（点偏/机型渲染差异）时，
       //   点击落在阳光附近 → 优先收集该阳光并返回，不再走放植物流程弹「该格已有植物」等误导提示
       if (this._tryCollectSunAt(x, y)) return;
+      // v66: 铲子模式 — 点击网格铲除植物并半价回收（不与放置流程交叉）
+      if (this.data.shovelSelected) {
+        const rm = gameManager.tryRemovePlantAt(x, y);
+        if (rm.ok) {
+          const refundText = rm.refund > 0 ? ' 回收 +' + rm.refund + '☀️' : '';
+          wx.showToast({ title: '已铲除 ' + rm.name + refundText, icon: 'none', duration: 900 });
+        } else if (rm.reason && rm.reason !== '未选择铲子') {
+          wx.showToast({ title: rm.reason, icon: 'none', duration: 800 });
+        }
+        return;
+      }
       if (!this.data.selectedPlant) return;
       const res = gameManager.tryPlacePlantAt(x, y);
       if (!res.ok) {
@@ -745,6 +771,7 @@ Page({
       selectedPlant: null,
       selectedPlantName: '',
       plantTipVisible: false,
+      shovelSelected: false,     // v66: 重开铲子态复位
       shopItems: buildShopItems(SUNLIGHT.INITIAL),
       currentQuestion: null,
       feedback: 'idle',

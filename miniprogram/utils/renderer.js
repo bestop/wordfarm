@@ -982,7 +982,9 @@ class Renderer {
    */
   _drawPlant(ctx, plant) {
     const def = plant.def;
-    if (!def) return;
+    // v66: dead 植物（被啃死/樱桃爆炸/铲除）跳过绘制 — 旧版依赖下一帧
+    //   update splice, 死亡当帧会残留一帧正常体态（樱桃爆炸时尤其穿帮）
+    if (!def || plant.state === 'dead') return;
     const cs = pathManager.getCellSize();
     const size = Math.min(cs.w, cs.h) * 0.78;
     const r = size * 0.42;            // 头部基准半径

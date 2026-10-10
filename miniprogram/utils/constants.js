@@ -406,6 +406,9 @@ const PLANT = {
   WOBBLE_SPEED: 3,               // 摇摆角速度(rad/s)
   INITIAL_CD_RATIO: 0.5,         // 初始攻击冷却比例（× attackInterval）
   NO_TARGET_RETRY_MS: 200,       // 无目标时短冷却(ms)
+  // v66: 铲子回收比例 — 移除植物返还 cost×此值 的阳光（向下取整, 儿童向
+  //   半价回收: 放错位置可止损重摆, 又不至于无成本反复横跳）
+  REMOVE_REFUND_RATIO: 0.5,
   // v64 角色动效打磨 — 纯视觉层参数（零战斗逻辑耦合）
   SPAWN_POP_MS: 340,             // 种植入场弹跳时长(ms) — plant.age 由 plantManager 累加
   SHOOT_FX_MS: 260,              // 射击后坐力时长(ms) — _spawnProjectile 置 1，update 线性衰减到 0
