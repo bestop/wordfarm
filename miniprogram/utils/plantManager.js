@@ -99,7 +99,10 @@ class PlantManager {
       chomperState: def.isChomper ? 'idle' : null,   // idle | snap | swallow
       chomperTimer: 0,                                 // 当前状态剩余时长(ms)
       chomperBiteProgress: 0,                          // 咬合动画进度 0~1(张口→咬合)
-      chomperSwallowProgress: 0                        // 吞咽鼓起进度 0~1
+      chomperSwallowProgress: 0,                       // 吞咽鼓起进度 0~1
+      // v64 角色动效（纯视觉，渲染层读取）：
+      age: 0,                // 存活时长(ms) — 入场弹跳动画用（< PLANT.SPAWN_POP_MS 内播弹入）
+      shootFx: 0             // 射击后坐力归一化计时(1→0) — _spawnProjectile 置 1，update 按 SHOOT_FX_MS 线性衰减
     };
     this.plants.push(plant);
     return { ok: true, plant: plant, cost: def.cost };
@@ -149,6 +152,9 @@ class PlantManager {
       // v6 修复 (Task 12): 摇摆速度 → PLANT.WOBBLE_SPEED
       p.wobble += dtSec * PLANT.WOBBLE_SPEED;
       if (p.hitFlash > 0) p.hitFlash -= dt;
+      // v64 角色动效：存活时长累加（入场弹跳用）+ 射击后坐力线性衰减（纯视觉）
+      p.age += dt;
+      if (p.shootFx > 0) p.shootFx = Math.max(0, p.shootFx - dt / PLANT.SHOOT_FX_MS);
 
       const def = p.def;
 
@@ -410,6 +416,8 @@ class PlantManager {
    */
   _spawnProjectile(plant, projDef) {
     const slow = projDef.slow || null;
+    // v64 角色动效：触发射击后坐力（纯视觉，渲染层在 shootFx>0 时绘制 kick + 炮口闪光）
+    plant.shootFx = 1;
     const lanes = projDef.multiLane ? this._coveredLanes(plant.lane) : [plant.lane];
     for (const lane of lanes) {
       const x = (lane === plant.lane)

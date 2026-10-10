@@ -390,7 +390,12 @@ const ZOMBIE = {
   DANCER_SUMMON_DELAY_MS: 2000,  // 首次召唤延迟(上场 2s 后开跳, 给玩家反应窗口)
   DANCER_SUMMON_COOLDOWN_MS: 8000, // 召唤冷却(每 8s 一轮)
   DANCER_SUMMON_TYPE: 'imp',     // 召唤物 = 小鬼僵尸(3HP 快速炮灰, 模拟伴舞)
-  DANCER_SUMMON_BACK: 0.05       // 召唤物出生在舞王身后(进度 -0.05, 下限 0)
+  DANCER_SUMMON_BACK: 0.05,      // 召唤物出生在舞王身后(进度 -0.05, 下限 0)
+  // v64 角色动效打磨 — 纯视觉层参数（零战斗逻辑耦合）
+  SPAWN_POP_MS: 280,             // 出场弹入动画时长(ms) — renderer _drawZombie 读取 spawnTime 计算
+  WALK_TILT: 0.045,              // 行走身体倾斜幅度(rad，脚步踏步感)
+  EAT_LUNGE_RATIO: 0.10,         // 啃食前扑幅度(× r，朝植物方向点头)
+  DIE_FALL_RAD: 1.05             // 死亡倒地旋转角(rad，≈60° 侧倒)
 };
 
 // ============ 植物通用参数 ============
@@ -401,6 +406,12 @@ const PLANT = {
   WOBBLE_SPEED: 3,               // 摇摆角速度(rad/s)
   INITIAL_CD_RATIO: 0.5,         // 初始攻击冷却比例（× attackInterval）
   NO_TARGET_RETRY_MS: 200,       // 无目标时短冷却(ms)
+  // v64 角色动效打磨 — 纯视觉层参数（零战斗逻辑耦合）
+  SPAWN_POP_MS: 340,             // 种植入场弹跳时长(ms) — plant.age 由 plantManager 累加
+  SHOOT_FX_MS: 260,              // 射击后坐力时长(ms) — _spawnProjectile 置 1，update 线性衰减到 0
+  WILT_HP_RATIO: 0.40,           // 低血量蔫萎阈值(HP 比例低于此值开始低头晃叶)
+  BREATHE_AMP: 0.025,            // 待机呼吸纵向幅度(scaleY ±)
+  SUN_GLOW_MS: 900,              // 向日葵产阳光预兆光晕窗口(sunCooldown 剩余 < 此值时脉冲发光)
   CHOMPER: {
     SNAP_DURATION_MS: 300,      // 咬合动画时长(ms)
     BITE_DAMAGE_POINT: 0.55,    // 咬合进度达到此值即结算伤害（× SNAP_DURATION）

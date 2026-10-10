@@ -682,9 +682,29 @@ class Renderer {
     const scale = 0.6 + zombie.progress * 0.5;
     const r = zombie.radius * scale;
     const wobbleY = Math.sin(zombie.wobble) * 3;
+    const isEating = zombie.state === 'eating';
+
+    // ===== v64 动效参数（纯视觉，不改状态机） =====
+    // 出场弹入：spawn 后 SPAWN_POP_MS 内 easeOutBack 从 0.3 过冲到 1.0
+    let spawnScale = 1, spawnAlpha = 1;
+    if (zombie.state === 'walking' && zombie.spawnTime > 0) {
+      const zAge = Date.now() - zombie.spawnTime;
+      if (zAge >= 0 && zAge < ZOMBIE.SPAWN_POP_MS) {
+        const t = zAge / ZOMBIE.SPAWN_POP_MS;
+        const c1 = 1.70158, c3 = c1 + 1;               // easeOutBack 常数
+        spawnScale = Math.max(0.30, 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2));
+        spawnAlpha = Math.min(1, 0.25 + t * 1.5);
+      }
+    }
+    // 行走踏步：脚底锚点小幅左右交替倾斜（脚步落地感）
+    // 啃食前扑：朝植物方向（+y，僵尸自上而下走）节奏性点头，与啃食 wobble 同频
+    const walkTilt = Math.sin(zombie.wobble) * ZOMBIE.WALK_TILT;
+    const eatLunge = isEating ? Math.max(0, Math.sin(zombie.wobble)) * ZOMBIE.EAT_LUNGE_RATIO * r : 0;
 
     ctx.save();
     ctx.translate(pos.x, pos.y + wobbleY);
+    // v64 出场透明度（乘入后续受击闪烁，互不覆盖）
+    if (spawnAlpha < 1) ctx.globalAlpha *= spawnAlpha;
     // v26 铁桶受击弹跳 / v27 小鬼受击弹跳（体轻弹得更高，参照"被击飞"状态）
     // v28 橄榄球重甲受击微弹跳（tank 体感：0.08 最小）
     // v29 舞王受击弹跳（表演者踮脚一跳 0.10）
@@ -699,15 +719,36 @@ class Renderer {
                      zombie.type === 'king' ? 0.06 : 0.12;
       ctx.translate(0, -r * bounce * Math.sin(Math.PI * hp));
     }
-    // v6 修复 (Task 12): 受击闪烁 + 死亡渐隐 — 跨文件耦合常量（zombieManager 同步）
+    // v6 修复 (Task 12): 受击闪烁 — 跨文件耦合常量（zombieManager 同步）
+    // v64: 改为乘入当前透明度（不再抹掉出场淡入 alpha）
     if (zombie.hitFlash > 0) {
-      ctx.globalAlpha = 0.5 + 0.5 * Math.sin(zombie.hitFlash / ZOMBIE.HIT_FLASH_DIV);
+      ctx.globalAlpha *= 0.5 + 0.5 * Math.sin(zombie.hitFlash / ZOMBIE.HIT_FLASH_DIV);
     }
     // 死亡渐隐（duration 必须与 zombieManager L409 z.stateTimer > N 同步）
+    // v64: "膨胀消失" → "侧向倒地"（绕脚底加速倒下 + 轻微缩小下沉 + 渐隐）
     if (zombie.state === 'dying') {
-      ctx.globalAlpha = Math.max(0, 1 - zombie.stateTimer / ZOMBIE.DYING_DURATION_MS);
-      const dyScale = 1 + zombie.stateTimer / ZOMBIE.DYING_DURATION_MS * 0.5;
+      const dT = Math.min(1, zombie.stateTimer / ZOMBIE.DYING_DURATION_MS);
+      ctx.globalAlpha = Math.max(0, 1 - dT);
+      const fallDir = (zombie.id % 2 === 0) ? 1 : -1;      // 按实体固定倒向，避免逐帧抖动
+      ctx.translate(0, r * 1.05);
+      ctx.rotate(fallDir * ZOMBIE.DIE_FALL_RAD * dT * dT); // easeIn：先愣住后加速倒
+      ctx.translate(0, -r * 1.05);
+      const dyScale = 1 - 0.12 * dT;
       ctx.scale(dyScale, dyScale);
+    } else {
+      // v64 出场弹入（脚底锚点缩放）
+      if (spawnScale !== 1) {
+        ctx.translate(0, r * 1.05);
+        ctx.scale(spawnScale, spawnScale);
+        ctx.translate(0, -r * 1.05);
+      }
+      // v64 行走倾斜 / 啃食前扑（仅存活状态）
+      if (zombie.state === 'walking' || isEating) {
+        ctx.translate(0, r * 1.05);
+        ctx.rotate(isEating ? Math.sin(zombie.wobble) * 0.03 : walkTilt);
+        ctx.translate(0, -r * 1.05);
+        if (eatLunge > 0) ctx.translate(0, eatLunge);
+      }
     }
 
     // 离屏图绘制
@@ -868,31 +909,75 @@ class Renderer {
     }
 
     // 血条（强壮僵尸多血 / 受伤显示）
+    // v64: 圆角胶囊 + 白描边 + 绿→琥珀→红分档（与植物血条同语言）
     if (zombie.maxHealth > 1 && zombie.state !== 'dying' && zombie.health < zombie.maxHealth) {
       const barW = r * 1.4;
-      const barH = 6;
+      const barH = Math.max(4, r * 0.16);
       const barY = -r * 1.4;
-      ctx.fillStyle = 'rgba(0,0,0,0.3)';
-      ctx.fillRect(-barW / 2, barY, barW, barH);
-      ctx.fillStyle = '#66BB6A';
-      ctx.fillRect(-barW / 2, barY, barW * (zombie.health / zombie.maxHealth), barH);
+      const pct = Math.max(0, Math.min(1, zombie.health / zombie.maxHealth));
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      safeRoundRect(ctx, -barW / 2 - 1, barY - 1, barW + 2, barH + 2, (barH + 2) / 2);
+      ctx.fill();
+      ctx.fillStyle = pct > 0.5 ? '#66BB6A' : pct > 0.25 ? '#F5B301' : '#E53935';
+      if (pct > 0) {
+        safeRoundRect(ctx, -barW / 2, barY, Math.max(barH, barW * pct), barH, barH / 2);
+        ctx.fill();
+      }
+      ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+      ctx.lineWidth = 1;
+      safeRoundRect(ctx, -barW / 2, barY, barW, barH, barH / 2);
+      ctx.stroke();
     }
 
     // 减速光环（被寒冰射手命中）
+    // v64 升级：柔边霜环（径向渐变）+ 保留内缘细环 + 三片雪花椭圆轨道环绕
     if (zombie.slowTimer > 0) {
+      const frostGrad = ctx.createRadialGradient(0, 0, r * 0.55, 0, 0, r * 1.18);
+      frostGrad.addColorStop(0, 'rgba(79,195,247,0)');
+      frostGrad.addColorStop(0.75, 'rgba(79,195,247,0.10)');
+      frostGrad.addColorStop(1, 'rgba(79,195,247,0.30)');
+      ctx.fillStyle = frostGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 1.18, 0, Math.PI * 2);
+      ctx.fill();
       ctx.strokeStyle = 'rgba(79,195,247,0.7)';
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(0, 0, r * 1.05, 0, Math.PI * 2);
       ctx.stroke();
+      // v64 环绕雪花 ×3（椭圆轨道 = 空间纵深；低端机 shouldSkipDetails 时省略）
+      if (!fpsMonitor.shouldSkipDetails() && r > 18) {
+        ctx.strokeStyle = 'rgba(224,255,255,0.9)';
+        ctx.lineWidth = Math.max(1, r * 0.03);
+        for (let i = 0; i < 3; i++) {
+          const orbitA = zombie.wobble * 0.9 + i * (Math.PI * 2 / 3);
+          const flakeX = Math.cos(orbitA) * r * 1.18;
+          const flakeY = Math.sin(orbitA) * r * 0.50 - r * 0.35;
+          const flakeR = Math.max(2, r * 0.10);
+          for (let k = 0; k < 3; k++) {
+            const ang = orbitA * 1.7 + k * Math.PI / 3;
+            ctx.beginPath();
+            ctx.moveTo(flakeX - Math.cos(ang) * flakeR, flakeY - Math.sin(ang) * flakeR);
+            ctx.lineTo(flakeX + Math.cos(ang) * flakeR, flakeY + Math.sin(ang) * flakeR);
+            ctx.stroke();
+          }
+        }
+      }
     }
 
     ctx.restore();
   }
 
   /**
-   * 绘制植物（矢量萌系造型 + 血条 + 摇摆 + 受击闪烁）
-   * 三种植物：豌豆射手 / 坚果墙 / 寒冰射手，统一萌系白描边风格，无背景圆盘
+   * 绘制植物（矢量萌系造型 + 血条 + v64 动效层）
+   * 七种植物：豌豆射手 / 坚果墙 / 寒冰射手 / 樱桃炸弹 / 食人花 / 向日葵 / 火焰射手
+   * v64 动效层（纯视觉，全部从 plant 对象读状态，不改任何战斗逻辑）：
+   *   · 待机呼吸：scaleY/scaleX 反相微缩放（体积守恒 squash & stretch）
+   *   · 入场弹跳：age < SPAWN_POP_MS 时 easeOutBack 过冲落地 + 阴影同步长大
+   *   · 射击后坐力：shootFx 包络 → 左下踢腿 + 轻微反拧 + 炮口闪光（各炮类自绘）
+   *   · 受击顿帧：挤压回弹 punch（叠加原闪烁）
+   *   · 低血蔫萎：HP < WILT_HP_RATIO 后低头无力摇摆
+   *   · 血条胶囊化：圆角 + 白描边 + 绿→琥珀→红分档
    */
   _drawPlant(ctx, plant) {
     const def = plant.def;
@@ -907,55 +992,85 @@ class Renderer {
     this._strokeW(1, r);
     const swMain = this._strokeW(T.STROKE.MAIN);
 
+    // ===== v64 动效参数（纯视觉） =====
+    const hpRatio = plant.maxHealth > 0 ? Math.max(0, plant.health / plant.maxHealth) : 1;
+    // 射击后坐力：shootFx 1→0 线性衰减，正弦包络中段最猛
+    const recoil = plant.shootFx > 0 ? Math.sin(Math.min(1, plant.shootFx) * Math.PI) : 0;
+    // 入场弹跳：age < SPAWN_POP_MS 时 easeOutBack 过冲（t=1 处恰好 =1，无跳变）
+    let spawnScale = 1;
+    if (plant.age != null && plant.age >= 0 && plant.age < PLANT.SPAWN_POP_MS) {
+      const t = plant.age / PLANT.SPAWN_POP_MS;
+      const c1 = 1.70158, c3 = c1 + 1;                 // easeOutBack 常数
+      spawnScale = Math.max(0.05, 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2));
+    }
+    // 受击顿帧：hitFlash 剩余 1→0，正弦包络单峰挤压
+    const hitPunch = plant.hitFlash > 0
+      ? Math.sin((1 - Math.min(1, plant.hitFlash / PLANT.HIT_FLASH_MS)) * Math.PI) : 0;
+    // 低血蔫萎：血量越低头垂得越狠 + 无力摇摆
+    const wilt = hpRatio < PLANT.WILT_HP_RATIO ? (1 - hpRatio / PLANT.WILT_HP_RATIO) : 0;
+    // 待机呼吸（体积守恒：scaleY 涨则 scaleX 缩）
+    const breathe = Math.sin(plant.wobble * 2) * PLANT.BREATHE_AMP;
+    const sx = spawnScale * (1 - breathe - hitPunch * 0.05);
+    const sy = spawnScale * (1 + breathe + hitPunch * 0.06);
+    // 后坐力踢腿（炮口朝右上 → 反冲左下）+ 蔫萎低头角度
+    const kickX = -recoil * r * 0.07;
+    const kickY = recoil * r * 0.05;
+    const tilt = wilt * (0.07 + 0.025 * Math.sin(plant.wobble * 0.7)) - recoil * 0.045;
+
     ctx.save();
     ctx.translate(plant.x + wobbleX, plant.y);
-    // v6 修复 (Task 12): 受击闪烁除数 — 跨文件耦合（plantManager L116 hitFlash = PLANT.HIT_FLASH_MS）
+    // v6 修复 (Task 12): 受击闪烁除数 — 跨文件耦合（plantManager L119 hitFlash = PLANT.HIT_FLASH_MS）
     if (plant.hitFlash > 0) {
       ctx.globalAlpha = 0.5 + 0.5 * Math.sin(plant.hitFlash / PLANT.HIT_FLASH_DIV);
     }
-    // 地面阴影椭圆（统一 Tokens 比例）
+    // 地面阴影椭圆（统一 Tokens 比例；入场期随角色一起长大）
     ctx.fillStyle = T.COLORS.SHADOW;
     ctx.beginPath();
-    ctx.ellipse(0, r * T.SHADOW.Y, r * T.SHADOW.RX, r * T.SHADOW.RY, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, r * T.SHADOW.Y, r * T.SHADOW.RX * spawnScale, r * T.SHADOW.RY * spawnScale, 0, 0, Math.PI * 2);
     ctx.fill();
+
+    // v64 动效合成变换（以脚底为锚点：挤压/倾斜不悬空，符合接地视觉）
+    ctx.translate(kickX, r * T.SHADOW.Y + kickY);
+    ctx.rotate(tilt);
+    ctx.scale(sx, sy);
+    ctx.translate(0, -r * T.SHADOW.Y);
 
     // 公共描边（与僵尸统一的萌系白描边，粗细按 r 动态计算）
     this._setStroke(ctx, T.COLORS.STROKE, swMain);
 
-    // 按类型绘制植物造型（优先使用图片资源，降级为矢量绘制）
-    // 食人花在咬合/吞咽状态下强制用矢量绘制，保证动画能被看到
-    const iconImg = this.imageCache[def.iconPath];
-    const forceVectorForChomper = def.isChomper &&
-      (plant.chomperState === 'snap' || plant.chomperState === 'swallow' || plant.chomperBiteProgress > 0.05 || plant.chomperSwallowProgress > 0.05);
-    if (iconImg && iconImg.width > 0 && !forceVectorForChomper) {
-      const imgSize = size * 1.0;
-      ctx.drawImage(iconImg, -imgSize / 2, -imgSize / 2, imgSize, imgSize);
-    } else {
-      switch (def.type) {
-        case 'shooter':    this._drawShooter(ctx, r, def, plant.wobble); break;
-        case 'wall':       this._drawWall(ctx, r, def, plant.wobble); break;
-        case 'freezer':    this._drawFreezer(ctx, r, def, plant.wobble); break;
-        case 'cherry':     this._drawCherry(ctx, r, def, plant); break;
-        case 'chomper':    this._drawChomper(ctx, r, def, plant); break;
-        case 'sunflower':  this._drawSunflower(ctx, r, def, plant.wobble); break;
-        case 'fire':       this._drawFire(ctx, r, def, plant.wobble); break;
-        default:           this._drawWall(ctx, r, def, plant.wobble); break;
-      }
+    // 按类型绘制植物造型（v64: 统一传 plant 对象，各类型读取 shootFx/sunCooldown 画专属动效；
+    // v54 起 iconPath 已全数移除，删除不可达的图片分支，永远走矢量绘制）
+    switch (def.type) {
+      case 'shooter':    this._drawShooter(ctx, r, def, plant); break;
+      case 'wall':       this._drawWall(ctx, r, def, plant); break;
+      case 'freezer':    this._drawFreezer(ctx, r, def, plant); break;
+      case 'cherry':     this._drawCherry(ctx, r, def, plant); break;
+      case 'chomper':    this._drawChomper(ctx, r, def, plant); break;
+      case 'sunflower':  this._drawSunflower(ctx, r, def, plant); break;
+      case 'fire':       this._drawFire(ctx, r, def, plant); break;
+      default:           this._drawWall(ctx, r, def, plant); break;
     }
+    ctx.restore();
 
-    // 血条（受伤时显示）
-    if (plant.maxHealth > 1 && plant.health < plant.maxHealth) {
+    // 血条（受伤时显示；v64 移出角色变换外，不随蔫萎倾斜保持可读；胶囊形+分档色）
+    if (plant.maxHealth > 1 && hpRatio > 0 && hpRatio < 1) {
+      ctx.save();
+      ctx.translate(plant.x + wobbleX, plant.y);
       const barW = size * 0.9;
       const barH = Math.max(4, 0.095 * r);
       const barY = -size * 0.62;
-      ctx.globalAlpha = 1;
       ctx.fillStyle = 'rgba(0,0,0,0.3)';
-      ctx.fillRect(-barW / 2, barY, barW, barH);
-      ctx.fillStyle = '#66BB6A';
-      ctx.fillRect(-barW / 2, barY, barW * (plant.health / plant.maxHealth), barH);
+      safeRoundRect(ctx, -barW / 2, barY, barW, barH, barH / 2);
+      ctx.fill();
+      ctx.fillStyle = hpRatio > 0.5 ? '#7CB342' : hpRatio > 0.25 ? '#F5B301' : '#E53935';
+      safeRoundRect(ctx, -barW / 2, barY, Math.max(barH, barW * hpRatio), barH, barH / 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+      ctx.lineWidth = 1;
+      safeRoundRect(ctx, -barW / 2, barY, barW, barH, barH / 2);
+      ctx.stroke();
+      ctx.restore();
     }
-    ctx.restore();
-    // v6 修复 (Task 11 F15): 删除后置 globalAlpha=1（restore 已恢复 alpha）
   }
 
   /**
@@ -1110,12 +1225,16 @@ class Renderer {
    * - 茎加环形纹理（植物节）；侧叶改尖卵贝塞尔（更生动）
    * - 表情嘴改为 smile 微笑（嘴部位置让给炮管）
    */
-  _drawShooter(ctx, r, def, wobblePhase) {
+  _drawShooter(ctx, r, def, plant) {
     const T = this.T;
     const C = T.COLORS;
     const H = T.HEAD;
     const headR = r * 1.0;
     const headY = -r * 0.25;
+    // v64: 兼容旧调用（传相位数字）；fx = 射击后坐力包络（0~1，shootFx>0 时 > 0）
+    const wobblePhase = (typeof plant === 'number') ? plant : (plant.wobble || 0);
+    const fx = (typeof plant === 'object' && plant && plant.shootFx > 0)
+      ? Math.sin(Math.min(1, plant.shootFx) * Math.PI) : 0;
 
     // ---- 1. 半球形身体底座（带纵向棱线，瓜类纹理）----
     const bodyY = r * 0.62;
@@ -1238,6 +1357,24 @@ class Renderer {
     ctx.beginPath();
     ctx.ellipse(cannonLen, 0, cannonR * 0.28, cannonR * 0.65, 0, 0, Math.PI * 2);
     ctx.fill();
+    // v64 炮口闪光（射击后坐力期）：白芯豆绿光晕 + 四角星芒，沿炮口朝右上炸开
+    if (fx > 0.12) {
+      ctx.save();
+      ctx.globalAlpha *= fx;
+      const tipX = cannonLen + cannonR * 0.45;
+      const mFlash = ctx.createRadialGradient(tipX, 0, 0, tipX, 0, cannonR * 1.55);
+      mFlash.addColorStop(0, 'rgba(255,255,255,0.95)');
+      mFlash.addColorStop(0.45, 'rgba(197,225,165,0.55)');
+      mFlash.addColorStop(1, 'rgba(197,225,165,0)');
+      ctx.fillStyle = mFlash;
+      ctx.beginPath();
+      ctx.arc(tipX, 0, cannonR * 1.55, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FFFFFF';
+      this._drawStarShape(ctx, tipX, 0, cannonR * 0.52, 4, 0.32);
+      ctx.fill();
+      ctx.restore();
+    }
     ctx.restore();
 
     // ---- 7. 头顶水滴形嫩叶（替代原"待发射豌豆"，更接近PvZ原版）----
@@ -1275,14 +1412,18 @@ class Renderer {
    * - 头顶两团尖角火苗冠（左小右大反相摆动，"燃烧的头发"）
    * - 凶萌表情：倒八字眉 + 向内斜视怒目 + grin 坏笑 + 暖橙腮红
    */
-  _drawFire(ctx, r, def, wobblePhase) {
+  _drawFire(ctx, r, def, plant) {
     const T = this.T;
     const C = T.COLORS;
     const H = T.HEAD;
     const F = T.FACE;
     const headR = r * 1.0;
     const headY = -r * 0.25;
+    // v64: 兼容旧调用（传相位数字）；fx = 射击后坐力包络（0~1）
+    const wobblePhase = (typeof plant === 'number') ? plant : (plant.wobble || 0);
     const sway = Math.sin(wobblePhase * 2.0) * headR * 0.05;
+    const fx = (typeof plant === 'object' && plant && plant.shootFx > 0)
+      ? Math.sin(Math.min(1, plant.shootFx) * Math.PI) : 0;
 
     // ---- 1. 焦橙半球底座（径向渐变 + 纵向棱线）----
     const bodyY = r * 0.62;
@@ -1429,13 +1570,33 @@ class Renderer {
     ctx.beginPath();
     ctx.ellipse(cannonLen, 0, cannonR * 0.28, cannonR * 0.62, 0, 0, Math.PI * 2);
     ctx.fill();
+    // v64 炮口闪光（射击后坐力期）：暖黄芯 + 橙红光晕 + 四角星芒（火系最强闪光）
+    if (fx > 0.12) {
+      ctx.save();
+      ctx.globalAlpha *= fx;
+      const tipX = cannonLen + cannonR * 0.45;
+      const mFlash = ctx.createRadialGradient(tipX, 0, 0, tipX, 0, cannonR * 1.8);
+      mFlash.addColorStop(0, 'rgba(255,249,196,0.95)');
+      mFlash.addColorStop(0.45, 'rgba(255,138,101,0.60)');
+      mFlash.addColorStop(1, 'rgba(255,138,101,0)');
+      ctx.fillStyle = mFlash;
+      ctx.beginPath();
+      ctx.arc(tipX, 0, cannonR * 1.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FFFFFF';
+      this._drawStarShape(ctx, tipX, 0, cannonR * 0.60, 4, 0.32);
+      ctx.fill();
+      ctx.restore();
+    }
     ctx.restore();
-    // 管口三层火苗（v34 随炮口旋至右上；与 _drawProjectile 火焰弹完全同色系；sway 呼吸摆动）
+    // 管口三层火苗（v34 随炮口旋至右上；与 _drawProjectile 火焰弹完全同色系；sway 呼吸摆动；
+    // v64: 射击瞬间火苗随 fx 增大 60% = 喷射感）
+    const flameBoost = 1 + fx * 0.6;
     const muzzleDist = cannonLen + cannonR * 0.55;
     this._drawFlame(ctx,
       cannonX + Math.cos(-0.70) * muzzleDist,
       cannonY + Math.sin(-0.70) * muzzleDist,
-      headR * 0.26, headR * 0.38, sway * 0.8);
+      headR * 0.26 * flameBoost, headR * 0.38 * flameBoost, sway * 0.8);
 
     // ---- 7. 头顶两团尖角火苗冠（左小右大，反相位摆动）----
     this._drawFlame(ctx, -headR * 0.28, headY - headR * 0.80, headR * 0.26, headR * 0.46, -sway * 0.6);
@@ -1509,7 +1670,8 @@ class Renderer {
    * - 新增粗黑倒八字眉（坚果墙核心特征：怒目坚定表情）
    * - 左上高光月牙保留；底部投影由 _drawPlant 统一绘制
    */
-  _drawWall(ctx, r, def, wobblePhase) {
+  _drawWall(ctx, r, def, plant) {
+    const wobblePhase = (typeof plant === 'number') ? plant : (plant.wobble || 0);
     const T = this.T;
     const C = T.COLORS;
     const H = T.HEAD;
@@ -1621,12 +1783,16 @@ class Renderer {
    * （v34：-40° 朝右上+安装座环+深青发射腔+管口冰雾随管朝右上喷）+ 头顶三叉冰晶簇
    * + 四片鲜绿底座叶（后2大+前2小）+ 冷酷表情（半垂眼睑+抿嘴+冰蓝腮红）
    */
-  _drawFreezer(ctx, r, def, wobblePhase) {
+  _drawFreezer(ctx, r, def, plant) {
     const T = this.T;
     const C = T.COLORS;
     const H = T.HEAD;
     const headR = r * 1.0;
     const headY = -r * 0.25;
+    // v64: 兼容旧调用（传相位数字）；fx = 射击后坐力包络（0~1）
+    const wobblePhase = (typeof plant === 'number') ? plant : (plant.wobble || 0);
+    const fx = (typeof plant === 'object' && plant && plant.shootFx > 0)
+      ? Math.sin(Math.min(1, plant.shootFx) * Math.PI) : 0;
     const swMain = this._strokeW(T.STROKE.MAIN);
 
     // ---- 1. 四片鲜绿底座叶（后 2 大侧叶 + 前 2 小内叶，双层结构参照附件）----
@@ -1767,6 +1933,24 @@ class Renderer {
     ctx.beginPath();
     ctx.ellipse(cannonLen + cannonR * 0.72 + mistSway * 0.6, cannonR * 0.10, cannonR * 0.26, cannonR * 0.18, 0.25, 0, Math.PI * 2);
     ctx.fill();
+    // v64 炮口闪光（射击后坐力期）：白芯薄荷青光晕 + 四角星芒（冰系冷光）
+    if (fx > 0.12) {
+      ctx.save();
+      ctx.globalAlpha *= fx;
+      const tipX = cannonLen + cannonR * 0.45;
+      const mFlash = ctx.createRadialGradient(tipX, 0, 0, tipX, 0, cannonR * 1.6);
+      mFlash.addColorStop(0, 'rgba(255,255,255,0.95)');
+      mFlash.addColorStop(0.45, 'rgba(178,240,234,0.55)');
+      mFlash.addColorStop(1, 'rgba(178,240,234,0)');
+      ctx.fillStyle = mFlash;
+      ctx.beginPath();
+      ctx.arc(tipX, 0, cannonR * 1.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FFFFFF';
+      this._drawStarShape(ctx, tipX, 0, cannonR * 0.52, 4, 0.32);
+      ctx.fill();
+      ctx.restore();
+    }
     ctx.restore();
 
     // ---- 6. 头顶三叉冰晶簇（中央主晶 + 两侧短晶，微后倾；切面暗部 + 中轴线）----
@@ -1856,6 +2040,18 @@ class Renderer {
     ctx.save();
     if (shake) ctx.translate(shake, 0);
     ctx.lineJoin = 'round';
+
+    // v64 引信燃烧红光（<1000ms 时左樱后方脉冲暖红光晕，配合蓄力震动强化"要炸了"预警）
+    if (fuseLeft > 0 && fuseLeft < 1000) {
+      const auraA = 0.22 + 0.18 * Math.abs(Math.sin(Date.now() / 90));
+      const aura = ctx.createRadialGradient(lx, ly, lr * 0.3, lx, ly, lr * 1.9);
+      aura.addColorStop(0, 'rgba(255,87,34,' + auraA.toFixed(3) + ')');
+      aura.addColorStop(1, 'rgba(255,87,34,0)');
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.arc(lx, ly, lr * 1.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // ---- 1. 双茎（粗圆柱：白边底层 + 绿面层；樱桃本体稍后压住茎根）----
     const stemW = r * 0.13;
@@ -2235,13 +2431,29 @@ class Renderer {
    * · 光滑暖橙黄花盘（无棕色种子纹理） + 左上方月牙形高光
    * · 圆润草绿躯干 + 心形叶 + 珊瑚粉腮红
    */
-  _drawSunflower(ctx, r, def, wobblePhase) {
+  _drawSunflower(ctx, r, def, plant) {
     const T = this.T;
     const C = T.COLORS;
     const H = T.HEAD;
     const headR = r * 0.95;
     const headY = -r * 0.2;
+    // v64: 兼容旧调用（传相位数字）
+    const wobblePhase = (typeof plant === 'number') ? plant : (plant.wobble || 0);
     const wobble = Math.sin(wobblePhase) * 0.05;
+
+    // v64 产阳光预兆光晕：sunCooldown 进入最后 SUN_GLOW_MS 窗口时，花盘后方金色光环脉冲
+    // （功能预告：告诉孩子"快出阳光了"，也是向日葵的高光时刻）
+    if (typeof plant === 'object' && plant && plant.sunCooldown > 0 && plant.sunCooldown < PLANT.SUN_GLOW_MS) {
+      const pulse = 0.45 + 0.55 * Math.abs(Math.sin(Date.now() / 130));
+      const glow = ctx.createRadialGradient(0, headY, headR * 0.2, 0, headY, headR * 1.55);
+      glow.addColorStop(0, 'rgba(255,213,79,' + (0.38 * pulse).toFixed(3) + ')');
+      glow.addColorStop(0.65, 'rgba(255,193,7,' + (0.20 * pulse).toFixed(3) + ')');
+      glow.addColorStop(1, 'rgba(255,193,7,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(0, headY, headR * 1.55, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // === 茎 + 两片心形叶（圆润草绿躯干） ===
     // 茎：圆润矩形，渐变绿色
