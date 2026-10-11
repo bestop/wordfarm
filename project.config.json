@@ -1,0 +1,39 @@
+{
+  "description": "单词农场 - 萌系背单词小游戏（monorepo 根入口：小程序源码位于 miniprogram/ 子目录）",
+  "miniprogramRoot": "miniprogram/",
+  "compileType": "miniprogram",
+  "libVersion": "3.17.0",
+  "appid": "wx9e3d5c3d2641b209",
+  "projectname": "word-farm-miniprogram",
+  "packOptions": {
+    "ignore": [
+      { "type": "folder", "value": "src" },
+      { "type": "folder", "value": "scripts" },
+      { "type": "folder", "value": "node_modules" },
+      { "type": "file", "value": "package.json" },
+      { "type": "file", "value": "bun.lock" },
+      { "type": "file", "value": "tsconfig.json" },
+      { "type": "file", "value": "components.json" },
+      { "type": "file", "value": "README.md" }
+    ],
+    "include": []
+  },
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "postcss": true,
+    "compileHotReLoad": true,
+    "minified": true,
+    "useCompilerPlugins": false,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    }
+  },
+  "condition": {},
+  "editorSetting": {
+    "tabIndent": "insertSpaces",
+    "tabSize": 2
+  }
+}

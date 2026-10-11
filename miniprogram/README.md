@@ -346,6 +346,19 @@ miniprogram/
 
 ---
 
-## 十三、License
+## 十三、常见问题（FAQ）
+
+### Q：微信开发者工具打开后提示「找不到主页 / 未找到 app.json」？
+
+本仓库是 **monorepo 双端结构**，小程序源码位于 `miniprogram/` 子目录（Web 端在 `src/`），请按以下任一方式打开：
+
+- **方式一（推荐）**：直接用微信开发者工具打开 **仓库根目录**。根目录已提供 `project.config.json`，其中 `miniprogramRoot` 已指向 `miniprogram/`，工具会自动定位小程序源码。
+- **方式二**：用微信开发者工具直接打开 **`miniprogram/` 子目录**（该目录内也有一份独立的 `project.config.json`）。
+
+⚠️ 请勿将 `src/`、`scripts/` 等 Web 端目录当作小程序项目打开。
+
+---
+
+## 十四、License
 
 MIT License © 2026 WordFarm
