@@ -1,4 +1,5 @@
-// pages/index/index.js - 欢迎页（v7 UI 统一协调）：自定义导航栏 + 统计卡 + 难度胶囊 + 玩法网格 + Banner + 开始
+// pages/index/index.js - 欢迎页（v67 信息层级重构）：自定义导航 + 轻量悬浮条 + 词库胶囊 + Hero 大卡（玩法徽章 + 开始冒险）
+// v67 变化：brand-hero/howto-group/cta-bar 移除，全部事件复用（onKnowMore 迁移至导航「📖 玩法」入口）
 // v7 设计 tokens（基于模块节奏 = 18rpx 的 1/3/2/3 比例）：
 //   字号 5 级 / 圆角 3 级 / 间距 3 级 / 文本色 3 级
 
@@ -46,8 +47,8 @@ Page({
       { key: 'custom',  name: '导入词库' }
     ],
 
-    // 玩法卡（单行 4 列，展示游戏核心循环 — 原第二排重复内容已移除）
-    // v63: 底色同步「木语农场」纸色系（手账纸签调）
+    // 玩法徽章（v67 渲染于 Hero 大卡 banner-chips 2×2，展示游戏核心循环）
+    // v63/v65: 底色沿用「木语农场」纸色系（手账纸签调）
     howtoList: [
       { id: 'a1', icon: '✅', title: '答对消除', bg: '#E3F6C8' },
       { id: 'a2', icon: '⚡',  title: '连错加速', bg: '#FFEDB8' },
