@@ -1,39 +1,45 @@
-<!-- pages/index/index.wxml — v68 参考图重绘（PvZ 草地鲜绿风）
-  v68 更新（参考附图逐区对齐）：
-    · 导航改木质风：圆形木盘返回钮 + 中央木牌匾「单词农场」+ 右侧圆形木盘「📖 玩法」
-    · 新增副标题「背单词，保卫农场」（导航下方棕色粗体居中）
-    · hud-strip 磨砂 → 奶油胶囊横排（彩色图标 + 标签 + 白框数字）
-    · char-strip 增高放大（150→240rpx 弹性）：角色 scale 1.5，VS 改橙色立体描边大字
-    · banner-hero 木框公告栏 → 浅绿草地大圆角卡：标题橙棕渐变字，副标题「背单词、养植物、闯关拿奖励」
-      左侧场景加白描边插画框 + 迷你奖杯；chips 白描边亮化
-    · 新增右下角浮动「奖励中心」入口（reward-fab，承接 onOpenRewards）
-  v67 更新（视觉层级 / 模块布局 / 细节打磨）：
-    · 导航栏升级主品牌：标题「边玩边背单词」→「单词农场」，右侧新增「📖 玩法」入口（承接原 howto-head 立即了解）
-    · 删除 brand-hero 品牌胶囊（与导航标题去重，节省垂直空间）
-    · stats-row 4 张统计卡 → hud-strip 轻量悬浮条（磨砂玻璃质感，图标+数值横排，置于导航正下方）
-    · diff-pills 词库选择上移至角色条后（核心操作前置，一屏内完成「选词库→开始游戏」）
-    · howto-group 玩法组整体移除，玩法标签化为 Hero 卡内 banner-chips 小徽章
-    · banner-hero 升级为视觉中心 Hero 大卡：高度弹性自适应（380~520rpx 吸收剩余空间）
-      右侧文案精简（「背单词 · 养植物 · 拿奖励」）+ 玩法 chips + 全宽木纹大按钮「开始冒险」（整合原底部 CTA）
-    · cta-bar 底部开始按钮移除（开始冒险即唯一主 CTA，消除双按钮歧义）
-    · char-strip 角色条保留，VS 徽章 / 墓碑占比放大（视觉平衡）
-  v62 更新（Banner 冲击力升级: 场景 300→336 / 太阳彩虹放大 / 寒冰射手入阵 / 右侧文案放大）
-  v46 更新（角色条: 小太阳/漂移云/接触阴影/名牌描边; Banner: 远山绿丘/太阳光束/光泽扫过/箭头微动）
-  v30 更新（游戏角色展示条 + Banner 场景升级：彩虹拱/太阳卡哇伊脸/云朵睡脸/坚果墙入阵/僵尸探头/蘑菇/蝴蝶）
-  布局结构（v67）：
+<!-- pages/index/index.wxml — v69 严格按参考图重绘（含插画图片）
+  v69 更新（布局/UI/图片内容与位置 逐像素对齐参考图）：
+    · 导航：木盘返回钮 + 中央木牌匾「单词农场」（双铆钉）+ 右侧⚙️木盘钮（承接玩法弹窗）
+    · 副标题「背单词，保卫农场」紧贴牌匾下方
+    · 数据条：卡其木胶囊横排（🏆最高分/🎮游戏次数/🔊音效/👤亲子积分，深棕白框数字徽章）
+    · 横幅：新增 PvZ 插画大图 /images/banner-hero.jpg（向日葵+豌豆+坚果 VS 僵尸，
+      太阳草地蓝天），中偏右压橙色描边大字「VS」——替代原纯 CSS 角色条与 CSS 农场场景
+    · 词库牌：单排六枚木牌（小学/初中/高中/KET/PET/导入词库），选中亮柠绿+白光圈+顶部小芽
+    · 大冒险卡：左 /images/card-plants.jpg 角色合影插画（向日葵+坚果+寒冰射手+金杯），
+      右侧橙金标题「单词农场大冒险」+ 副标 + 2×2 白胶囊玩法徽章（答对消除/连击加速/连击翻倍/防线守卫）
+    · 「开始冒险」独立木纹大按钮移至卡片下方（参考图底部位置），两侧草丛装饰
+    · 右下角奖励中心浮动钮改为红浆果圆钮（参考图红色圆钮）
+    · 新增页面底部左右深绿灌木丛装饰（page-flora）
+  v67/v68 历史见 git log；全部事件与数据绑定复用零改动
+  布局结构（v69）：
     .page (flex column, 高度 {{pageHeight}}rpx, overflow:hidden)
-      ├── nav-bar            自定义导航栏（< 返回 / 单词农场 / 📖玩法）
-      ├── .main-view         纯 flex 主体，space-between + Hero 弹性吸收，禁止滚动
-      │   ├── hud-strip      v67 轻量悬浮条：🏆最高分 / 🎮次数 / 🔊音效 / 💝亲子积分
-      │   ├── char-strip     游戏角色展示条：4 植物 VS 舞王僵尸（迷你 .chr--* 体系）
-      │   ├── diff-pills     词库选择（上移）：小学 / 初中 / 高中 / KET / PET / 导入词库
-      │   ├── pack-bar       v35 自定义词包信息条（条件渲染）
-      │   └── banner-hero    v67 Hero 大卡：左侧农场场景 · 右侧大标题/玩法chips/木纹大按钮
-      └── km-mask            v33 「立即了解」玩法弹窗（导航「📖 玩法」触发）
+      ├── page-flora         底部灌木装饰（绝对定位，不入流）
+      ├── nav-bar            自定义导航（返回 / 木牌匾 / ⚙️玩法）
+      ├── .main-view         纯 flex 主体，禁止滚动
+      │   ├── brand-sub      副标题
+      │   ├── hud-strip      数据胶囊条（最高分/游戏次数/音效/亲子积分）
+      │   ├── hero-banner    PvZ 插画横幅（图 + VS 大字）
+      │   ├── diff-pills     词库木牌 ×6
+      │   ├── pack-bar       自定义词包信息条（条件渲染）
+      │   ├── adventure-card 大冒险卡（左插画 + 右文案/徽章）
+      │   └── start-wrap     开始冒险木按钮 + 草丛
+      ├── reward-fab         右下角奖励中心
+      └── km-mask            「立即了解」玩法弹窗
 -->
 <view class="page" style="height: {{pageHeight}}rpx;">
 
-  <!-- ============ 自定义导航栏（v67：主品牌 + 玩法入口） ============ -->
+  <!-- ============ v69: 页面底部灌木丛装饰（参考图页缘绿植） ============ -->
+  <view class="page-flora">
+    <view class="fb fb--1"></view>
+    <view class="fb fb--2"></view>
+    <view class="fb fb--3"></view>
+    <view class="fb fb--4"></view>
+    <view class="fb fb--5"></view>
+    <view class="fb fb--6"></view>
+  </view>
+
+  <!-- ============ 自定义导航栏（木盘钮 + 木牌匾 + ⚙️） ============ -->
   <view
     class="nav-bar"
     style="padding-top: {{statusBarHeight}}px; height: calc({{statusBarHeight}}px + {{navBarHeight}}px);"
@@ -48,15 +54,17 @@
         <text class="nav-icon">‹</text>
       </view>
       <view class="nav-title">
+        <view class="board-screw board-screw--l"></view>
         <text class="nav-title-text">单词农场</text>
+        <view class="board-screw board-screw--r"></view>
       </view>
       <view
-        class="nav-btn nav-btn--more"
+        class="nav-btn"
         style="width: {{navBarHeight - 6}}px; height: {{navBarHeight - 6}}px;"
         bindtap="onKnowMore"
         hover-class="nav-btn-hover"
       >
-        <text class="nav-more-icon">📖</text>
+        <text class="nav-gear">⚙️</text>
       </view>
     </view>
   </view>
@@ -64,164 +72,40 @@
   <!-- ============ 纯 flex 主体（严格一屏，禁止滚动） ============ -->
   <view class="main-view">
 
-    <!-- 0. v68 副标题（参考图：导航下方棕色粗体居中） -->
+    <!-- 1. 副标题（参考图：牌匾正下方棕色粗体） -->
     <view class="brand-sub">背单词，保卫农场</view>
 
-    <!-- 1. v68 奶油数据条：最高分 / 游戏次数 / 音效 / 亲子积分 -->
+    <!-- 2. 数据条：最高分 / 游戏次数 / 音效 / 亲子积分（参考图卡其胶囊） -->
     <view class="hud-strip">
       <view class="hud-item">
         <text class="hud-ico">🏆</text>
-        <text class="hud-num">{{highestScore}}</text>
         <text class="hud-label">最高分</text>
+        <view class="hud-badge"><text class="hud-badge-txt">{{highestScore}}</text></view>
       </view>
-      <view class="hud-sep"></view>
       <view class="hud-item">
         <text class="hud-ico">🎮</text>
-        <text class="hud-num">{{totalGames}}</text>
-        <text class="hud-label">次数</text>
+        <text class="hud-label">游戏次数</text>
+        <view class="hud-badge"><text class="hud-badge-txt">{{totalGames}}</text></view>
       </view>
-      <view class="hud-sep"></view>
       <view class="hud-item hud-tap" bindtap="onToggleSound" hover-class="hud-tap-hover">
         <text class="hud-ico">{{soundEnabled ? '🔊' : '🔇'}}</text>
-        <text class="hud-num hud-num--sm">{{soundEnabled ? '开' : '关'}}</text>
         <text class="hud-label">音效</text>
       </view>
-      <view class="hud-sep"></view>
       <view class="hud-item hud-tap" bindtap="onOpenRewards" hover-class="hud-tap-hover">
-        <text class="hud-ico">💝</text>
-        <text class="hud-num">{{rewardPoints}}</text>
+        <text class="hud-ico">👤</text>
         <text class="hud-label">亲子积分</text>
+        <view class="hud-badge"><text class="hud-badge-txt">{{rewardPoints}}</text></view>
       </view>
     </view>
 
-    <!-- 2. v30 游戏角色展示条：向日葵/豌豆射手/寒冰射手/坚果墙 VS 舞王僵尸 -->
-    <view class="char-strip">
-      <view class="char-enemy-zone"></view>
-      <view class="cs-ground"></view>
-      <view class="cs-grass cs-grass-back"></view>
-      <view class="cs-grass cs-grass-front"></view>
-      <!-- v46: 天空小太阳 + 漂移云×2（植物侧暖光, 与僵尸侧紫雾对冲） -->
-      <view class="cs-sun"></view>
-      <view class="cs-cloud cs-cloud--1"></view>
-      <view class="cs-cloud cs-cloud--2"></view>
-      <view class="cs-daisy cs-daisy--1"></view>
-      <view class="cs-daisy cs-daisy--2"></view>
-      <view class="cs-daisy cs-daisy--3"></view>
-      <view class="cs-tomb"></view>
-      <view class="cs-note cs-note--1"><text>♪</text></view>
-      <view class="cs-note cs-note--2"><text>♫</text></view>
-      <view class="cs-note cs-note--3"><text>♪</text></view>
-
-      <!-- 向日葵（迷你 v17 风格） -->
-      <view class="cs-slot cs-slot--sunflower">
-        <view class="chr chr--sunflower">
-          <view class="sun-stem"></view>
-          <view class="sun-leaf sun-leaf--l"></view>
-          <view class="sun-leaf sun-leaf--r"></view>
-          <view class="sun-head">
-            <view class="sun-p sun-p--1"></view>
-            <view class="sun-p sun-p--2"></view>
-            <view class="sun-p sun-p--3"></view>
-            <view class="sun-p sun-p--4"></view>
-            <view class="sun-p sun-p--5"></view>
-            <view class="sun-p sun-p--6"></view>
-            <view class="sun-p sun-p--7"></view>
-            <view class="sun-p sun-p--8"></view>
-            <view class="sun-disc"></view>
-            <view class="sun-eye sun-eye--l"></view>
-            <view class="sun-eye sun-eye--r"></view>
-            <view class="sun-blush sun-blush--l"></view>
-            <view class="sun-blush sun-blush--r"></view>
-            <view class="sun-mouth"></view>
-          </view>
-        </view>
-      </view>
-
-      <!-- 豌豆射手（迷你） -->
-      <view class="cs-slot cs-slot--shooter">
-        <view class="chr chr--shooter">
-          <view class="sht-stem"></view>
-          <view class="sht-leaf sht-leaf--l"></view>
-          <view class="sht-leaf sht-leaf--r"></view>
-          <view class="sht-head">
-            <view class="sht-face"></view>
-            <view class="sht-snout"></view>
-            <view class="sht-eye"></view>
-          </view>
-        </view>
-      </view>
-
-      <!-- 寒冰射手（迷你 v22 风格） -->
-      <view class="cs-slot cs-slot--ice">
-        <view class="chr chr--ice">
-          <view class="ice-stem"></view>
-          <view class="ice-leaf ice-leaf--l"></view>
-          <view class="ice-leaf ice-leaf--r"></view>
-          <view class="ice-head">
-            <view class="ice-crystal ice-crystal--main"></view>
-            <view class="ice-crystal ice-crystal--l"></view>
-            <view class="ice-crystal ice-crystal--r"></view>
-            <view class="ice-face"></view>
-            <view class="ice-snout"></view>
-            <view class="ice-eye"></view>
-            <view class="ice-frost ice-frost--1"></view>
-            <view class="ice-frost ice-frost--2"></view>
-          </view>
-        </view>
-      </view>
-
-      <!-- 坚果墙（迷你 v20 风格） -->
-      <view class="cs-slot cs-slot--wall">
-        <view class="chr chr--wall">
-          <view class="wall-body">
-            <view class="wall-bump"></view>
-            <view class="wall-wrinkle wall-wrinkle--mid"></view>
-            <view class="wall-wrinkle wall-wrinkle--low"></view>
-            <view class="wall-eye wall-eye--l"></view>
-            <view class="wall-eye wall-eye--r"></view>
-            <view class="wall-blush wall-blush--l"></view>
-            <view class="wall-blush wall-blush--r"></view>
-            <view class="wall-mouth"></view>
-          </view>
-        </view>
-      </view>
-
-      <!-- VS 徽章 -->
-      <view class="char-vs"><text class="vs-text">VS</text></view>
-
-      <!-- 舞王僵尸（迷你 v29 风格） -->
-      <view class="cs-slot cs-slot--zombie">
-        <view class="chr chr--zombie">
-          <view class="zb-hat">
-            <view class="zb-hat-crown"></view>
-            <view class="zb-hat-brim"></view>
-          </view>
-          <view class="zb-head">
-            <view class="zb-eye zb-eye--l"></view>
-            <view class="zb-eye zb-eye--r"></view>
-            <view class="zb-brow zb-brow--l"></view>
-            <view class="zb-brow zb-brow--r"></view>
-            <view class="zb-mouth"></view>
-          </view>
-          <view class="zb-body">
-            <view class="zb-shirt"></view>
-            <view class="zb-tie"></view>
-          </view>
-          <view class="zb-arm zb-arm--l"></view>
-          <view class="zb-arm zb-arm--r"></view>
-          <view class="zb-leg zb-leg--l"></view>
-          <view class="zb-leg zb-leg--r"></view>
-        </view>
-      </view>
-
-      <view class="cs-name cs-name--sunflower"><text>向日葵</text></view>
-      <view class="cs-name cs-name--shooter"><text>豌豆射手</text></view>
-      <view class="cs-name cs-name--ice"><text>寒冰射手</text></view>
-      <view class="cs-name cs-name--wall"><text>坚果墙</text></view>
-      <view class="cs-name cs-name--zombie"><text>舞王僵尸</text></view>
+    <!-- 3. PvZ 插画横幅（参考图主视觉：植物 VS 僵尸 + 橙色描边 VS） -->
+    <view class="hero-banner">
+      <image class="hero-img" src="/images/banner-hero.jpg" mode="aspectFill" />
+      <view class="hero-shine"></view>
+      <view class="hero-vs"><text class="hero-vs-text">VS</text></view>
     </view>
 
-    <!-- 3. 词库选择（v67 上移至核心操作区：小学 / 初中 / 高中 / KET / PET / 导入词库） -->
+    <!-- 4. 词库选择：单排六枚木牌（选中亮柠绿 + 白光圈 + 顶部小芽） -->
     <view class="diff-pills">
       <block wx:for="{{difficulties}}" wx:key="key">
         <view
@@ -230,8 +114,12 @@
           bindtap="onSelectDifficulty"
           hover-class="diff-pill-hover"
         >
-          {{item.name}}
-          <text wx:if="{{difficulty === item.key}}" class="diff-leaf">🍃</text>
+          <view wx:if="{{difficulty === item.key}}" class="pill-sprout">
+            <view class="sprout-stem"></view>
+            <view class="sprout-leaf sprout-leaf--l"></view>
+            <view class="sprout-leaf sprout-leaf--r"></view>
+          </view>
+          <text class="diff-pill-txt">{{item.name}}</text>
         </view>
       </block>
     </view>
@@ -244,236 +132,57 @@
       <text class="pack-bar-action">管理 ›</text>
     </view>
 
-    <!-- 4. v67 Hero 大卡：左侧农场场景（彩虹/太阳脸/云睡脸/向日葵/寒冰射手/坚果墙/豌豆射手/僵尸探头/蘑菇/蝴蝶/闪光）
-         右侧：大标题 + 精简副标题 + 玩法 chips + 全宽木纹大按钮「开始冒险」（唯一主 CTA） -->
-    <view class="banner-hero">
-      <!-- 装饰光斑 -->
-      <view class="banner-spot banner-spot-1"></view>
-      <view class="banner-spot banner-spot-2"></view>
-
-      <!-- 左侧：纯 CSS 农场场景 -->
-      <view class="banner-scene">
-        <!-- 天空（渐变叠加层） -->
-        <view class="scene-sky"></view>
-        <!-- v46: 远山绿丘 + 太阳光束（层次与氛围） -->
-        <view class="scene-hills"></view>
-        <view class="scene-beams"></view>
-        <!-- v30 彩虹拱 -->
-        <view class="scene-rainbow">
-          <view class="rb rb--1"></view>
-          <view class="rb rb--2"></view>
-          <view class="rb rb--3"></view>
-        </view>
-
-        <!-- v30 太阳：射线独立旋转 + 卡哇伊脸 -->
-        <view class="scene-sun">
-          <view class="sun-rays">
-            <view class="sun-ray sun-ray-1"></view>
-            <view class="sun-ray sun-ray-2"></view>
-            <view class="sun-ray sun-ray-3"></view>
-            <view class="sun-ray sun-ray-4"></view>
-          </view>
-          <view class="sun-core">
-            <view class="sun-face-eye sun-face-eye--l"></view>
-            <view class="sun-face-eye sun-face-eye--r"></view>
-            <view class="sun-face-smile"></view>
-            <view class="sun-face-blush sun-face-blush--l"></view>
-            <view class="sun-face-blush sun-face-blush--r"></view>
-          </view>
-        </view>
-
-        <!-- 云朵 1 + 云朵 2 -->
-        <view class="scene-cloud scene-cloud-1">
-          <view class="cloud-puff cloud-puff-a"></view>
-          <view class="cloud-puff cloud-puff-b"></view>
-          <view class="cloud-puff cloud-puff-c"></view>
-          <!-- v30 云朵睡脸 -->
-          <view class="cloud-face">
-            <view class="cloud-face-eye cloud-face-eye--l"></view>
-            <view class="cloud-face-eye cloud-face-eye--r"></view>
-            <view class="cloud-face-mouth"></view>
-          </view>
-        </view>
-        <view class="scene-cloud scene-cloud-2">
-          <view class="cloud-puff cloud-puff-a"></view>
-          <view class="cloud-puff cloud-puff-b"></view>
-          <view class="cloud-puff cloud-puff-c"></view>
-        </view>
-        <!-- 草地：双层绿色波浪 -->
-        <view class="scene-ground"></view>
-        <view class="scene-grass scene-grass-back"></view>
-        <view class="scene-grass scene-grass-front"></view>
-        <!-- 向日葵 v17：12 片外层花瓣 + 6 片内层小花瓣 + 月牙高光 + 珊瑚粉腮红 -->
-        <view class="scene-sunflower">
-          <view class="sf-stem"></view>
-          <view class="sf-leaf sf-leaf-l"></view>
-          <view class="sf-leaf sf-leaf-r"></view>
-          <view class="sf-head">
-            <view class="sf-petal sf-petal-1"></view>
-            <view class="sf-petal sf-petal-2"></view>
-            <view class="sf-petal sf-petal-3"></view>
-            <view class="sf-petal sf-petal-4"></view>
-            <view class="sf-petal sf-petal-5"></view>
-            <view class="sf-petal sf-petal-6"></view>
-            <view class="sf-petal sf-petal-7"></view>
-            <view class="sf-petal sf-petal-8"></view>
-            <view class="sf-petal sf-petal-9"></view>
-            <view class="sf-petal sf-petal-10"></view>
-            <view class="sf-petal sf-petal-11"></view>
-            <view class="sf-petal sf-petal-12"></view>
-            <view class="sf-petal-inner sf-petal-inner-1"></view>
-            <view class="sf-petal-inner sf-petal-inner-2"></view>
-            <view class="sf-petal-inner sf-petal-inner-3"></view>
-            <view class="sf-petal-inner sf-petal-inner-4"></view>
-            <view class="sf-petal-inner sf-petal-inner-5"></view>
-            <view class="sf-petal-inner sf-petal-inner-6"></view>
-            <view class="sf-face">
-              <view class="sf-face-shine"></view>
+    <!-- 5. 大冒险卡（参考图：左角色合影插画 + 右橙金标题/副标/2×2 白胶囊徽章） -->
+    <view class="adventure-card">
+      <view class="ac-illu">
+        <image class="ac-img" src="/images/card-plants.jpg" mode="aspectFill" />
+        <view class="ac-illu-ring"></view>
+      </view>
+      <view class="ac-main">
+        <view class="ac-title">单词农场大冒险</view>
+        <view class="ac-sub">背单词、养植物、闯关拿奖励</view>
+        <view class="ac-chips">
+          <block wx:for="{{howtoList}}" wx:key="id">
+            <view class="bchip">
+              <text class="bchip-ico">{{item.icon}}</text>
+              <text class="bchip-txt">{{item.title}}</text>
             </view>
-            <view class="sf-eye sf-eye-l"></view>
-            <view class="sf-eye sf-eye-r"></view>
-            <view class="sf-blush sf-blush-l"></view>
-            <view class="sf-blush sf-blush-r"></view>
-            <view class="sf-mouth"></view>
-          </view>
-        </view>
-        <!-- v30 坚果墙入阵（复用迷你角色 .chr--wall） -->
-        <view class="banner-wall">
-          <view class="chr chr--wall">
-            <view class="wall-body">
-              <view class="wall-bump"></view>
-              <view class="wall-wrinkle wall-wrinkle--mid"></view>
-              <view class="wall-wrinkle wall-wrinkle--low"></view>
-              <view class="wall-eye wall-eye--l"></view>
-              <view class="wall-eye wall-eye--r"></view>
-              <view class="wall-blush wall-blush--l"></view>
-              <view class="wall-blush wall-blush--r"></view>
-              <view class="wall-mouth"></view>
-            </view>
-          </view>
-        </view>
-        <!-- v62 寒冰射手入阵（复用迷你角色 .chr--ice） -->
-        <view class="banner-ice">
-          <view class="chr chr--ice">
-            <view class="ice-stem"></view>
-            <view class="ice-leaf ice-leaf--l"></view>
-            <view class="ice-leaf ice-leaf--r"></view>
-            <view class="ice-head">
-              <view class="ice-crystal ice-crystal--main"></view>
-              <view class="ice-crystal ice-crystal--l"></view>
-              <view class="ice-crystal ice-crystal--r"></view>
-              <view class="ice-face"></view>
-              <view class="ice-snout"></view>
-              <view class="ice-eye"></view>
-              <view class="ice-frost ice-frost--1"></view>
-              <view class="ice-frost ice-frost--2"></view>
-            </view>
-          </view>
-        </view>
-        <!-- 豌豆射手 -->
-        <view class="scene-shooter">
-          <view class="ps-stem"></view>
-          <view class="ps-leaf ps-leaf-l"></view>
-          <view class="ps-leaf ps-leaf-r"></view>
-          <view class="ps-head">
-            <view class="ps-face"></view>
-            <view class="ps-eye"></view>
-            <view class="ps-mouth"></view>
-            <view class="ps-shadow"></view>
-          </view>
-        </view>
-        <!-- v30 僵尸探头（右边缘偷窥） -->
-        <view class="scene-zpeek">
-          <view class="zk-hat-crown"></view>
-          <view class="zk-hat-brim"></view>
-          <view class="zk-head">
-            <view class="zk-eye zk-eye--l"></view>
-            <view class="zk-eye zk-eye--r"></view>
-            <view class="zk-grin"></view>
-          </view>
-          <view class="zk-hand"></view>
-        </view>
-        <!-- 栅栏 -->
-        <view class="scene-fence">
-          <view class="fence-post fence-post-1"></view>
-          <view class="fence-post fence-post-2"></view>
-          <view class="fence-post fence-post-3"></view>
-          <view class="fence-post fence-post-4"></view>
-          <view class="fence-rail fence-rail-top"></view>
-          <view class="fence-rail fence-rail-bottom"></view>
-        </view>
-        <!-- v30 蘑菇 + 蝴蝶 + 闪光星 + 小花 -->
-        <view class="scene-shroom">
-          <view class="shroom-cap"></view>
-          <view class="shroom-stem"></view>
-        </view>
-        <view class="scene-butterfly scene-butterfly--1">
-          <view class="bf-wing bf-wing--l"></view>
-          <view class="bf-wing bf-wing--r"></view>
-          <view class="bf-body"></view>
-        </view>
-        <view class="scene-butterfly scene-butterfly--2">
-          <view class="bf-wing bf-wing--l"></view>
-          <view class="bf-wing bf-wing--r"></view>
-          <view class="bf-body"></view>
-        </view>
-        <view class="scene-spark scene-spark--1"></view>
-        <view class="scene-spark scene-spark--2"></view>
-        <view class="scene-spark scene-spark--3"></view>
-        <view class="scene-bloom scene-bloom-1"></view>
-        <view class="scene-bloom scene-bloom-2"></view>
-        <view class="scene-bloom scene-bloom-3"></view>
-        <view class="scene-bloom scene-bloom-4"></view>
-        <view class="scene-bloom scene-bloom-5"></view>
-        <!-- v68 迷你奖杯（参考图插画框左下金色奖杯） -->
-        <view class="scene-trophy">
-          <view class="tf-cup"></view>
-          <view class="tf-handle tf-handle--l"></view>
-          <view class="tf-handle tf-handle--r"></view>
-          <view class="tf-stem"></view>
-          <view class="tf-base"></view>
+          </block>
         </view>
       </view>
+    </view>
 
-      <!-- 右侧：大标题 + 副标题 + 玩法 chips + 全宽木纹大按钮 -->
-      <view class="banner-main">
-        <view class="banner-title">单词农场大冒险</view>
-        <view class="banner-sub">背单词、养植物、闯关拿奖励</view>
-        <!-- v67 玩法标签化：4 枚小徽章（承自原 howto-grid） -->
-        <view class="banner-chips">
-          <view
-            wx:for="{{howtoList}}"
-            wx:key="id"
-            class="bchip"
-            style="background: {{item.bg}};"
-          >
-            <text class="bchip-ico">{{item.icon}}</text>
-            <text class="bchip-txt">{{item.title}}</text>
-          </view>
-        </view>
-        <view
-          class="banner-btn"
-          bindtap="onBannerStart"
-          hover-class="banner-btn-hover"
-        >
-          <text class="banner-btn-shine"></text>
-          <text class="banner-btn-label">开始冒险</text>
-          <text class="banner-btn-arrow">›</text>
-        </view>
+    <!-- 6. 开始冒险木纹大按钮（参考图底部主 CTA，两侧草丛） -->
+    <view class="start-wrap">
+      <view class="tuft tuft--l">
+        <view class="blade blade--1"></view>
+        <view class="blade blade--2"></view>
+        <view class="blade blade--3"></view>
+      </view>
+      <view class="start-btn" bindtap="onStart" hover-class="start-btn-hover">
+        <text class="start-btn-label">开始冒险</text>
+      </view>
+      <view class="tuft tuft--r">
+        <view class="blade blade--1"></view>
+        <view class="blade blade--2"></view>
+        <view class="blade blade--3"></view>
       </view>
     </view>
 
   </view>
 
-  <!-- ============ v68: 右下角浮动「奖励中心」入口（参考图） ============ -->
+  <!-- ============ v69: 右下角「奖励中心」红浆果圆钮（参考图） ============ -->
   <view
     class="reward-fab"
     style="bottom: {{safeBottomRpx + 10}}rpx;"
     bindtap="onOpenRewards"
     hover-class="reward-fab-hover"
   >
-    <view class="reward-fab-ico"><text>🎁</text></view>
-    <view class="reward-fab-label">奖励中心</view>
+    <view class="fab-ico">
+      <view class="fab-berry"></view>
+      <view class="fab-spark"></view>
+    </view>
+    <view class="fab-label">奖励中心</view>
   </view>
 
   <!-- ============ v33: 「立即了解」玩法介绍弹窗（左对齐卡片式，替代原生 showModal） ============ -->
