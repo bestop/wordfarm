@@ -1,36 +1,30 @@
-/* pages/index/index.wxss — v67 首页信息层级重构（视觉层级 / 模块布局 / 细节打磨）
-   v67 更新：
-   - 导航栏升级主品牌「单词农场」（emoji + 渐变字），右侧新增「📖 玩法」入口
-   - 删除 brand-hero 品牌胶囊（与导航去重）；删除 howto-group（玩法标签化进 Hero 卡）
-   - stats-row 4 张统计卡 → hud-strip 轻量磨砂悬浮条（图标+数值，置于导航正下方）
-   - diff-pill 上移核心操作区：未选中内阴影「凹进去」，选中加 pillGlow 发光扩散 + 发芽动效
-   - char-strip：VS 徽章 44→54rpx、墓碑 26×32→34×42rpx（占比放大，视觉平衡）
-   - banner-hero 升级视觉中心：flex 弹性 380~520rpx；文案精简「背单词 · 养植物 · 拿奖励」
-     + banner-chips 2×2 玩法徽章 + banner-btn 全宽大木牌「开始冒险」（整合原底部 CTA）
-   - cta-bar/start-main 删除：开始冒险为唯一主 CTA，消除双按钮歧义
+/* pages/index/index.wxss — v68 参考图重绘（PvZ 草地鲜绿风）
+   v68 更新（参考附图逐区对齐）：
+   - 页面背景：天空蓝→纸色 渐变改为草地鲜绿渐变（顶部晨光 + 草地深绿晕）
+   - 导航木质化：圆形木盘返回钮/玩法钮 + 中央浅木牌匾「单词农场」；新增副标题「背单词，保卫农场」
+   - hud-strip 磨砂 → 奶油胶囊横排：彩色图标 + 标签 + 白框数字
+   - char-strip 增高放大（150→240rpx 弹性）：角色 --cs-s 变量 scale 1.5，VS 改橙色立体描边大字
+   - diff-pill：未选中奶油木标签内凹，选中浅黄绿发芽高亮（保留 pillGlow）
+   - banner-hero：木框公告栏 → 浅绿草地大圆角卡；标题橙棕渐变；副标题「背单词、养植物、闯关拿奖励」
+     banner-scene 白描边插画框 + 新增迷你奖杯；chips 白描边胶囊化；右上角小叶装饰
+   - 新增 reward-fab 右下角浮动「奖励中心」入口（含浮动动效）
    v62 更新（Banner 冲击力升级: 场景 336rpx / 太阳彩虹放大 / 寒冰射手入阵 / bannerRise 入场）
-   v46 更新（接触阴影/天空太阳云/远山光束/光泽扫过/箭头微动）
    v30 更新（char-strip 角色条 + Banner 场景元素升级）
    v7 设计 tokens（基于模块节奏 = 18rpx 的 1/3/2/3 比例）：
    - 字号 5 级：44(hero) / 30(nav-brand) / 26(section) / 22(button) / 18(caption) / 15(micro)
    - 圆角 3 级：22rpx(卡片) / 42rpx(主CTA) / 999rpx(胶囊)
    - 间距 3 级：20rpx(模块) / 12rpx(卡片间) / 6rpx(卡片内)
    - 文本色 3 级：#2F3A26(primary) / #5E6F48(secondary) / #657551(muted)
-   参考图对应区块：
-   - 背景：农场天空 → 草甸渐变（#B8E6FF → #DDF3C8 → #F7EFCF → #FFF9EA），顶柔光晕
-   - 悬浮条：磨砂半透明轻量条（hud-strip），轻垫在导航下
-   - 词库胶囊：未选中纸质标签内凹，选中叶绿火漆印 + 发光扩散
-   - Hero 大卡：木质外框公告栏（左侧 CSS 农场场景 336rpx + 右侧文字/徽章/大按钮）
 */
 
-/* ========== 页面容器（v63：农场天空 → 草甸渐变 + 纸感光斑） ========== */
+/* ========== 页面容器（v68：PvZ 草地鲜绿渐变 + 阳光光斑，参考图背景） ========== */
 .page {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   background:
-    radial-gradient(120% 70% at 50% -8%, #FFF7D6 0%, rgba(255,247,214,0) 55%),
-    linear-gradient(180deg, #B8E6FF 0%, #DDF3C8 34%, #F7EFCF 68%, #FFF9EA 100%);
+    radial-gradient(120% 60% at 50% -6%, #F4FFC8 0%, rgba(244,255,200,0) 55%),
+    linear-gradient(180deg, #D2F0A2 0%, #BCE584 32%, #A9D968 66%, #9BCE58 100%);
   overflow: hidden;
   position: relative;
 }
@@ -47,12 +41,12 @@
 .page:before {
   width: 520rpx; height: 520rpx;
   left: -180rpx; top: -120rpx;
-  background: rgba(255, 221, 138, 0.60);   /* 晨光太阳晕 */
+  background: rgba(248, 255, 178, 0.55);   /* 晨光太阳晕（黄绿） */
 }
 .page:after {
   width: 560rpx; height: 560rpx;
   right: -200rpx; bottom: -160rpx;
-  background: rgba(196, 226, 160, 0.60);   /* 草甸绿晕 */
+  background: rgba(120, 190, 70, 0.45);   /* 草地深绿晕 */
 }
 .page > .nav-bar,
 .page > .main-view { position: relative; z-index: 1; }
@@ -74,71 +68,75 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* v63：纸片圆钮 + 墨线描边 */
+  /* v68：木质圆盘钮（参考图） */
   border-radius: 50%;
-  background: #FFFDF5;
-  border: 2rpx solid rgba(74, 52, 42, 0.45);
-  box-shadow: 2rpx 3rpx 0 rgba(74, 52, 42, 0.14), 0 6rpx 14rpx rgba(74, 52, 42, 0.10);
+  background: linear-gradient(180deg, #EBCD97 0%, #D9AB6C 55%, #C08A4B 100%);
+  border: 2.5rpx solid #7A5230;
+  box-shadow: 0 3rpx 0 rgba(95, 59, 34, 0.5),
+              0 6rpx 12rpx rgba(95, 59, 34, 0.28),
+              inset 0 2rpx 0 rgba(255, 244, 214, 0.75);
   -webkit-tap-highlight-color: transparent;
-  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+  transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease;
 }
 .nav-btn-hover {
   transform: scale(0.94);
-  background: #FBF3E2;
-  box-shadow: 2rpx 2rpx 0 rgba(74, 52, 42, 0.12), 0 3rpx 8rpx rgba(74, 52, 42, 0.08);
+  filter: brightness(0.96);
+  box-shadow: 0 1rpx 0 rgba(95, 59, 34, 0.45),
+              0 3rpx 8rpx rgba(95, 59, 34, 0.2),
+              inset 0 2rpx 0 rgba(255, 244, 214, 0.6);
 }
 .nav-icon {
   font-size: 34rpx;
   font-weight: 800;
-  color: var(--farm-ink, #4A342A);
+  color: #5C3A1E;
   line-height: 1;
+  text-shadow: 0 1rpx 0 rgba(255, 244, 214, 0.6);
 }
+/* v68：中央木牌匾标题（参考图：浅木圆角牌 + 深棕描边） */
 .nav-title {
   flex: 1;
   min-width: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6rpx;
-  padding: 4rpx 16rpx;
-  font-size: 30rpx;          /* v67 24→30：主品牌提级（承接原 brand-chip） */
-  font-weight: 800;
-  color: var(--farm-ink, #4A342A);
-  letter-spacing: 2rpx;
+  align-self: center;
+  margin: 0 18rpx;
+  padding: 6rpx 30rpx;
+  border-radius: 14rpx 20rpx 16rpx 22rpx / 20rpx 14rpx 22rpx 16rpx;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 42%) ,
+    linear-gradient(180deg, #F6E5BF 0%, #EBD29C 55%, #DFC084 100%);
+  border: 3rpx solid #7A5230;
+  box-shadow: 0 4rpx 0 rgba(95, 59, 34, 0.5),
+              0 8rpx 16rpx rgba(95, 59, 34, 0.22),
+              inset 0 2rpx 0 rgba(255, 248, 224, 0.8);
+  font-size: 30rpx;
+  font-weight: 900;
+  letter-spacing: 3rpx;
   line-height: 1.25;
 }
-.nav-title-emoji { font-size: 27rpx; line-height: 1; }
 .nav-title-text {
-  background: linear-gradient(180deg, #3F5E1E 0%, #4E8C2F 58%, #6BA82C 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #5C3A1E;
+  text-shadow: 0 1rpx 0 rgba(255, 244, 214, 0.65);
 }
-/* v67 导航右侧「玩法」入口（承接原 howto-head-more） */
-.nav-more {
+/* v68 导航右侧「玩法」入口：与返回钮同族木质圆盘（内容为 📖 图标） */
+.nav-more-icon {
+  font-size: 30rpx;
+  line-height: 1;
+  filter: drop-shadow(0 1rpx 0 rgba(255, 244, 214, 0.5));
+}
+
+/* v68 副标题（参考图：导航下棕色粗体居中） */
+.brand-sub {
   flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 4rpx;
-  padding: 8rpx 16rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 253, 245, 0.92);
-  border: 2rpx solid rgba(74, 52, 42, 0.4);
-  box-shadow: 2rpx 2rpx 0 rgba(74, 52, 42, 0.12);
-  -webkit-tap-highlight-color: transparent;
-  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
-}
-.nav-more-hover {
-  transform: scale(0.94);
-  background: #FBF3E2;
-  box-shadow: 2rpx 2rpx 0 rgba(74, 52, 42, 0.10);
-}
-.nav-more-icon { font-size: 20rpx; line-height: 1; }
-.nav-more-text {
-  font-size: 19rpx;
-  font-weight: 700;
-  color: #4E8C2F;
-  letter-spacing: 0.5rpx;
+  text-align: center;
+  font-size: 24rpx;
+  font-weight: 800;
+  color: #4C7A20;
+  letter-spacing: 2.5rpx;
+  text-shadow: 0 1.5rpx 0 rgba(255, 255, 255, 0.5);
+  line-height: 1.3;
+  animation: rise-in 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.05) both;
 }
 
 /* ========== 主体：纯 flex 一屏，禁止滚动 ========== */
@@ -159,19 +157,20 @@
    v30 新增：游戏角色展示条 CSS（4 植物 VS 舞王僵尸）
    px→rpx 1:1 迁移自 preview_home.html（VLM 3 轮收敛版本）
    ================================================================ */
-/* 展示条容器：天空→草地渐变小场景 */
+/* 展示条容器：v68 增高放大（参考图大场景卡）：蓝天→草地渐变 */
 .char-strip {
-  flex: 0 0 auto;
-  height: 150rpx;
+  flex: 0 1 240rpx;          /* v68 150→240rpx 弹性：短屏可收缩至 190rpx 兑底 */
+  min-height: 190rpx;
+  height: 240rpx;
   position: relative;
   margin: 0 4rpx;
-  border-radius: 22rpx;
+  border-radius: 26rpx;
   background:
     radial-gradient(46% 54% at 8% 6%, rgba(255,243,176,0.6) 0%, rgba(255,243,176,0) 62%),
     radial-gradient(60% 70% at 12% 0%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 60%),
-    linear-gradient(180deg, #C9EBFF 0%, #DCF6CC 45%, #C4E990 78%, #ABDD74 100%);
-  box-shadow: 0 8rpx 18rpx rgba(102,148,52,0.18),
-              0 0 0 3rpx rgba(255,255,255,0.55),
+    linear-gradient(180deg, #AEDFFB 0%, #C8EFA8 42%, #A5DC72 74%, #8CCB54 100%);
+  box-shadow: 0 10rpx 22rpx rgba(84,120,40,0.24),
+              0 0 0 3rpx rgba(255,255,255,0.6),
               inset 0 2rpx 0 rgba(255,255,255,0.9);
   overflow: hidden;
 }
@@ -182,14 +181,14 @@
     rgba(107,61,116,0) 0%, rgba(107,61,116,0.08) 45%, rgba(74,37,80,0.16) 100%);
   pointer-events: none; z-index: 1;
 }
-/* 草地（底色 + 双层波浪） */
+/* 草地（v68 加厚：底色 + 双层波浪） */
 .cs-ground {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 30rpx;
+  position: absolute; left: 0; right: 0; bottom: 0; height: 46rpx;
   background: linear-gradient(180deg, #85D44A 0%, #5FA82E 100%); z-index: 3;
 }
 .cs-grass { position: absolute; left: 0; right: 0; z-index: 4; pointer-events: none; }
 .cs-grass-back {
-  bottom: 24rpx; height: 16rpx; opacity: 0.85;
+  bottom: 36rpx; height: 18rpx; opacity: 0.85;
   background:
     radial-gradient(ellipse 18rpx 14rpx at 6%  100%, #6FC23A 0 50%, transparent 51%),
     radial-gradient(ellipse 18rpx 14rpx at 21% 100%, #6FC23A 0 50%, transparent 51%),
@@ -211,25 +210,33 @@
 /* 草地小白花 */
 .cs-daisy { position: absolute; width: 8rpx; height: 8rpx; background: #FFFFFF; border-radius: 50%; z-index: 4; }
 .cs-daisy::after { content: ""; position: absolute; inset: 2rpx; background: #FFC107; border-radius: 50%; }
-.cs-daisy--1 { left: 52rpx; bottom: 33rpx; }
-.cs-daisy--2 { left: 172rpx; bottom: 35rpx; }
-.cs-daisy--3 { left: 250rpx; bottom: 32rpx; }
+.cs-daisy--1 { left: 60rpx; bottom: 48rpx; }
+.cs-daisy--2 { left: 196rpx; bottom: 51rpx; }
+.cs-daisy--3 { left: 288rpx; bottom: 47rpx; }
 
-/* VS 徽章（红橙渐变 + 白描边 + 脉动） */
+/* v68 VS 大字：橙色渐变立体字（参考图：白描边 + 深色投影，去圆底） */
 .char-vs {
-  position: absolute; left: 384rpx; bottom: 50rpx;
-  width: 54rpx; height: 54rpx; border-radius: 50%;
-  background: linear-gradient(135deg, #FF8A65 0%, #E53935 100%);
-  border: 3rpx solid #FFFFFF;
-  box-shadow: 0 3rpx 7rpx rgba(229,57,53,0.25);
+  position: absolute; left: 404rpx; bottom: 64rpx;
+  width: 96rpx; height: 72rpx;
   display: flex; align-items: center; justify-content: center;
-  transform: rotate(-8deg); z-index: 9;
+  transform: rotate(-6deg); z-index: 9;
   animation: vsPulse 2.4s ease-in-out infinite;
 }
-.vs-text { font-size: 23rpx; font-weight: 900; color: #FFFFFF; line-height: 1; }
+.vs-text {
+  font-size: 60rpx;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 1rpx;
+  background: linear-gradient(180deg, #FFD34A 0%, #FF9E3E 52%, #EF6A1F 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 2rpx #FFFFFF;
+  filter: drop-shadow(0 4rpx 0 rgba(186, 73, 22, 0.5));
+}
 @keyframes vsPulse {
-  0%, 100% { transform: rotate(-8deg) scale(1); }
-  50%      { transform: rotate(-5deg) scale(1.1); }
+  0%, 100% { transform: rotate(-6deg) scale(1); }
+  50%      { transform: rotate(-3deg) scale(1.09); }
 }
 /* 音符（Z_DN_SUIT_LIGHT 紫，v29.1 对比度结论） */
 .cs-note {
@@ -243,27 +250,27 @@
   0%, 100% { transform: translateY(0) rotate(-6deg); }
   50%      { transform: translateY(-7rpx) rotate(8deg); }
 }
-/* 墓碑点缀（VS 与僵尸之间空档） */
+/* 墓碑点缀（VS 与僵尸之间空档；v68 适配新草地） */
 .cs-tomb {
-  position: absolute; left: 448rpx; bottom: 22rpx;
-  width: 34rpx; height: 42rpx; z-index: 5;
+  position: absolute; left: 500rpx; bottom: 30rpx;
+  width: 38rpx; height: 48rpx; z-index: 5;
   background: linear-gradient(180deg, #CFCFCF 0%, #ADADAD 100%);
   border-radius: 17rpx 17rpx 4rpx 4rpx;
   box-shadow: 0 2rpx 4rpx rgba(0,0,0,0.15), inset 2rpx 0 0 rgba(255,255,255,0.4);
 }
 .cs-tomb::before {
-  content: ""; position: absolute; left: 50%; top: 13rpx; margin-left: -8rpx;
-  width: 16rpx; height: 4rpx; background: #8A8A8A; border-radius: 2rpx;
+  content: ""; position: absolute; left: 50%; top: 12rpx; margin-left: -9rpx;
+  width: 18rpx; height: 4rpx; background: #8A8A8A; border-radius: 2rpx;
 }
 .cs-tomb::after {
-  content: ""; position: absolute; left: 50%; top: 17rpx; margin-left: -1.5rpx;
-  width: 3rpx; height: 14rpx; background: #8A8A8A; border-radius: 2rpx;
+  content: ""; position: absolute; left: 50%; top: 7rpx; margin-left: -1.5rpx;
+  width: 3rpx; height: 16rpx; background: #8A8A8A; border-radius: 2rpx;
 }
 
 /* v46 天空小太阳（暖光呼应植物侧, 复用 sceneSunGlow 脉动） */
 .cs-sun {
-  position: absolute; left: 16rpx; top: 12rpx;
-  width: 18rpx; height: 18rpx; border-radius: 50%;
+  position: absolute; left: 20rpx; top: 16rpx;
+  width: 22rpx; height: 22rpx; border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, #FFF59D 0%, #FFD54F 60%, #FFB300 100%);
   box-shadow: 0 0 14rpx rgba(255, 200, 80, 0.75), 0 0 4rpx rgba(255, 224, 130, 0.9);
   z-index: 2; animation: sceneSunGlow 3.4s ease-in-out infinite;
@@ -288,25 +295,29 @@
   0%, 100% { transform: translateX(0) scale(0.8); }
   50%      { transform: translateX(-7rpx) scale(0.8); }
 }
-/* 角色槽位（站位于草地顶面 bottom 30rpx） */
-.cs-slot { position: absolute; bottom: 30rpx; z-index: 6; }
-.cs-slot--sunflower { left: 22rpx;  width: 64rpx; height: 78rpx; }
-.cs-slot--shooter   { left: 114rpx; width: 58rpx; height: 74rpx; }
-.cs-slot--ice       { left: 204rpx; width: 58rpx; height: 78rpx; }
-.cs-slot--wall      { left: 294rpx; width: 48rpx; height: 56rpx; }
-.cs-slot--zombie    { left: 512rpx; width: 62rpx; height: 96rpx; z-index: 7; }
-.cs-slot .chr { position: absolute; left: 0; bottom: 0; animation: charBob 2.8s ease-in-out infinite; }
+/* 角色槽位（v68 放大 ×1.5：站位于草地顶面 bottom 46rpx，scale 用 --cs-s 变量） */
+.cs-slot { position: absolute; bottom: 46rpx; z-index: 6; }
+.cs-slot--sunflower { --cs-s: 1.52; left: 30rpx;  width: 97rpx; height: 119rpx; }
+.cs-slot--shooter   { --cs-s: 1.5;  left: 138rpx; width: 87rpx; height: 111rpx; }
+.cs-slot--ice       { --cs-s: 1.5;  left: 234rpx; width: 87rpx; height: 117rpx; }
+.cs-slot--wall      { --cs-s: 1.5;  left: 330rpx; width: 72rpx; height: 84rpx; }
+.cs-slot--zombie    { --cs-s: 1.5;  left: 570rpx; width: 93rpx; height: 144rpx; z-index: 7; }
+.cs-slot .chr {
+  position: absolute; left: 0; bottom: 0;
+  transform-origin: 50% 100%;
+  animation: charBob 2.8s ease-in-out infinite;
+}
 .cs-slot--shooter .chr { animation-delay: 0.4s; }
 .cs-slot--ice .chr     { animation-delay: 0.8s; }
 .cs-slot--wall .chr    { animation-delay: 1.2s; }
 .cs-slot--zombie .chr  { animation: zombieGroove 1.8s ease-in-out infinite; }
 @keyframes charBob {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-5rpx); }
+  0%, 100% { transform: translateY(0) scale(var(--cs-s, 1)); }
+  50%      { transform: translateY(-7rpx) scale(var(--cs-s, 1)); }
 }
 @keyframes zombieGroove {
-  0%, 100% { transform: translateY(0) rotate(-4deg); }
-  50%      { transform: translateY(-6rpx) rotate(5deg); }
+  0%, 100% { transform: translateY(0) rotate(-4deg) scale(var(--cs-s, 1)); }
+  50%      { transform: translateY(-8rpx) rotate(5deg) scale(var(--cs-s, 1)); }
 }
 /* v46 脚下接触阴影（消除角色悬浮感; ::after z-1 低于 .chr 且不随 charBob 抖动 → 贴地正确） */
 .cs-slot::after {
@@ -315,16 +326,16 @@
   background: radial-gradient(ellipse, rgba(52,78,22,0.34) 0%, rgba(52,78,22,0) 68%);
   z-index: -1; pointer-events: none;
 }
-.cs-slot--sunflower::after { width: 48rpx; margin-left: -24rpx; }
-.cs-slot--shooter::after   { width: 42rpx; margin-left: -21rpx; }
-.cs-slot--ice::after       { width: 42rpx; margin-left: -21rpx; }
-.cs-slot--wall::after      { width: 36rpx; height: 7rpx; margin-left: -18rpx; }
-.cs-slot--zombie::after    { width: 46rpx; height: 10rpx; margin-left: -23rpx;
+.cs-slot--sunflower::after { width: 66rpx; margin-left: -33rpx; }
+.cs-slot--shooter::after   { width: 58rpx; margin-left: -29rpx; }
+.cs-slot--ice::after       { width: 58rpx; margin-left: -29rpx; }
+.cs-slot--wall::after      { width: 50rpx; height: 9rpx; margin-left: -25rpx; }
+.cs-slot--zombie::after    { width: 62rpx; height: 12rpx; margin-left: -31rpx;
   background: radial-gradient(ellipse, rgba(38,20,44,0.4) 0%, rgba(38,20,44,0) 68%); }
-/* 名牌（RPG 立牌风，敌方深紫底） */
+/* 名牌（RPG 立牌风，敌方深紫底；v68 适配放大后槽位） */
 .cs-name {
-  position: absolute; bottom: 3rpx; padding: 0 10rpx;
-  height: 25rpx; line-height: 25rpx;
+  position: absolute; bottom: 6rpx; padding: 0 10rpx;
+  height: 27rpx; line-height: 27rpx;
   border-radius: 999rpx;
   border: 1rpx solid rgba(255,255,255,0.85);
   letter-spacing: 0.5rpx;
@@ -333,11 +344,11 @@
   font-size: 16rpx; font-weight: 700; color: #4B6A2D;
   z-index: 8; white-space: nowrap;
 }
-.cs-name--sunflower { left: 20rpx; }
-.cs-name--shooter   { left: 100rpx; }
-.cs-name--ice       { left: 190rpx; }
-.cs-name--wall      { left: 283rpx; }
-.cs-name--zombie    { left: 500rpx; background: rgba(58,28,64,0.85); color: #F3E5F5; box-shadow: 0 2rpx 4rpx rgba(58,28,64,0.3); }
+.cs-name--sunflower { left: 26rpx; }
+.cs-name--shooter   { left: 124rpx; }
+.cs-name--ice       { left: 220rpx; }
+.cs-name--wall      { left: 322rpx; }
+.cs-name--zombie    { left: 556rpx; background: rgba(58,28,64,0.85); color: #F3E5F5; box-shadow: 0 2rpx 4rpx rgba(58,28,64,0.3); }
 
 /* ---------- 通用角色骨架 ---------- */
 .chr { position: absolute; left: 0; bottom: 0; }
@@ -714,29 +725,28 @@
   border-radius: 3rpx;
 }
 
-/* ========== v67 轻量数据悬浮条（磨砂玻璃 · 替代原 4 张统计大卡） ========== */
+/* ========== v68 奶油数据条（参考图：奶油胶囊横排 · 彩色图标+标签+白框数字） ========== */
 .hud-strip {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   margin: 0 4rpx;
-  padding: 8rpx 6rpx;
-  border-radius: 20rpx 26rpx 22rpx 28rpx / 24rpx 20rpx 28rpx 22rpx;
-  background: rgba(255, 253, 245, 0.72);
-  border: 2rpx solid rgba(74, 52, 42, 0.28);
-  box-shadow: 0 4rpx 14rpx rgba(74, 52, 42, 0.10),
-              inset 0 2rpx 0 rgba(255, 255, 255, 0.65);
-  -webkit-backdrop-filter: blur(12rpx);
-  backdrop-filter: blur(12rpx);
+  padding: 10rpx 14rpx;
+  border-radius: 22rpx;
+  background: linear-gradient(180deg, rgba(255,252,231,0.96) 0%, rgba(255,245,208,0.92) 100%);
+  border: 2rpx solid rgba(146, 104, 52, 0.38);
+  box-shadow: 0 4rpx 12rpx rgba(90, 110, 40, 0.22),
+              inset 0 2rpx 0 rgba(255, 255, 255, 0.85);
   box-sizing: border-box;
 }
 .hud-item {
   flex: 1 1 0;
   min-width: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 2rpx;
+  justify-content: center;
+  gap: 6rpx;
   padding: 2rpx 2rpx;
   border-radius: 14rpx;
 }
@@ -749,31 +759,43 @@
   flex: 0 0 auto;
   align-self: center;
   width: 2rpx;
-  height: 42rpx;
+  height: 30rpx;
   background: linear-gradient(180deg,
-    rgba(74, 52, 42, 0) 0%,
-    rgba(74, 52, 42, 0.20) 30%,
-    rgba(74, 52, 42, 0.20) 70%,
-    rgba(74, 52, 42, 0) 100%);
+    rgba(146, 104, 52, 0) 0%,
+    rgba(146, 104, 52, 0.22) 30%,
+    rgba(146, 104, 52, 0.22) 70%,
+    rgba(146, 104, 52, 0) 100%);
 }
 .hud-ico {
-  font-size: 25rpx;
-  line-height: 1.15;
+  font-size: 27rpx;
+  line-height: 1;
+  flex-shrink: 0;
 }
+/* v68：数字白框（参考图数字带浅色圆角小框） */
 .hud-num {
-  font-size: 23rpx;
+  flex-shrink: 0;
+  min-width: 44rpx;
+  text-align: center;
+  padding: 1rpx 10rpx;
+  box-sizing: border-box;
+  font-size: 19rpx;
   font-weight: 900;
-  color: var(--farm-ink, #4A342A);
-  line-height: 1.1;
+  color: #4A342A;
+  line-height: 1.5;
   font-variant-numeric: tabular-nums;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1.5rpx solid rgba(146, 104, 52, 0.30);
+  border-radius: 10rpx;
+  box-shadow: inset 0 1rpx 0 rgba(255,255,255,0.9);
 }
-.hud-num--sm { font-size: 19rpx; letter-spacing: 1.5rpx; }
+.hud-num--sm { min-width: 38rpx; letter-spacing: 1rpx; }
 .hud-label {
-  font-size: 15rpx;
-  font-weight: 600;
-  color: var(--farm-ink-soft, #7A6450);
+  font-size: 19rpx;
+  font-weight: 800;
+  color: #6B4A2A;
   letter-spacing: 0.3rpx;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 /* ========== 难度选择 胶囊（v67 上移至核心操作区） ========== */
@@ -791,22 +813,19 @@
   min-width: 0;
   padding: 10rpx 0;           /* v50 12→10：六胶囊单行微收 */
   min-height: 64rpx;          /* v58 60→64：触摸热区（+描边实高 88rpx≈44px 达标） */
-  /* v63：纸质种子标签 + 墨线描边（手绘抖动圆角） */
-  border: 2rpx solid rgba(74, 52, 42, 0.55);
+  /* v68：奶油木标签（参考图未选中态）+ 轻内阴影「凹进去」 */
+  border: 2rpx solid rgba(133, 96, 54, 0.52);
   border-radius: 16rpx 22rpx 18rpx 24rpx / 20rpx 16rpx 24rpx 18rpx;
   background:
-    repeating-linear-gradient(180deg,
-      rgba(122, 100, 80, 0.035) 0 1rpx,
-      rgba(122, 100, 80, 0) 1rpx 20rpx),
-    linear-gradient(180deg, #FFFDF7 0%, #FFF9EA 100%);
-  color: var(--farm-ink-soft, #7A6450);
+    linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 45%),
+    linear-gradient(180deg, #FFFDF3 0%, #F7EBCB 100%);
+  color: #6B4A2A;
   text-align: center;
   font-size: 20rpx;          /* v50 22→20rpx：六胶囊单行（「导入词库」4 字裕量充足） */
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 1rpx;
-  /* v67：轻微内阴影 → 未选中「凹进去」的种植盆质感 */
-  box-shadow: 2rpx 3rpx 0 rgba(74, 52, 42, 0.12),
-              inset 0 2rpx 6rpx rgba(122, 100, 80, 0.16);
+  box-shadow: 2rpx 3rpx 0 rgba(95, 59, 34, 0.14),
+              inset 0 2rpx 6rpx rgba(133, 96, 54, 0.16);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -816,31 +835,28 @@
 }
 .diff-pill-hover { transform: scale(0.97) rotate(-0.8deg); }
 .diff-pill.active {
-  /* v63：选中态 = 叶绿火漆印标签 */
+  /* v68：选中态 = 浅黄绿发芽高亮（参考图：亮绿底 + 深绿字，不再实底火漆） */
   background:
-    repeating-linear-gradient(90deg,
-      rgba(43, 74, 21, 0.10) 0 2rpx,
-      rgba(255, 255, 255, 0.05) 2rpx 4rpx,
-      rgba(43, 74, 21, 0) 4rpx 48rpx),
-    linear-gradient(180deg, #8ED44E 0%, #6FBF2E 52%, #4E9321 100%);
-  border-color: #2E7D14;
-  color: #FFFFFF;
-  text-shadow: 0 2rpx 0 rgba(43, 74, 21, 0.4);
-  box-shadow: 0 6rpx 0 #33691E, 0 10rpx 16rpx rgba(85, 139, 47, 0.3),
-              inset 0 2rpx 0 rgba(255,255,255,0.4);
+    linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 50%),
+    linear-gradient(180deg, #ECF9C4 0%, #D6EF96 100%);
+  border-color: #7CB342;
+  color: #33691E;
+  text-shadow: none;
+  box-shadow: 0 4rpx 0 rgba(124, 179, 66, 0.6), 0 8rpx 16rpx rgba(124, 179, 66, 0.32),
+              inset 0 2rpx 0 rgba(255,255,255,0.8);
   /* v67：压印入场 + 发光扩散呼吸（选中像「按下去」并持续吸引视线） */
   animation: stamp-in 0.36s cubic-bezier(.2,.9,.2,1.2),
              pillGlow 2.2s ease-in-out 0.5s infinite;
 }
 @keyframes pillGlow {
   0%, 100% {
-    box-shadow: 0 6rpx 0 #33691E, 0 10rpx 16rpx rgba(85, 139, 47, 0.30),
-                inset 0 2rpx 0 rgba(255,255,255,0.4),
+    box-shadow: 0 4rpx 0 rgba(124, 179, 66, 0.6), 0 8rpx 16rpx rgba(124, 179, 66, 0.32),
+                inset 0 2rpx 0 rgba(255,255,255,0.8),
                 0 0 0 0 rgba(158, 224, 92, 0.45);
   }
   50% {
-    box-shadow: 0 6rpx 0 #33691E, 0 10rpx 16rpx rgba(85, 139, 47, 0.30),
-                inset 0 2rpx 0 rgba(255,255,255,0.4),
+    box-shadow: 0 4rpx 0 rgba(124, 179, 66, 0.6), 0 8rpx 16rpx rgba(124, 179, 66, 0.32),
+                inset 0 2rpx 0 rgba(255,255,255,0.8),
                 0 0 0 12rpx rgba(158, 224, 92, 0);
   }
 }
@@ -855,28 +871,26 @@
   100% { transform: scale(1) rotate(0deg);     opacity: 1; }
 }
 
-/* ========== v67 Hero 大卡（全 CSS 农场插画，不再依赖外部 PNG） ==========
-   v67：flex 弹性吸收剩余空间，成为页面视觉中心（380~520rpx）
-   左侧场景元素（绝对定位）：天空层 / 太阳 / 云×2 / 草地双层 / 向日葵 / 豌豆射手 / 栅栏 / 小花×3
+/* ========== v68 Hero 大卡（参考图：浅绿草地大圆角卡，去木框） ==========
+   v68：木框公告栏 → 浅绿渐变圆角卡 + 白描边；左侧场景白框化（插画框）
+   flex 弹性吸收剩余空间，成为页面视觉中心（380~520rpx）
 */
 .banner-hero {
   flex: 1 1 auto;            /* v67 弹性拉伸（地面/栅栏/向日葵贴底、太阳贴顶，拉伸安全） */
-  min-height: 380rpx;        /* 短屏兜底：右侧内容最低保障 */
+  min-height: 380rpx;        /* 短屏兑底：右侧内容最低保障 */
   max-height: 520rpx;        /* 长屏上限：场景元素不过度拉伸 */
   position: relative;
   margin: 0 4rpx;
-  padding: 16rpx 22rpx 16rpx 16rpx;
-  /* v63：公告栏 = 木质外框 + 米黄公告纸内芯（左侧场景照旧展示） */
-  border-radius: 26rpx 34rpx 28rpx 36rpx / 32rpx 26rpx 36rpx 28rpx;
-  border: 8rpx solid var(--wood-edge, #5F3B22);
+  padding: 16rpx 20rpx 16rpx 16rpx;
+  border-radius: 30rpx;
   background:
-    radial-gradient(85% 110% at 0% 0%, #FFF9C4 0%, rgba(255,249,196,0) 58%),
-    linear-gradient(125deg, #FFFBD9 0%, #F6F4D4 32%, #EAECC2 66%, #C8E4A0 100%);
+    radial-gradient(90% 110% at 8% 0%, rgba(255,255,220,0.55) 0%, rgba(255,255,220,0) 55%),
+    linear-gradient(165deg, #EEF9D2 0%, #DFF2B4 52%, #CBE898 100%);
   box-shadow:
-    0 12rpx 0 rgba(63, 38, 20, 0.28),
-    0 18rpx 32rpx rgba(74, 52, 42, 0.26),
-    inset 0 0 0 3rpx rgba(255, 255, 255, 0.5),
-    inset 0 3rpx 0 rgba(255,255,255,0.55);
+    0 0 0 3rpx rgba(255, 255, 255, 0.78),
+    0 10rpx 0 rgba(84, 130, 40, 0.20),
+    0 18rpx 32rpx rgba(60, 100, 30, 0.26),
+    inset 0 2rpx 0 rgba(255, 255, 255, 0.85);
   overflow: hidden;
   display: flex;
   align-items: stretch;
@@ -932,17 +946,18 @@
   50%      { transform: translate(12rpx,-10rpx) scale(1.08); opacity: 0.72; }
 }
 
-/* ============ 左侧：纯 CSS 农场场景 ============ */
+/* ============ 左侧：纯 CSS 农场场景（v68：白描边插画框） ============ */
 .banner-scene {
   position: relative;
   flex-shrink: 0;
-  width: 336rpx;             /* v62 300→336rpx，加宽配高，画面更开阔 */
+  width: 300rpx;             /* v68 336→300rpx：给右侧标题让出行宽（44rpx×7 字单行） */
   height: 100%;
   overflow: hidden;
-  border-radius: 18rpx;
+  border-radius: 22rpx;
+  border: 4rpx solid rgba(255, 255, 255, 0.95);   /* v68 白描边插画框 */
   background: linear-gradient(180deg, #A5E3FF 0%, #CDEF9A 62%, #A8DB74 100%);
-  box-shadow: inset 0 2rpx 0 rgba(255,255,255,0.6),
-              inset 0 -2rpx 0 rgba(60, 110, 30, 0.18);
+  box-shadow: 0 6rpx 14rpx rgba(70, 110, 35, 0.22),
+              inset 0 2rpx 0 rgba(255,255,255,0.6);
 }
 
 /* 天空叠加层（增加云朵漫射感） */
@@ -1449,25 +1464,19 @@
   gap: 12rpx;                /* v67 10→12rpx（chips 行加入后呼吸更均匀） */
   position: relative;
   z-index: 1;
-  padding-left: 24rpx;
+  padding-left: 18rpx;
 }
-/* v62 精修：右上「新伙伴」贴纸（VLM 一轮：填补右上空白; 呼应寒冰射手入阵） */
+/* v68：右上角小叶装饰（参考图卡角小叶，替代原「❄️新伙伴」贴纸） */
 .banner-main::before {
-  content: "❄️ 新伙伴";
+  content: "🌿";
   position: absolute;
-  top: 6rpx;
-  right: 6rpx;
-  padding: 4rpx 12rpx;
-  border-radius: 999rpx;
-  background: linear-gradient(135deg, #E0F7FA 0%, #B2EBF2 100%);
-  border: 1.5rpx solid rgba(0, 137, 123, 0.35);
-  color: #00695C;
-  font-size: 15rpx;
-  font-weight: 800;
-  letter-spacing: 0.5rpx;
-  transform: rotate(-6deg);
-  box-shadow: 0 3rpx 8rpx rgba(0, 105, 92, 0.15),
-              inset 0 1rpx 0 rgba(255,255,255,0.7);
+  top: 4rpx;
+  right: 8rpx;
+  font-size: 32rpx;
+  line-height: 1;
+  transform: rotate(14deg);
+  opacity: 0.9;
+  filter: drop-shadow(0 2rpx 2rpx rgba(70, 110, 35, 0.3));
   z-index: 2;
   pointer-events: none;
 }
@@ -1491,21 +1500,21 @@
   font-weight: 900;
   letter-spacing: 1.5rpx;
   line-height: 1.1;
-  /* v63：墨绿烙印渐变字 */
-  background: linear-gradient(180deg, #3F5E1E 0%, #4E8C2F 55%, #7CB342 100%);
+  /* v68：橙棕烙印渐变字（参考图标题暖橙色） */
+  background: linear-gradient(180deg, #F5A02E 0%, #E2761B 55%, #C75812 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 0 2rpx 0 rgba(255,255,255,0.35);
+  filter: drop-shadow(0 2rpx 0 rgba(255, 255, 255, 0.45));
 }
 .banner-sub {
-  font-size: 20rpx;            /* v67 19→20rpx：文案精简「背单词 · 养植物 · 拿奖励」 */
-  font-weight: 700;
-  color: var(--farm-ink-soft, #7A6450);
+  font-size: 19rpx;            /* v68：文案「背单词、养植物、闯关拿奖励」 */
+  font-weight: 800;
+  color: #5E4A2E;
   line-height: 1.25;
   letter-spacing: 1rpx;
 }
-/* v67 玩法徽章行 2×2（承自原 howto-grid，标签化点缀 Hero 卡） */
+/* v68 玩法徽章行 2×2（承自原 howto-grid，标签化点缀 Hero 卡；白描边亮化） */
 .banner-chips {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1519,18 +1528,18 @@
   justify-content: center;
   gap: 5rpx;
   padding: 7rpx 8rpx;
-  /* 注：inline style 提供 item.bg 底色（JS 数据沿用 howtoList 农场纸色） */
-  border-radius: 14rpx 18rpx 15rpx 19rpx / 16rpx 14rpx 19rpx 15rpx;
-  border: 1.5rpx solid rgba(74, 52, 42, 0.30);
-  box-shadow: 1rpx 2rpx 0 rgba(74, 52, 42, 0.10),
-              inset 0 1rpx 0 rgba(255,255,255,0.55);
+  /* 注：inline style 提供 item.bg 底色（JS howtoList 浅彩纸底） */
+  border-radius: 999rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 3rpx 8rpx rgba(70, 110, 35, 0.16),
+              inset 0 1rpx 0 rgba(255,255,255,0.75);
   -webkit-tap-highlight-color: transparent;
 }
-.bchip-ico { font-size: 17rpx; line-height: 1; }
+.bchip-ico { font-size: 18rpx; line-height: 1; }
 .bchip-txt {
   font-size: 15rpx;
-  font-weight: 700;
-  color: var(--farm-ink, #4A342A);
+  font-weight: 800;
+  color: #4A342A;
   letter-spacing: 0.3rpx;
   line-height: 1.2;
   white-space: nowrap;
@@ -2212,7 +2221,87 @@
 .main-view > .pack-bar {
   animation: rise-in 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.05) both;
 }
-.main-view > .hud-strip  { animation-delay: 0.02s; }
-.main-view > .char-strip { animation-delay: 0.09s; }
-.main-view > .diff-pills { animation-delay: 0.16s; }
+/* v68：副标题参与错峰入场（首帧即入，居中偏移最小） */
+.main-view > .brand-sub { animation: rise-in 0.45s cubic-bezier(0.2, 0.9, 0.25, 1.05) both; animation-delay: 0s; }
+.main-view > .hud-strip  { animation-delay: 0.04s; }
+.main-view > .char-strip { animation-delay: 0.11s; }
+.main-view > .diff-pills { animation-delay: 0.18s; }
 .main-view > .pack-bar   { animation-delay: 0.23s; }
+
+/* ================================================================
+   v68 新增：迷你奖杯（Hero 插画框内，参考图金色奖杯）
+   ================================================================ */
+.scene-trophy {
+  position: absolute; left: 22rpx; bottom: 22rpx;
+  width: 40rpx; height: 46rpx; z-index: 8; pointer-events: none;
+  animation: charBob 3.6s ease-in-out infinite; animation-delay: 1.6s;
+}
+.tf-cup {
+  position: absolute; left: 50%; top: 4rpx;
+  width: 26rpx; height: 22rpx; margin-left: -13rpx;
+  background: linear-gradient(180deg, #FFE082 0%, #FFC107 55%, #E8A10E 100%);
+  border-radius: 4rpx 4rpx 12rpx 12rpx;
+  box-shadow: inset 0 2rpx 0 rgba(255,255,255,0.65),
+              inset -2rpx -2rpx 3rpx rgba(160, 100, 10, 0.35);
+}
+.tf-handle {
+  position: absolute; top: 8rpx;
+  width: 9rpx; height: 12rpx;
+  border: 2.5rpx solid #E8A10E;
+  background: transparent;
+}
+.tf-handle--l { left: 3rpx;  border-right: none;  border-radius: 6rpx 0 0 8rpx; }
+.tf-handle--r { right: 3rpx; border-left: none;   border-radius: 0 6rpx 8rpx 0; }
+.tf-stem {
+  position: absolute; left: 50%; top: 26rpx;
+  width: 8rpx; height: 8rpx; margin-left: -4rpx;
+  background: linear-gradient(180deg, #E8A10E, #C77B0A);
+  border-radius: 0 0 3rpx 3rpx;
+}
+.tf-base {
+  position: absolute; left: 50%; bottom: 2rpx;
+  width: 32rpx; height: 8rpx; margin-left: -16rpx;
+  background: linear-gradient(180deg, #D9920F 0%, #B36F08 100%);
+  border-radius: 3rpx 3rpx 4rpx 4rpx;
+  box-shadow: 0 2rpx 3rpx rgba(90, 50, 10, 0.35), inset 0 1rpx 0 rgba(255,220,130,0.6);
+}
+
+/* ================================================================
+   v68 新增：右下角浮动「奖励中心」入口（参考图）
+   绝对定位于 .page（不入 flex 流），bottom 由内联 style 按 safeBottomRpx 下发
+   ================================================================ */
+.reward-fab {
+  position: absolute; right: 14rpx; z-index: 30;
+  display: flex; flex-direction: column; align-items: center; gap: 4rpx;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 150ms ease;
+}
+.reward-fab-hover { transform: scale(0.92); }
+.reward-fab-ico {
+  width: 66rpx; height: 66rpx; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, #FFFBEA 0%, #FFEFC2 100%);
+  border: 3rpx solid #E8A10E;
+  box-shadow: 0 5rpx 0 rgba(160, 100, 10, 0.45),
+              0 10rpx 18rpx rgba(90, 60, 20, 0.3),
+              inset 0 2rpx 0 rgba(255,255,255,0.9);
+  font-size: 30rpx; line-height: 1;
+  animation: fabBob 2.6s ease-in-out infinite;
+}
+.reward-fab-ico text { line-height: 1; }
+.reward-fab-label {
+  padding: 2rpx 12rpx;
+  border-radius: 999rpx;
+  background: rgba(74, 52, 42, 0.72);
+  border: 1rpx solid rgba(255, 255, 255, 0.4);
+  color: #FFF8EA;
+  font-size: 15rpx;
+  font-weight: 800;
+  letter-spacing: 0.5rpx;
+  white-space: nowrap;
+  box-shadow: 0 3rpx 8rpx rgba(60, 40, 20, 0.3);
+}
+@keyframes fabBob {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50%      { transform: translateY(-5rpx) rotate(3deg); }
+}

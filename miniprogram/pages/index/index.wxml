@@ -1,4 +1,12 @@
-<!-- pages/index/index.wxml — v67 首页信息层级重构（UI/UX 三维优化）
+<!-- pages/index/index.wxml — v68 参考图重绘（PvZ 草地鲜绿风）
+  v68 更新（参考附图逐区对齐）：
+    · 导航改木质风：圆形木盘返回钮 + 中央木牌匾「单词农场」+ 右侧圆形木盘「📖 玩法」
+    · 新增副标题「背单词，保卫农场」（导航下方棕色粗体居中）
+    · hud-strip 磨砂 → 奶油胶囊横排（彩色图标 + 标签 + 白框数字）
+    · char-strip 增高放大（150→240rpx 弹性）：角色 scale 1.5，VS 改橙色立体描边大字
+    · banner-hero 木框公告栏 → 浅绿草地大圆角卡：标题橙棕渐变字，副标题「背单词、养植物、闯关拿奖励」
+      左侧场景加白描边插画框 + 迷你奖杯；chips 白描边亮化
+    · 新增右下角浮动「奖励中心」入口（reward-fab，承接 onOpenRewards）
   v67 更新（视觉层级 / 模块布局 / 细节打磨）：
     · 导航栏升级主品牌：标题「边玩边背单词」→「单词农场」，右侧新增「📖 玩法」入口（承接原 howto-head 立即了解）
     · 删除 brand-hero 品牌胶囊（与导航标题去重，节省垂直空间）
@@ -40,16 +48,15 @@
         <text class="nav-icon">‹</text>
       </view>
       <view class="nav-title">
-        <text class="nav-title-emoji">🌱</text>
         <text class="nav-title-text">单词农场</text>
       </view>
       <view
-        class="nav-more"
+        class="nav-btn nav-btn--more"
+        style="width: {{navBarHeight - 6}}px; height: {{navBarHeight - 6}}px;"
         bindtap="onKnowMore"
-        hover-class="nav-more-hover"
+        hover-class="nav-btn-hover"
       >
         <text class="nav-more-icon">📖</text>
-        <text class="nav-more-text">玩法</text>
       </view>
     </view>
   </view>
@@ -57,7 +64,10 @@
   <!-- ============ 纯 flex 主体（严格一屏，禁止滚动） ============ -->
   <view class="main-view">
 
-    <!-- 1. v67 轻量数据悬浮条：最高分 / 游戏次数 / 音效 / 亲子积分（磨砂玻璃质感） -->
+    <!-- 0. v68 副标题（参考图：导航下方棕色粗体居中） -->
+    <view class="brand-sub">背单词，保卫农场</view>
+
+    <!-- 1. v68 奶油数据条：最高分 / 游戏次数 / 音效 / 亲子积分 -->
     <view class="hud-strip">
       <view class="hud-item">
         <text class="hud-ico">🏆</text>
@@ -415,12 +425,20 @@
         <view class="scene-bloom scene-bloom-3"></view>
         <view class="scene-bloom scene-bloom-4"></view>
         <view class="scene-bloom scene-bloom-5"></view>
+        <!-- v68 迷你奖杯（参考图插画框左下金色奖杯） -->
+        <view class="scene-trophy">
+          <view class="tf-cup"></view>
+          <view class="tf-handle tf-handle--l"></view>
+          <view class="tf-handle tf-handle--r"></view>
+          <view class="tf-stem"></view>
+          <view class="tf-base"></view>
+        </view>
       </view>
 
       <!-- 右侧：大标题 + 副标题 + 玩法 chips + 全宽木纹大按钮 -->
       <view class="banner-main">
         <view class="banner-title">单词农场大冒险</view>
-        <view class="banner-sub">背单词 · 养植物 · 拿奖励</view>
+        <view class="banner-sub">背单词、养植物、闯关拿奖励</view>
         <!-- v67 玩法标签化：4 枚小徽章（承自原 howto-grid） -->
         <view class="banner-chips">
           <view
@@ -445,6 +463,17 @@
       </view>
     </view>
 
+  </view>
+
+  <!-- ============ v68: 右下角浮动「奖励中心」入口（参考图） ============ -->
+  <view
+    class="reward-fab"
+    style="bottom: {{safeBottomRpx + 10}}rpx;"
+    bindtap="onOpenRewards"
+    hover-class="reward-fab-hover"
+  >
+    <view class="reward-fab-ico"><text>🎁</text></view>
+    <view class="reward-fab-label">奖励中心</view>
   </view>
 
   <!-- ============ v33: 「立即了解」玩法介绍弹窗（左对齐卡片式，替代原生 showModal） ============ -->

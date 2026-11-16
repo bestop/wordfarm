@@ -1,5 +1,5 @@
-// pages/index/index.js - 欢迎页（v67 信息层级重构）：自定义导航 + 轻量悬浮条 + 词库胶囊 + Hero 大卡（玩法徽章 + 开始冒险）
-// v67 变化：brand-hero/howto-group/cta-bar 移除，全部事件复用（onKnowMore 迁移至导航「📖 玩法」入口）
+// pages/index/index.js - 欢迎页（v68 参考图重绘）：木牌匾导航 + 副标题 + 奶油数据条 + 放大 VS 场景 + 浅绿 Hero 卡 + 奖励浮动钮
+// v68 变化：纯视觉重绘，全部事件复用零改动；howtoList 文案对齐参考图（连错加速→连击加速）
 // v7 设计 tokens（基于模块节奏 = 18rpx 的 1/3/2/3 比例）：
 //   字号 5 级 / 圆角 3 级 / 间距 3 级 / 文本色 3 级
 
@@ -47,11 +47,11 @@ Page({
       { key: 'custom',  name: '导入词库' }
     ],
 
-    // 玩法徽章（v67 渲染于 Hero 大卡 banner-chips 2×2，展示游戏核心循环）
-    // v63/v65: 底色沿用「木语农场」纸色系（手账纸签调）
+    // 玩法徽章（v68 渲染于 Hero 大卡 banner-chips 2×2，文案/图标对齐参考图）
+    // 底色：浅彩纸签调（配合 v68 白描边胶囊）
     howtoList: [
       { id: 'a1', icon: '✅', title: '答对消除', bg: '#E3F6C8' },
-      { id: 'a2', icon: '⚡',  title: '连错加速', bg: '#FFEDB8' },
+      { id: 'a2', icon: '⚡',  title: '连击加速', bg: '#FFEDB8' },
       { id: 'a3', icon: '🔥',  title: '连击翻倍', bg: '#FFE0CC' },
       { id: 'a4', icon: '🛡️', title: '防线守卫', bg: '#DCF1FB' }
     ],
