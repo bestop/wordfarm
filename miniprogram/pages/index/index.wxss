@@ -1,34 +1,59 @@
-/* pages/index/index.wxss — v72 牌匾升级与卡内紧凑（v71 基础上的反馈调整）
-   v72 更新：
-   - 牌匾靠下加大：margin-top 14→22rpx、题字 36→40rpx、内衬收紧，左侧新增🌻农场图标
-   - 大冒险卡紧凑：插画改定高 216rpx 居中（不再 stretch），与右侧文案块中心线对齐、高度相当
-   - 右侧文案/徽章间距收紧：ac-main gap 18→12rpx、chips gap 12→10、徽章内衬 12/16→10/14rpx
-   - 标题 44→40rpx、副标 24→22rpx，图文两块紧凑成组居中于卡体
-   v71 更新：
-   - 导航只保留居中木牌匾（返回/⚙️ 钮删除），牌匾靠下
-   - 玩法徽章 bchip 可点击（hover 反馈），点击打开「怎么玩」弹窗
-   - 大冒险卡：插画 stretch 自适应限高，卡分配权重收紧（flex 1.5，max 560rpx）
-   - 「开始冒险」width 58% 水平居中；奖励中心改卡内绝对定位锚定右下角；卡内 gap 收紧
-   - km-* 弹窗 / pack-bar / hud-strip / hero-banner / diff-pills 样式自 v70 原样保留
-   v7 设计 tokens：字号 5 级 / 圆角 3 级 / 间距 3 级 / 文本色 3 级
+/* pages/index/index.wxss — v73 糖果果冻主题（v72 基础上的整体换皮）
+   设计体系：蛋仔派对风糖果果冻（圆润、高饱和、轻 3D）
+   - 果冻公式：大圆角 + 白描边 3-4rpx + 浅顶深底渐变 + 底部挤出深色投影 + 顶部内发光
+   - 色板：草莓粉 FF8FB5/柠黄 FFD34D/蜜橙 FFA53D/薄荷 7EE0A8/苹果绿 A8E86A/天蓝 7CC8FA/葡萄紫 C79BF2
+   v73 更新：
+   - 页面背景换奶油黄→粉→淡蓝糖果渐变，新增 page-candy 糖星散布层；灌木→橙色果冻波浪
+   - 牌匾粉果冻+白描边+黄糖珠（铆钉退役），题字白字粉描边
+   - hud 白果冻条+橙黄果冻徽章；横幅白描边+青蓝光晕
+   - 词库牌六色果冻（diff-pill--key 挂钩），白字+选中白圈光晕
+   - 大冒险卡粉→蓝果冻渐变+糖星装饰；标题双色分段；徽章淡彩描边（bchip--id）
+   - 开始冒险橙黄果冻+白描边；奖励中心粉橙果冻球；弹窗白果冻+薄荷 CTA
+   v72/v71/v67-v70 历史见 git log；数据绑定与事件零破坏
 */
 
-/* ========== 页面容器（v69：PvZ 鲜绿草坪渐变 + 晨光晕） ========== */
+/* ========== 页面容器（v73：糖果渐变——奶油黄→粉→淡蓝，暖甜底色） ========== */
 .page {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   background:
-    radial-gradient(120% 55% at 50% -4%, #F6FFD0 0%, rgba(246, 255, 208, 0) 52%),
-    radial-gradient(80% 40% at 50% 108%, rgba(140, 205, 80, 0.5) 0%, rgba(140, 205, 80, 0) 60%),
-    linear-gradient(180deg, #EEF6CB 0%, #DCF0A6 34%, #C4E287 68%, #B3D870 100%);
+    radial-gradient(90% 40% at 12% 6%, rgba(255, 214, 235, 0.5) 0%, rgba(255, 214, 235, 0) 58%),
+    radial-gradient(84% 34% at 88% 26%, rgba(190, 226, 255, 0.42) 0%, rgba(190, 226, 255, 0) 60%),
+    radial-gradient(90% 36% at 50% 104%, rgba(255, 178, 92, 0.35) 0%, rgba(255, 178, 92, 0) 62%),
+    linear-gradient(180deg, #FFF2AE 0%, #FFE7BC 24%, #FFDFE4 46%, #EFE7F8 70%, #CFE6FA 100%);
   overflow: hidden;
   position: relative;
 }
 .page > .nav-bar,
 .page > .main-view { position: relative; z-index: 1; }
 
-/* ---- v69 页缘灌木丛（参考图底部左右深绿树丛） ---- */
+/* ---- v73 糖果星星散布层（蛋仔风点缀，绝对定位不入流，低于主体层） ---- */
+.page-candy {
+  position: absolute;
+  left: 0; right: 0; top: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.pc {
+  position: absolute;
+  line-height: 1;
+  opacity: 0.9;
+  filter: drop-shadow(0 3rpx 4rpx rgba(216, 120, 80, 0.28));
+  animation: pcFloat 3.6s ease-in-out infinite;
+}
+.pc--1 { left: 14rpx;  top: 250rpx;  font-size: 34rpx; }
+.pc--2 { right: 16rpx; top: 330rpx;  font-size: 28rpx; animation-delay: 0.6s; }
+.pc--3 { left: 12rpx;  top: 640rpx;  font-size: 30rpx; animation-delay: 1.2s; }
+.pc--4 { right: 14rpx; top: 760rpx;  font-size: 26rpx; animation-delay: 0.9s; }
+.pc--5 { left: 16rpx;  bottom: 430rpx; font-size: 30rpx; animation-delay: 1.5s; }
+.pc--6 { right: 18rpx; bottom: 320rpx; font-size: 32rpx; animation-delay: 0.3s; }
+@keyframes pcFloat {
+  0%, 100% { transform: translateY(0) rotate(-8deg); }
+  50%      { transform: translateY(-10rpx) rotate(8deg); }
+}
+
+/* ---- v73 页缘橙色果冻波浪（参考图底部橙丘，替换灌木） ---- */
 .page-flora {
   position: absolute;
   left: 0; right: 0; bottom: 0;
@@ -38,9 +63,10 @@
 }
 .fb {
   position: absolute;
-  border-radius: 50% 50% 40% 40%;
-  background: linear-gradient(180deg, #5EA53C 0%, #477F2A 70%, #3A6B22 100%);
-  box-shadow: inset -6rpx -8rpx 0 rgba(38, 74, 18, 0.35);
+  border-radius: 50% 50% 42% 42%;
+  background: linear-gradient(180deg, #FFC170 0%, #FF9E4A 62%, #F5862E 100%);
+  box-shadow: inset -6rpx -8rpx 0 rgba(216, 108, 28, 0.35),
+              inset 0 8rpx 12rpx rgba(255, 236, 200, 0.55);
 }
 .fb--1 { width: 200rpx; height: 150rpx; left: -70rpx;  bottom: -46rpx; transform: rotate(-8deg); }
 .fb--2 { width: 150rpx; height: 110rpx; left: 70rpx;   bottom: -60rpx; opacity: 0.9; }
@@ -63,7 +89,7 @@
   box-sizing: border-box;
 }
 
-/* v72：中央木牌匾标题（居中靠下，🌻 图标 + 双铆钉 + 深棕刻字） */
+/* v73：中央糖果牌匾（粉果冻 + 白描边 + 黄糖珠 + 白字粉描边） */
 .nav-title {
   flex: 0 1 auto;
   min-width: 0;
@@ -71,60 +97,62 @@
   align-items: center;
   justify-content: center;
   align-self: center;
-  margin: 22rpx 0 0;         /* v72: 再靠下一些 */
-  padding: 8rpx 40rpx;       /* v72: 内衬收紧，容纳加大后的题字 */
+  margin: 22rpx 0 0;
+  padding: 8rpx 40rpx;
   position: relative;
-  border-radius: 16rpx 22rpx 18rpx 24rpx / 22rpx 16rpx 24rpx 18rpx;
-  background:
-    repeating-linear-gradient(0deg,
-      rgba(122, 74, 24, 0.07) 0 3rpx,
-      rgba(255, 255, 255, 0.05) 3rpx 6rpx,
-      rgba(122, 74, 24, 0) 6rpx 26rpx),
-    linear-gradient(180deg, #F4DFB2 0%, #E5C487 55%, #D5AE6C 100%);
-  border: 3rpx solid #7A5230;
-  box-shadow: 0 5rpx 0 rgba(95, 59, 34, 0.5),
-              0 10rpx 18rpx rgba(95, 59, 34, 0.24),
-              inset 0 2rpx 0 rgba(255, 248, 224, 0.8);
+  border-radius: 999rpx;
+  background: linear-gradient(180deg, #FFB1CB 0%, #FF8FB5 55%, #F76E9C 100%);
+  border: 4rpx solid #FFFFFF;
+  box-shadow: 0 6rpx 0 rgba(216, 79, 134, 0.5),
+              0 12rpx 22rpx rgba(216, 79, 134, 0.32),
+              inset 0 6rpx 10rpx rgba(255, 255, 255, 0.85),
+              inset 0 -6rpx 12rpx rgba(199, 54, 110, 0.18);
 }
+/* v73: 牌匾两侧黄糖珠（替换 v72 前的木铆钉） */
+.candy-bead {
+  position: absolute;
+  top: 50%;
+  width: 16rpx;
+  height: 16rpx;
+  margin-top: -8rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #FFF3B0 0%, #FFD34D 55%, #F5B301 100%);
+  box-shadow: 0 2rpx 3rpx rgba(180, 120, 20, 0.35),
+              inset 0 1rpx 2rpx rgba(255, 255, 255, 0.8);
+}
+.candy-bead--l { left: 16rpx; }
+.candy-bead--r { right: 16rpx; }
 /* v72: 牌匾左侧农场图标（向日葵，与游戏内阳光/向日葵主题呼应） */
 .nav-logo-ico {
   font-size: 38rpx;
   line-height: 1;
   margin-right: 12rpx;
   flex-shrink: 0;
-  filter: drop-shadow(0 2rpx 1rpx rgba(95, 59, 34, 0.35));
+  filter: drop-shadow(0 2rpx 1rpx rgba(199, 54, 110, 0.35));
 }
-.board-screw {
-  position: absolute;
-  top: 50%;
-  width: 13rpx;
-  height: 13rpx;
-  margin-top: -6.5rpx;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #D9B98C 0%, #8A5A28 70%);
-  box-shadow: inset 0 1rpx 1rpx rgba(255, 240, 200, 0.55), 0 1rpx 1rpx rgba(60, 34, 12, 0.4);
-}
-.board-screw--l { left: 16rpx; }
-.board-screw--r { right: 16rpx; }
 .nav-title-text {
-  color: #5C3A1E;
-  font-size: 40rpx;          /* v72: 「单词农场」再加大 */
+  color: #FFFFFF;
+  font-size: 40rpx;
   font-weight: 900;
   letter-spacing: 5rpx;
-  white-space: nowrap;       /* 窄屏下禁止牌匾题字换行 */
+  white-space: nowrap;
   line-height: 1.15;
-  text-shadow: 0 1.5rpx 0 rgba(255, 244, 214, 0.65);
+  /* v73: 白字粉描边——用 8 向 text-shadow 模拟（text-stroke 会吞字芯，弃用） */
+  text-shadow:
+    3rpx 0 0 #E8548C, -3rpx 0 0 #E8548C, 0 3rpx 0 #E8548C, 0 -3rpx 0 #E8548C,
+    3rpx 3rpx 0 #E8548C, -3rpx -3rpx 0 #E8548C, 3rpx -3rpx 0 #E8548C, -3rpx 3rpx 0 #E8548C,
+    0 6rpx 0 rgba(199, 54, 110, 0.4);
 }
 
-/* v69 副标题（参考图：牌匾下方棕色粗体居中） */
+/* v73 副标题（糖果暖棕，保持参考图深色粗体） */
 .brand-sub {
   flex: 0 0 auto;
   text-align: center;
   font-size: 26rpx;
   font-weight: 900;
-  color: #5B4A22;
+  color: #8A5A28;
   letter-spacing: 3rpx;
-  text-shadow: 0 1.5rpx 0 rgba(255, 255, 255, 0.55);
+  text-shadow: 0 1.5rpx 0 rgba(255, 255, 255, 0.65);
   line-height: 1.3;
   animation: rise-in 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.05) both;
 }
@@ -146,7 +174,7 @@
 }
 
 /* ================================================================
-   v69 数据条（参考图：卡其木胶囊横排 · 彩色图标 + 标签 + 白框数字徽章）
+   v73 数据条（白色果冻胶囊横排 · 彩色图标 + 标签 + 橙黄果冻数字徽章）
    ================================================================ */
 .hud-strip {
   flex: 0 0 auto;
@@ -155,12 +183,11 @@
   justify-content: space-between;
   padding: 12rpx 26rpx;
   border-radius: 999rpx;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 46%),
-    linear-gradient(180deg, #E6D6AE 0%, #D9C496 60%, #CDB584 100%);
-  border: 2.5rpx solid rgba(122, 84, 42, 0.4);
-  box-shadow: 0 4rpx 12rpx rgba(95, 70, 30, 0.18),
-              inset 0 2rpx 0 rgba(255, 252, 236, 0.6);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.68) 58%, rgba(255, 246, 214, 0.78) 100%);
+  border: 3rpx solid #FFFFFF;
+  box-shadow: 0 6rpx 0 rgba(245, 179, 1, 0.24),
+              0 12rpx 24rpx rgba(245, 179, 1, 0.2),
+              inset 0 4rpx 10rpx rgba(255, 255, 255, 0.9);
   animation: rise-in 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.05) both;
   animation-delay: 0.04s;
 }
@@ -183,7 +210,7 @@
 .hud-label {
   font-size: 20rpx;
   font-weight: 800;
-  color: #5B4632;
+  color: #8A5A28;
   letter-spacing: 0.5rpx;
   white-space: nowrap;
 }
@@ -191,9 +218,10 @@
   min-width: 36rpx;
   padding: 1rpx 10rpx;
   border-radius: 12rpx;
-  background: linear-gradient(180deg, #5E4830 0%, #4A3826 100%);
-  border: 2rpx solid rgba(255, 255, 255, 0.85);
-  box-shadow: 0 2rpx 4rpx rgba(60, 40, 16, 0.3);
+  background: linear-gradient(180deg, #FFC53D 0%, #FFA53D 100%);   /* v73: 橙黄果冻徽章 */
+  border: 2rpx solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2rpx 0 rgba(232, 137, 27, 0.55),
+              inset 0 1rpx 2rpx rgba(255, 255, 255, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -202,12 +230,13 @@
 .hud-badge-txt {
   font-size: 18rpx;
   font-weight: 900;
-  color: #FFF7E4;
+  color: #FFFFFF;
   line-height: 1.5;
+  text-shadow: 0 1rpx 0 rgba(200, 120, 10, 0.5);
 }
 
 /* ================================================================
-   v69 插画横幅（参考图主视觉：PvZ 插画 + 橙色白描边「VS」）
+   v73 插画横幅（白描边 + 青蓝光晕，保留 PvZ 插画与橙色 VS）
    ================================================================ */
 .hero-banner {
   flex: 1 1 0;
@@ -215,11 +244,12 @@
   max-height: 390rpx;
   position: relative;
   width: 100%;
-  border-radius: 28rpx;
+  border-radius: 36rpx;
   overflow: hidden;
-  border: 3rpx solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 10rpx 26rpx rgba(70, 110, 35, 0.28),
-              inset 0 2rpx 0 rgba(255, 255, 255, 0.35);
+  border: 4rpx solid #FFFFFF;
+  box-shadow: 0 0 0 6rpx rgba(124, 200, 250, 0.32),
+              0 14rpx 30rpx rgba(90, 150, 220, 0.3),
+              inset 0 4rpx 12rpx rgba(255, 255, 255, 0.35);
   animation: rise-in 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.05) both;
   animation-delay: 0.1s;
 }
@@ -262,7 +292,8 @@
 }
 
 /* ================================================================
-   v69 词库选择（参考图：单排六枚木牌 · 选中亮柠绿 + 白光圈 + 顶部小芽）
+   v73 词库选择：单排六枚糖果果冻胶囊（粉/蓝/橙/薄荷/苹果绿/黄）
+   白描边 + 底部挤出 + 顶部高光；选中白圈光晕 + 小芽
    ================================================================ */
 .diff-pills {
   flex: 0 0 auto;
@@ -279,44 +310,62 @@
   flex-shrink: 0;
   padding: 13rpx 17rpx;
   border-radius: 999rpx;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0) 44%),
-    linear-gradient(180deg, #F0DDB2 0%, #E2C994 58%, #D4B57C 100%);
-  border: 2.5rpx solid #A97B46;
-  box-shadow: 0 3.5rpx 0 rgba(150, 100, 50, 0.42),
-              0 6rpx 10rpx rgba(110, 75, 35, 0.18),
-              inset 0 2rpx 0 rgba(255, 250, 230, 0.7);
+  background: linear-gradient(180deg, #FFA5BC 0%, #F76FA0 100%);   /* 默认粉（六色由 --key 覆写） */
+  border: 3rpx solid #FFFFFF;
+  box-shadow: 0 5rpx 0 rgba(216, 79, 134, 0.45),
+              0 10rpx 16rpx rgba(216, 79, 134, 0.22),
+              inset 0 4rpx 8rpx rgba(255, 255, 255, 0.75);
   -webkit-tap-highlight-color: transparent;
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
+/* 六色果冻挂钩（v73：WXML diff-pill--{{item.key}}） */
+.diff-pill--junior {
+  background: linear-gradient(180deg, #7CC8FA 0%, #48A8EE 100%);
+  box-shadow: 0 5rpx 0 rgba(47, 143, 212, 0.45), 0 10rpx 16rpx rgba(47, 143, 212, 0.22), inset 0 4rpx 8rpx rgba(255, 255, 255, 0.75);
+}
+.diff-pill--senior {
+  background: linear-gradient(180deg, #FFB25C 0%, #FF9038 100%);
+  box-shadow: 0 5rpx 0 rgba(232, 121, 0, 0.45), 0 10rpx 16rpx rgba(232, 121, 0, 0.22), inset 0 4rpx 8rpx rgba(255, 255, 255, 0.75);
+}
+.diff-pill--ket {
+  background: linear-gradient(180deg, #6FDAB8 0%, #3EC49A 100%);
+  box-shadow: 0 5rpx 0 rgba(43, 164, 126, 0.45), 0 10rpx 16rpx rgba(43, 164, 126, 0.22), inset 0 4rpx 8rpx rgba(255, 255, 255, 0.75);
+}
+.diff-pill--pet {
+  background: linear-gradient(180deg, #A8E86A 0%, #7ED13E 100%);
+  box-shadow: 0 5rpx 0 rgba(95, 176, 42, 0.45), 0 10rpx 16rpx rgba(95, 176, 42, 0.22), inset 0 4rpx 8rpx rgba(255, 255, 255, 0.75);
+}
+.diff-pill--custom {
+  background: linear-gradient(180deg, #FFD34D 0%, #FFC02E 100%);
+  box-shadow: 0 5rpx 0 rgba(232, 168, 0, 0.45), 0 10rpx 16rpx rgba(232, 168, 0, 0.22), inset 0 4rpx 8rpx rgba(255, 255, 255, 0.75);
+}
 .diff-pill-hover {
-  transform: scale(0.94);
-  box-shadow: 0 1.5rpx 0 rgba(150, 100, 50, 0.4),
-              inset 0 2rpx 0 rgba(255, 250, 230, 0.6);
+  transform: scale(0.94) translateY(3rpx);
+  box-shadow: 0 2rpx 0 rgba(120, 60, 20, 0.3), inset 0 4rpx 8rpx rgba(255, 255, 255, 0.7);
 }
 .diff-pill-txt {
   font-size: 23rpx;
   font-weight: 900;
-  color: #6B4A22;
+  color: #FFFFFF;
   letter-spacing: 0.5rpx;
   line-height: 1.2;
   white-space: nowrap;
+  text-shadow: 0 2rpx 0 rgba(120, 60, 30, 0.28);
 }
-/* 选中态：亮柠绿 + 白光圈（参考图「初中」） */
+/* 选中态：白圈光晕 + 微放大（保持本色果冻） */
 .diff-pill.active {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0) 46%),
-    linear-gradient(180deg, #E2F67C 0%, #C8E94E 55%, #AFD832 100%);
-  border-color: #8FB62B;
-  transform: scale(1.05);
-  box-shadow: 0 0 0 4rpx rgba(255, 255, 255, 0.85),
-              0 0 28rpx rgba(200, 233, 78, 0.95),
-              0 4rpx 0 rgba(120, 150, 30, 0.42),
-              0 8rpx 16rpx rgba(120, 150, 30, 0.25),
-              inset 0 2rpx 0 rgba(255, 255, 255, 0.8);
+  transform: scale(1.08);
+  box-shadow: 0 0 0 5rpx rgba(255, 255, 255, 0.95),
+              0 0 26rpx rgba(255, 211, 77, 0.75),
+              0 6rpx 0 rgba(120, 60, 30, 0.3),
+              0 12rpx 20rpx rgba(120, 60, 30, 0.18),
+              inset 0 4rpx 8rpx rgba(255, 255, 255, 0.8);
 }
-.diff-pill.active .diff-pill-txt { color: #3F5A10; }
-/* 顶部小芽：茎 + 两片对生叶（参考图选中牌上方嫩芽） */
+.diff-pill.active .diff-pill-txt {
+  color: #FFFFFF;
+  text-shadow: 0 2rpx 0 rgba(90, 45, 20, 0.32);
+}
+/* 顶部小芽：茎 + 两片对生叶（糖果嫩绿，无边框） */
 .pill-sprout {
   position: absolute;
   top: -27rpx;
@@ -340,17 +389,16 @@
   height: 22rpx;
   margin-left: -1.75rpx;
   border-radius: 3rpx;
-  background: linear-gradient(180deg, #6FBF3A 0%, #4E8C2F 100%);
+  background: linear-gradient(180deg, #7ED13E 0%, #4E9C2A 100%);
 }
 .sprout-leaf {
   position: absolute;
   top: 0;
   width: 17rpx;
   height: 11rpx;
-  background: linear-gradient(180deg, #8FD14F 0%, #5FA23C 100%);
-  border: 1.5rpx solid #3F7C1E;
+  background: linear-gradient(180deg, #A8E86A 0%, #7ED13E 100%);
   border-radius: 100% 6rpx 100% 6rpx;
-  box-shadow: 0 1rpx 2rpx rgba(50, 90, 20, 0.3);
+  box-shadow: 0 2rpx 4rpx rgba(90, 150, 40, 0.3);
 }
 .sprout-leaf--l {
   left: 1rpx;
@@ -364,7 +412,7 @@
 }
 
 /* ================================================================
-   v35 自定义词包信息条（样式自 v68 原样保留）
+   v35 自定义词包信息条（v73: 白果冻胶囊 + 淡蓝挤出）
    ================================================================ */
 .pack-bar {
   flex: 0 0 auto;
@@ -372,15 +420,12 @@
   align-items: center;
   gap: 10rpx;
   padding: 10rpx 18rpx;
-  border-radius: 16rpx 22rpx 18rpx 24rpx / 20rpx 16rpx 24rpx 18rpx;
-  background:
-    repeating-linear-gradient(180deg,
-      rgba(122, 100, 80, 0.04) 0 1rpx,
-      rgba(122, 100, 80, 0) 1rpx 22rpx),
-    linear-gradient(180deg, #FFFDF5 0%, #F6EDD6 100%);
-  border: 2rpx solid rgba(74, 52, 42, 0.5);
-  box-shadow: 2rpx 3rpx 0 rgba(74, 52, 42, 0.10),
-              0 5rpx 12rpx rgba(74, 52, 42, 0.10);
+  border-radius: 999rpx;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF6DF 100%);
+  border: 3rpx solid #FFFFFF;
+  box-shadow: 0 5rpx 0 rgba(58, 165, 232, 0.22),
+              0 10rpx 18rpx rgba(58, 165, 232, 0.16),
+              inset 0 4rpx 8rpx rgba(255, 255, 255, 0.9);
   animation: rise-in 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.05) both;
   animation-delay: 0.21s;
   -webkit-tap-highlight-color: transparent;
@@ -400,7 +445,7 @@
   min-width: 0;
   font-size: 18rpx;
   font-weight: 700;
-  color: var(--farm-ink, #4A342A);
+  color: #8A5A28;
   letter-spacing: 0.3rpx;
   white-space: nowrap;
   overflow: hidden;
@@ -411,10 +456,10 @@
   flex-shrink: 0;
   font-size: 16rpx;
   font-weight: 800;
-  color: #4E8C2F;
+  color: #2BA47E;
   padding: 4rpx 12rpx;
   border-radius: 999rpx;
-  background: rgba(124, 179, 66, 0.18);
+  background: rgba(62, 201, 140, 0.16);
 }
 .pack-bar-action {
   flex-shrink: 0;
@@ -427,30 +472,41 @@
 }
 
 /* ================================================================
-   v70 大冒险卡（上段：左插画合影 + 右橙金标题/2×2 白胶囊；下段：卡内主按钮 + 奖励中心）
+   v73 大冒险卡（粉→蓝糖果果冻渐变 + 白描边 + 糖星装饰；上段左插画右文案，下段按钮排）
    ================================================================ */
 .adventure-card {
   flex: 1.5 1 0;
   min-height: 410rpx;
   max-height: 560rpx;
   display: flex;
-  flex-direction: column;    /* v70: 上段插画区 + 下段按钮排 */
-  gap: 10rpx;                /* v71: 收紧卡内空隙 */
+  flex-direction: column;
+  gap: 10rpx;
   padding: 20rpx 22rpx 18rpx;
-  border-radius: 32rpx 26rpx 34rpx 28rpx / 26rpx 32rpx 28rpx 34rpx;
-  background:
-    repeating-linear-gradient(180deg,
-      rgba(110, 150, 60, 0.045) 0 2rpx,
-      rgba(110, 150, 60, 0) 2rpx 26rpx),
-    linear-gradient(180deg, #F3F9D9 0%, #E4F1BC 58%, #D8EAAB 100%);
-  border: 3rpx solid rgba(124, 160, 60, 0.55);
-  box-shadow: 0 10rpx 26rpx rgba(80, 120, 40, 0.2),
-              inset 0 2rpx 0 rgba(255, 255, 255, 0.8);
+  position: relative;        /* v73: 糖星装饰锚 */
+  border-radius: 36rpx;
+  background: linear-gradient(168deg, #FFDFEB 0%, #FFF6EC 38%, #E9F7E4 66%, #CFE9FA 100%);
+  border: 4rpx solid #FFFFFF;
+  box-shadow: 0 6rpx 0 rgba(255, 255, 255, 0.65),
+              0 16rpx 36rpx rgba(180, 120, 200, 0.28),
+              inset 0 6rpx 14rpx rgba(255, 255, 255, 0.85);
   overflow: hidden;
   animation: rise-in 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.05) both;
   animation-delay: 0.26s;
   box-sizing: border-box;
 }
+/* v73: 卡内糖星装饰（不遮挡内容层） */
+.card-star {
+  position: absolute;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.92;
+  filter: drop-shadow(0 3rpx 4rpx rgba(216, 120, 80, 0.25));
+}
+.card-star--1 { left: 22rpx; top: 16rpx; font-size: 30rpx; animation: pcFloat 3.2s ease-in-out infinite; }
+.card-star--2 { right: 180rpx; top: 12rpx; font-size: 24rpx; animation: pcFloat 3.8s ease-in-out 0.8s infinite; }
+.adventure-card > .ac-body,
+.adventure-card > .ac-start { position: relative; z-index: 1; }
 /* v70: 上段（左插画 + 右文案/徽章），高度自适应吃掉余量 */
 .ac-body {
   flex: 1 1 auto;
@@ -460,18 +516,19 @@
   gap: 14rpx;                /* v72: 图文水平间距收紧 */
 }
 /* 左侧插画合影（白框圆角小图，向日葵+坚果+寒冰射手+金杯）
-   v72: 改定高居中（不再 stretch），高度与右侧文案块基本相当 */
+   v72: 定高居中（不再 stretch），高度与右侧文案块基本相当 */
 .ac-illu {
   position: relative;
   width: 224rpx;
   height: 216rpx;            /* v72: 定高，与右侧文案块等高 */
   align-self: center;        /* v72: 中心线与右侧文案对齐 */
   flex-shrink: 0;
-  border-radius: 22rpx;
+  border-radius: 26rpx;
   overflow: hidden;
-  border: 4rpx solid rgba(255, 255, 255, 0.92);
-  box-shadow: 0 6rpx 16rpx rgba(80, 110, 40, 0.24);
-  background: #E8F3C8;
+  border: 4rpx solid #FFFFFF;
+  box-shadow: 0 6rpx 0 rgba(255, 255, 255, 0.55),
+              0 10rpx 20rpx rgba(216, 79, 134, 0.18);
+  background: #FFF4E4;
 }
 .ac-img {
   position: absolute;
@@ -495,22 +552,39 @@
   justify-content: center;
   gap: 12rpx;                /* v72: 内容纵向收紧，与插画等高紧凑成组 */
 }
+/* v73: 卡标题双色分段（粉橙「单词农场」+ 天蓝「大冒险」，白描边蛋仔字） */
 .ac-title {
-  font-size: 40rpx;          /* v72: 紧凑回调（v71 44rpx） */
-  font-weight: 900;
-  color: #F59B0B;
+  display: flex;
+  align-items: baseline;
   letter-spacing: 2rpx;
   line-height: 1.15;
-  text-shadow: 0 2rpx 0 rgba(255, 244, 200, 0.9),
-               0 3.5rpx 0 rgba(196, 110, 0, 0.4);
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+.ac-title-a,
+.ac-title-b {
+  font-size: 40rpx;
+  font-weight: 900;
+}
+.ac-title-a {
+  color: #FF6E9C;
+  /* 白描边蛋仔字（8 向 text-shadow，保字芯） */
+  text-shadow:
+    2.5rpx 0 0 #FFFFFF, -2.5rpx 0 0 #FFFFFF, 0 2.5rpx 0 #FFFFFF, 0 -2.5rpx 0 #FFFFFF,
+    2.5rpx 2.5rpx 0 #FFFFFF, -2.5rpx -2.5rpx 0 #FFFFFF, 2.5rpx -2.5rpx 0 #FFFFFF, -2.5rpx 2.5rpx 0 #FFFFFF,
+    0 5rpx 0 rgba(232, 93, 138, 0.3);
+}
+.ac-title-b {
+  color: #38BDF0;
+  text-shadow:
+    2.5rpx 0 0 #FFFFFF, -2.5rpx 0 0 #FFFFFF, 0 2.5rpx 0 #FFFFFF, 0 -2.5rpx 0 #FFFFFF,
+    2.5rpx 2.5rpx 0 #FFFFFF, -2.5rpx -2.5rpx 0 #FFFFFF, 2.5rpx -2.5rpx 0 #FFFFFF, -2.5rpx 2.5rpx 0 #FFFFFF,
+    0 5rpx 0 rgba(42, 140, 200, 0.3);
 }
 .ac-sub {
   font-size: 22rpx;          /* v72: 紧凑回调（v71 24rpx） */
   font-weight: 700;
-  color: #6D5B33;
+  color: #8A5A28;
   letter-spacing: 1rpx;
   line-height: 1.3;
 }
@@ -520,26 +594,44 @@
   gap: 10rpx;                /* v72: 徽章排间距收紧 */
   margin-top: 0;             /* v72: 依赖 ac-main gap，去除额外偏移 */
 }
-/* 白胶囊玩法徽章（2×2 固定两排两列；可点击，打开「怎么玩」弹窗） */
+/* 白果冻玩法徽章（2×2 两排两列；v73 淡彩描边挂钩 bchip--id，可点开「怎么玩」） */
 .bchip {
   display: flex;
   align-items: center;
   gap: 10rpx;
-  padding: 10rpx 14rpx;      /* v72: 内衬收紧 */
+  padding: 10rpx 14rpx;
   border-radius: 999rpx;
-  background: linear-gradient(180deg, #FFFFFF 0%, #FDFBF2 100%);
-  border: 2rpx solid rgba(74, 52, 42, 0.16);
-  box-shadow: 0 2rpx 6rpx rgba(80, 110, 40, 0.14),
-              inset 0 1rpx 0 rgba(255, 255, 255, 0.9);
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF7EA 100%);
+  border: 3rpx solid #FFFFFF;
+  box-shadow: 0 4rpx 0 rgba(216, 79, 134, 0.22),
+              0 8rpx 14rpx rgba(150, 110, 60, 0.14),
+              inset 0 3rpx 6rpx rgba(255, 255, 255, 0.92);
   box-sizing: border-box;
   min-width: 0;
   -webkit-tap-highlight-color: transparent;
   transition: transform 150ms ease, box-shadow 150ms ease;
 }
-.bchip-hover {               /* v71: 点击徽章的按压反馈 */
-  transform: scale(0.94);
-  box-shadow: 0 1rpx 3rpx rgba(80, 110, 40, 0.12),
-              inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
+/* 四枚徽章淡彩描边（绿/黄/橙/蓝，与图标色呼应） */
+.bchip--a1 {
+  border-color: #C9ECAD;
+  box-shadow: 0 4rpx 0 rgba(126, 209, 62, 0.4), 0 8rpx 14rpx rgba(110, 150, 50, 0.16), inset 0 3rpx 6rpx rgba(255, 255, 255, 0.92);
+}
+.bchip--a2 {
+  border-color: #FFE9A8;
+  box-shadow: 0 4rpx 0 rgba(245, 179, 1, 0.35), 0 8rpx 14rpx rgba(200, 150, 20, 0.16), inset 0 3rpx 6rpx rgba(255, 255, 255, 0.92);
+}
+.bchip--a3 {
+  border-color: #FFD1B0;
+  box-shadow: 0 4rpx 0 rgba(255, 144, 56, 0.4), 0 8rpx 14rpx rgba(220, 110, 30, 0.16), inset 0 3rpx 6rpx rgba(255, 255, 255, 0.92);
+}
+.bchip--a4 {
+  border-color: #BFDCFA;
+  box-shadow: 0 4rpx 0 rgba(72, 168, 238, 0.4), 0 8rpx 14rpx rgba(50, 130, 200, 0.16), inset 0 3rpx 6rpx rgba(255, 255, 255, 0.92);
+}
+.bchip-hover {               /* 点击徽章的果冻按压反馈 */
+  transform: scale(0.94) translateY(2rpx);
+  box-shadow: 0 1rpx 0 rgba(120, 60, 20, 0.2),
+              inset 0 3rpx 6rpx rgba(255, 255, 255, 0.8);
 }
 .bchip-ico {
   font-size: 24rpx;
@@ -549,7 +641,7 @@
 .bchip-txt {
   font-size: 21rpx;
   font-weight: 800;
-  color: #4A3B2A;
+  color: #7A4E22;
   letter-spacing: 0.3rpx;
   white-space: nowrap;
   overflow: hidden;
@@ -557,68 +649,67 @@
 }
 
 /* ================================================================
-   v71 大冒险卡下段：「开始冒险」水平居中；奖励中心绝对定位锚定卡右下角
+   v73 大冒险卡下段：「开始冒险」橙黄果冻大按钮居中；奖励中心粉橙果冻球锚卡右下角
    ================================================================ */
 .ac-start {
   flex: 0 0 auto;
-  position: relative;        /* v71: 作为奖励中心的定位锚 */
+  position: relative;        /* 奖励中心定位锚 */
   display: flex;
   align-items: center;
-  justify-content: center;   /* v71: 按钮真正居中 */
+  justify-content: center;   /* 按钮真正居中 */
   padding: 0;
   animation: rise-in 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.05) both;
   animation-delay: 0.32s;
 }
 .start-btn {
-  width: 58%;                /* v71: 居中且右侧留出奖励中心空间 */
+  width: 58%;
   margin: 0 auto;
   height: 96rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 22rpx 18rpx 24rpx 20rpx / 20rpx 24rpx 18rpx 24rpx;
-  background-image:
-    repeating-linear-gradient(0deg,
-      rgba(122, 74, 24, 0.09) 0 3rpx,
-      rgba(255, 255, 255, 0.07) 3rpx 6rpx,
-      rgba(122, 74, 24, 0) 6rpx 34rpx),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 40%),
-    linear-gradient(180deg, #EDCB90 0%, #DCAB68 55%, #C9954F 100%);
-  border: 3rpx solid #8B5A3C;
-  box-shadow: 0 8rpx 0 #8B5A3C,
-              0 16rpx 28rpx rgba(90, 60, 20, 0.3),
-              inset 0 2rpx 0 rgba(255, 248, 224, 0.8);
+  border-radius: 999rpx;
+  background: linear-gradient(180deg, #FFD95E 0%, #FFB020 62%, #FF9C1B 100%);
+  border: 4rpx solid #FFFFFF;
+  box-shadow: 0 8rpx 0 rgba(232, 137, 27, 0.85),
+              0 16rpx 28rpx rgba(232, 137, 27, 0.35),
+              inset 0 6rpx 12rpx rgba(255, 255, 255, 0.75),
+              inset 0 -6rpx 12rpx rgba(216, 110, 20, 0.22);
   -webkit-tap-highlight-color: transparent;
   transition: transform 130ms ease, box-shadow 130ms ease, filter 130ms ease;
 }
 .start-btn-hover {
   transform: translateY(5rpx) scale(0.99);
-  filter: brightness(0.97);
-  box-shadow: 0 3rpx 0 #8B5A3C,
-              0 6rpx 14rpx rgba(90, 60, 20, 0.24),
-              inset 0 2rpx 0 rgba(255, 248, 224, 0.6);
+  filter: brightness(0.98);
+  box-shadow: 0 3rpx 0 rgba(232, 137, 27, 0.85),
+              0 8rpx 16rpx rgba(232, 137, 27, 0.28),
+              inset 0 6rpx 12rpx rgba(255, 255, 255, 0.7);
 }
 .start-btn-label {
   font-size: 42rpx;
   font-weight: 900;
-  color: #5A3A10;
+  color: #FFFFFF;
   letter-spacing: 8rpx;
   margin-right: -8rpx;    /* 抵消末字字距，视觉居中 */
   line-height: 1.1;
-  text-shadow: 0 1.5rpx 0 rgba(255, 244, 214, 0.65);
+  /* v73: 白字橙描边——8 向 text-shadow 模拟（保字芯） */
+  text-shadow:
+    3rpx 0 0 #F08A00, -3rpx 0 0 #F08A00, 0 3rpx 0 #F08A00, 0 -3rpx 0 #F08A00,
+    3rpx 3rpx 0 #F08A00, -3rpx -3rpx 0 #F08A00, 3rpx -3rpx 0 #F08A00, -3rpx 3rpx 0 #F08A00,
+    0 6rpx 0 rgba(200, 110, 10, 0.4);
 }
 
 /* ================================================================
    v33 新增：「立即了解」玩法介绍弹窗（左对齐·卡片式·替代原生 showModal）
-   - 遮罩：暗绿半透 + 毛玻璃，点击关闭；卡片 pop 弹入（回弹曲线）
+   - 遮罩：淡紫糖果半透 + 毛玻璃，点击关闭；卡片 pop 弹入（回弹曲线）
    - 规则行：数字徽章（六色渐变循环）+ 标题/描述，全部左对齐
    - 逐条错峰淡入（内联 animation-delay）；小屏 scroll-view 兜底滚动
-   - 底部：亲子积分联动提示（v32）+ 绿色渐变 CTA（复用 start-main 视觉）
+   - 底部：亲子积分联动提示（v32）+ 薄荷果冻 CTA（v73 糖果化）
    ================================================================ */
 .km-mask {
   position: absolute;
   inset: 0;
-  background: rgba(42, 30, 20, 0.5);
+  background: rgba(120, 84, 160, 0.42);   /* v73: 淡紫糖果遮罩 */
   backdrop-filter: blur(6rpx);
   display: flex;
   align-items: center;
@@ -637,19 +728,15 @@
   flex-direction: column;
   padding: 30rpx 28rpx 26rpx;
   box-sizing: border-box;
-  /* v63：羊皮纸卷轴 + 木质厚框 */
-  background:
-    repeating-linear-gradient(180deg,
-      rgba(122, 100, 80, 0.05) 0 1rpx,
-      rgba(122, 100, 80, 0) 1rpx 28rpx),
-    linear-gradient(180deg, #FFFDF5 0%, #F6EDD6 100%);
-  border-radius: 34rpx 26rpx 38rpx 28rpx / 28rpx 36rpx 26rpx 38rpx;
-  border: 6rpx solid var(--wood-edge, #5F3B22);
+  /* v73：白果冻卡 + 粉白双层描边 */
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF6E9 100%);
+  border-radius: 40rpx;
+  border: 6rpx solid #FFFFFF;
   box-shadow:
-    0 10rpx 0 rgba(63, 38, 20, 0.3),
-    0 22rpx 44rpx rgba(42, 30, 20, 0.4),
-    inset 0 0 0 3rpx rgba(255, 255, 255, 0.55),
-    inset 0 3rpx 0 rgba(255, 255, 255, 0.8);
+    0 12rpx 0 rgba(216, 79, 134, 0.16),
+    0 26rpx 48rpx rgba(120, 84, 160, 0.32),
+    inset 0 0 0 3rpx rgba(255, 205, 225, 0.55),
+    inset 0 4rpx 0 rgba(255, 255, 255, 0.9);
   animation: kmPop 0.42s cubic-bezier(.2,.9,.2,1.15);
 }
 @keyframes kmPop {
@@ -680,14 +767,14 @@
 .km-logo {
   width: 64rpx;
   height: 64rpx;
-  border-radius: 18rpx;
-  /* v63：木框纸印 logo 砖 */
-  background: linear-gradient(180deg, #FFFDF5, #EAF3D2);
-  border: 3rpx solid rgba(74, 52, 42, 0.5);
+  border-radius: 20rpx;
+  /* v73：薄荷果冻徽标砖 */
+  background: linear-gradient(180deg, #FFFFFF, #E2F8EC);
+  border: 3rpx solid #BFE8D2;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4rpx 10rpx rgba(63, 38, 20, 0.22), inset 0 2rpx 0 rgba(255,255,255,0.9);
+  box-shadow: 0 4rpx 10rpx rgba(46, 168, 140, 0.22), inset 0 2rpx 0 rgba(255,255,255,0.9);
   flex-shrink: 0;
 }
 .km-logo-emoji {
@@ -702,14 +789,14 @@
 .km-title {
   font-size: 30rpx;
   font-weight: 900;
-  color: var(--farm-ink, #4A342A);
+  color: #7A4E22;
   letter-spacing: 1rpx;
   line-height: 1.2;
 }
 .km-subtitle {
   font-size: 16rpx;
   font-weight: 500;
-  color: var(--farm-ink-soft, #7A6450);
+  color: #A9885E;
   margin-top: 4rpx;
   letter-spacing: 0.5rpx;
 }
@@ -717,29 +804,29 @@
   width: 52rpx;
   height: 52rpx;
   border-radius: 50%;
-  background: rgba(74, 52, 42, 0.08);
-  border: 2rpx solid rgba(74, 52, 42, 0.3);
+  background: rgba(232, 93, 138, 0.1);
+  border: 2rpx solid rgba(232, 93, 138, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24rpx;
   font-weight: 700;
-  color: var(--farm-ink-soft, #7A6450);
+  color: #D94F86;
   flex-shrink: 0;
   -webkit-tap-highlight-color: transparent;
   transition: transform 150ms ease, background 150ms ease;
 }
 .km-close-hover {
   transform: scale(0.88);
-  background: rgba(74, 52, 42, 0.16);
+  background: rgba(232, 93, 138, 0.2);
 }
 
-/* ---- 分割线：墨线渐隐（v63 手绘虚线感） ---- */
+/* ---- 分割线：粉糖果虚线 ---- */
 .km-divider {
   height: 0;
   margin: 22rpx 4rpx 24rpx;
   flex-shrink: 0;
-  border-top: 3rpx dashed rgba(74, 52, 42, 0.35);
+  border-top: 3rpx dashed rgba(232, 93, 138, 0.4);
 }
 
 /* ---- 规则列表：左对齐行式布局，小屏兜底滚动 ---- */
@@ -753,11 +840,12 @@
   align-items: flex-start;       /* 左对齐核心：徽章与文字块顶对齐 */
   gap: 14rpx;
   padding: 15rpx 16rpx;
-  /* v63：纸条便签 + 左缘墨线 + 微抖圆角 */
-  border-radius: 14rpx 20rpx 16rpx 22rpx / 18rpx 14rpx 22rpx 16rpx;
-  border: 2rpx solid rgba(74, 52, 42, 0.35);
+  /* v73：淡彩果冻便签 + 白描边 + 粉左条 */
+  border-radius: 20rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.95);
   border-left-width: 6rpx;
-  box-shadow: 2rpx 2rpx 0 rgba(74, 52, 42, 0.08);
+  border-left-color: rgba(216, 79, 134, 0.4);
+  box-shadow: 0 3rpx 8rpx rgba(150, 110, 60, 0.1);
   box-sizing: border-box;
   opacity: 0;
   animation: kmRowIn 0.4s ease-out forwards;   /* 逐条淡入（delay 见内联） */
@@ -793,7 +881,7 @@
   gap: 6rpx;
   font-size: 22rpx;
   font-weight: 800;
-  color: var(--farm-ink, #4A342A);
+  color: #7A4E22;
   line-height: 1.3;
   letter-spacing: 0.3rpx;
 }
@@ -803,7 +891,7 @@
   margin-top: 8rpx;
   font-size: 17rpx;
   font-weight: 500;
-  color: var(--farm-ink-soft, #7A6450);
+  color: #A9885E;
   line-height: 1.6;
   letter-spacing: 0.2rpx;
   text-align: left;              /* 描述左对齐（不两端对齐，避免拉伸） */
@@ -842,19 +930,14 @@
 }
 .km-tip-link-hover { transform: scale(0.94); opacity: 0.8; }
 
-/* ---- CTA：木牌按钮（与 start-main 视觉同族, v63 木质化） ---- */
+/* ---- CTA：薄荷果冻胶囊按钮（v73 糖果化） ---- */
 .km-cta {
   position: relative;
   margin-top: 24rpx;
   padding: 16rpx 0;
-  border-radius: 30rpx 24rpx 34rpx 26rpx / 26rpx 32rpx 24rpx 34rpx;
-  border: 3rpx solid var(--wood-edge, #5F3B22);
-  background-image:
-    repeating-linear-gradient(0deg,
-      rgba(63, 38, 20, 0.10) 0 3rpx,
-      rgba(255, 255, 255, 0.05) 3rpx 6rpx,
-      rgba(63, 38, 20, 0) 6rpx 30rpx),
-    linear-gradient(180deg, #C89B72 0%, #A9714B 50%, #8B5A3C 100%);
+  border-radius: 999rpx;
+  border: 3rpx solid #FFFFFF;
+  background-image: linear-gradient(180deg, #7EE0A8 0%, #3EC98C 62%, #2FB98C 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -862,9 +945,9 @@
   overflow: hidden;
   flex-shrink: 0;
   box-shadow:
-    0 6rpx 0 var(--wood-edge, #5F3B22),
-    0 12rpx 22rpx rgba(74, 52, 42, 0.3),
-    inset 0 2rpx 0 rgba(255,255,255,0.4);
+    0 6rpx 0 rgba(43, 164, 126, 0.8),
+    0 12rpx 22rpx rgba(43, 164, 126, 0.28),
+    inset 0 4rpx 10rpx rgba(255,255,255,0.55);
   -webkit-tap-highlight-color: transparent;
   transition: transform 130ms ease, box-shadow 130ms ease, filter 130ms ease;
 }
@@ -872,34 +955,34 @@
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 45%;
-  background: linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0));
+  background: linear-gradient(180deg, rgba(255,255,255,0.4), rgba(255,255,255,0));
   pointer-events: none;
 }
 .km-cta-text {
   font-size: 26rpx;
   font-weight: 900;
-  color: #FFF8EA;
+  color: #FFFFFF;
   letter-spacing: 3rpx;
   line-height: 1.2;
-  text-shadow: 0 2rpx 0 rgba(63, 38, 20, 0.45);
+  text-shadow: 0 2rpx 0 rgba(30, 120, 90, 0.45);
 }
 .km-cta-arrow {
   font-size: 30rpx;
   font-weight: 900;
-  color: rgba(255,255,255,0.9);
+  color: rgba(255,255,255,0.95);
   line-height: 1;
 }
 .km-cta-hover {
   transform: translateY(4rpx) scale(0.99);
-  filter: brightness(0.97);
+  filter: brightness(0.98);
   box-shadow:
-    0 2rpx 0 var(--wood-edge, #5F3B22),
-    0 5rpx 12rpx rgba(74, 52, 42, 0.24),
-    inset 0 2rpx 0 rgba(255,255,255,0.35);
+    0 2rpx 0 rgba(43, 164, 126, 0.8),
+    0 6rpx 12rpx rgba(43, 164, 126, 0.22),
+    inset 0 4rpx 10rpx rgba(255,255,255,0.5);
 }
 
 /* ================================================================
-   v71 「奖励中心」红浆果圆钮——绝对定位锚定大冒险卡右下角（ac-start 内）
+   v73 「奖励中心」粉橙果冻圆球——绝对定位锚定大冒险卡右下角（ac-start 内）
    不占按钮排流内空间，保证「开始冒险」居中；与上段徽章留有安全间距
    ================================================================ */
 .reward-fab {
@@ -919,14 +1002,15 @@
   width: 84rpx;
   height: 84rpx;
   border-radius: 50%;
-  background: radial-gradient(circle at 32% 26%, #FFA388 0%, #FF6A4D 46%, #E04A2E 78%, #C23A22 100%);
-  border: 3rpx solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 6rpx 0 rgba(150, 44, 20, 0.45),
-              0 12rpx 20rpx rgba(120, 40, 20, 0.32),
-              inset 0 3rpx 6rpx rgba(255, 220, 200, 0.5);
+  /* v73: 粉→橙糖果渐变球 */
+  background: radial-gradient(circle at 32% 26%, #FFD1A8 0%, #FF9FB8 40%, #F76FA0 72%, #E8548C 100%);
+  border: 4rpx solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 6rpx 0 rgba(199, 54, 110, 0.45),
+              0 12rpx 20rpx rgba(216, 79, 134, 0.35),
+              inset 0 4rpx 8rpx rgba(255, 220, 235, 0.6);
   animation: fabBob 2.6s ease-in-out infinite;
 }
-/* 浆果高光 + 白色星芒（参考图红果白纹） */
+/* 果冻高光 + 白色星芒 */
 .fab-spark {
   position: absolute;
   inset: 0;
@@ -940,7 +1024,7 @@
   width: 16rpx;
   height: 10rpx;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.8);
   transform: rotate(-24deg);
   filter: blur(1rpx);
 }
@@ -951,20 +1035,20 @@
   bottom: 10rpx;
   font-size: 20rpx;
   line-height: 1;
-  color: rgba(255, 255, 255, 0.92);
-  text-shadow: 0 1rpx 2rpx rgba(160, 40, 20, 0.5);
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1rpx 2rpx rgba(180, 40, 90, 0.5);
 }
 .fab-label {
   padding: 2rpx 12rpx;
   border-radius: 999rpx;
-  background: rgba(74, 52, 42, 0.72);
-  border: 1rpx solid rgba(255, 255, 255, 0.4);
-  color: #FFF8EA;
+  background: rgba(255, 255, 255, 0.94);
+  border: 2rpx solid #FFFFFF;
+  color: #E8548C;
   font-size: 16rpx;
   font-weight: 800;
   letter-spacing: 0.5rpx;
   white-space: nowrap;
-  box-shadow: 0 3rpx 8rpx rgba(60, 40, 20, 0.3);
+  box-shadow: 0 3rpx 8rpx rgba(216, 79, 134, 0.3);
 }
 @keyframes fabBob {
   0%, 100% { transform: translateY(0) rotate(-3deg); }

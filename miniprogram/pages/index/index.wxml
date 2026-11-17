@@ -1,14 +1,18 @@
-<!-- pages/index/index.wxml — v72 牌匾升级与卡内紧凑（在 v71 基础上按反馈调整）
+<!-- pages/index/index.wxml — v73 糖果果冻主题（在 v72 基础上整体换皮）
+  v73 更新（保留 v67-v72 信息架构与 PvZ 插画，仅视觉换皮）：
+    · 木纹体系→糖果果冻：牌匾粉果冻+白描边+黄糖珠（铆钉退役）、题字白字粉描边
+    · 页面背景换奶油黄→粉→淡蓝糖果渐变，新增 page-candy 糖果星星散布层
+    · 词库牌六色果冻（粉/蓝/橙/薄荷/苹果绿/黄，class 钩子 diff-pill--key），选中白圈+小芽
+    · 大冒险卡粉→蓝果冻渐变+卡内糖星装饰；卡标题双色分段（粉橙+天蓝）
+    · 徽章白果冻+淡彩描边（class 钩子 bchip--id）；开始冒险橙黄果冻+白描边
+    · 奖励中心粉橙果冻球；页底灌木→橙色果冻波浪；玩法弹窗白果冻+薄荷 CTA
   v72 更新：
-    · 牌匾「单词农场」再靠下（margin-top 加大）、题字加大（36→40rpx），左侧新增🌻农场图标
-    · 大冒险卡：左侧插画改为定高居中（不再 stretch），与右侧文案块高度基本相当、中心线对齐
-    · 右侧文案/徽章间距收紧（ac-main gap 18→12、徽章内衬 12→10rpx 等），图文整体更紧凑
+    · 牌匾「单词农场」再靠下、题字加大（36→40rpx），左侧新增🌻农场图标
+    · 大冒险卡：插画定高居中与文案块等高对齐；间距收紧
   v71 更新：
-    · 导航只保留居中木牌匾「单词农场」（居中、靠下）；左侧返回钮与右侧⚙️钮取消
-    · 「怎么玩」弹窗改由大冒险卡内四个玩法徽章点击打开（onKnowMore 由 bchip 承接）
-    · 右侧文案/徽章放大（标题/副标/白胶囊字号与内衬加大），与左侧插画高度基本相当
-    · 「开始冒险」在卡内水平居中，卡内空隙收紧；奖励中心红浆果钮仍锚定卡右下角（绝对定位）
-  v67-v70 历史见 git log；数据绑定与事件零破坏（onBack 移除、onKnowMore 换承载点）
+    · 导航只保留居中木牌匾→糖果牌匾；玩法徽章可点击打开「怎么玩」弹窗
+    · 「开始冒险」居中；奖励中心锚定卡右下角（绝对定位）
+  v67-v70 历史见 git log；数据绑定与事件零破坏
   布局结构（v71）：
     .page (flex column, 高度 {{pageHeight}}rpx, overflow:hidden)
       ├── page-flora         底部灌木装饰（绝对定位，不入流）
@@ -34,17 +38,27 @@
     <view class="fb fb--6"></view>
   </view>
 
-  <!-- ============ 自定义导航栏（居中木牌匾：🌻 图标 + 题字，双铆钉） ============ -->
+  <!-- ============ v73: 糖果星星散布层（蛋仔风点缀，不入流） ============ -->
+  <view class="page-candy">
+    <text class="pc pc--1">⭐</text>
+    <text class="pc pc--2">✨</text>
+    <text class="pc pc--3">🍬</text>
+    <text class="pc pc--4">🔵</text>
+    <text class="pc pc--5">⭐</text>
+    <text class="pc pc--6">🍬</text>
+  </view>
+
+  <!-- ============ 自定义导航栏（居中糖果牌匾：🌻 图标 + 白字题名，双糖珠） ============ -->
   <view
     class="nav-bar"
     style="padding-top: {{statusBarHeight}}px; height: calc({{statusBarHeight}}px + {{navBarHeight}}px);"
   >
     <view class="nav-bar-inner" style="height: {{navBarHeight}}px; padding: 0 20rpx;">
       <view class="nav-title">
-        <view class="board-screw board-screw--l"></view>
+        <view class="candy-bead candy-bead--l"></view>
         <text class="nav-logo-ico">🌻</text>
         <text class="nav-title-text">单词农场</text>
-        <view class="board-screw board-screw--r"></view>
+        <view class="candy-bead candy-bead--r"></view>
       </view>
     </view>
   </view>
@@ -85,11 +99,11 @@
       <view class="hero-vs"><text class="hero-vs-text">VS</text></view>
     </view>
 
-    <!-- 4. 词库选择：单排六枚木牌（选中亮柠绿 + 白光圈 + 顶部小芽） -->
+    <!-- 4. 词库选择：单排六枚糖果果冻胶囊（六色挂钩 diff-pill--key，选中白圈+小芽） -->
     <view class="diff-pills">
       <block wx:for="{{difficulties}}" wx:key="key">
         <view
-          class="diff-pill {{difficulty === item.key ? 'active' : ''}}"
+          class="diff-pill diff-pill--{{item.key}} {{difficulty === item.key ? 'active' : ''}}"
           data-key="{{item.key}}"
           bindtap="onSelectDifficulty"
           hover-class="diff-pill-hover"
@@ -112,20 +126,22 @@
       <text class="pack-bar-action">管理 ›</text>
     </view>
 
-    <!-- 5. 大冒险卡（v72：左插画定高与右文案块等高居中 + 卡内底部「开始冒险」 + 右下角奖励中心） -->
+    <!-- 5. 大冒险卡（v73：粉→蓝果冻渐变卡 + 左插画 + 右双色标题/2×2徽章 + 底部果冻按钮） -->
     <view class="adventure-card">
+      <text class="card-star card-star--1">⭐</text>
+      <text class="card-star card-star--2">✨</text>
       <view class="ac-body">
         <view class="ac-illu">
           <image class="ac-img" src="/images/card-plants.jpg" mode="aspectFill" />
           <view class="ac-illu-ring"></view>
         </view>
         <view class="ac-main">
-          <view class="ac-title">单词农场大冒险</view>
+          <view class="ac-title"><text class="ac-title-a">单词农场</text><text class="ac-title-b">大冒险</text></view>
           <view class="ac-sub">背单词、养植物、闯关拿奖励</view>
           <view class="ac-chips">
             <block wx:for="{{howtoList}}" wx:key="id">
               <view
-                class="bchip"
+                class="bchip bchip--{{item.id}}"
                 bindtap="onKnowMore"
                 hover-class="bchip-hover"
               >
