@@ -1,7 +1,7 @@
 {
   "navigationBarTitleText": "亲子奖励中心",
-  "navigationBarBackgroundColor": "#43A047",
+  "navigationBarBackgroundColor": "#FF8FB5",
   "navigationBarTextStyle": "white",
-  "backgroundColor": "#FFF9EA",
+  "backgroundColor": "#FFF6E3",
   "enablePullDownRefresh": false
 }

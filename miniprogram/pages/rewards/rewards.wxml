@@ -1,12 +1,24 @@
 <!-- pages/rewards/rewards.wxml - 亲子奖励中心 (v32)
-  结构：
+  结构（v77 糖果果冻统一，与首页 v76 蛋仔风同源）：
     .reward-page (scroll-view 全页滚动)
-      ├── .rp-wallet       积分钱包卡（大数字 + 连续打卡 / 月度积分 / 已兑换 三列）
-      ├── .rp-tier ×3      🟢即时小奖励 / 🟡周末中等 / 🔵长线大奖
-      │     └── .rp-item   奖励卡（emoji + 名称 + 价目 + 兑换按钮 / 家长确认长按条）
-      └── .rp-history      最近兑换记录
+      ├── .rp-candy       果冻气泡 + 星心花散布层（纯装饰，不入流不拦截点击）
+      ├── .rp-wallet       草莓粉果冻钱包卡（大数字 + 连续打卡 / 月度积分 / 已兑换 三列）
+      ├── .rp-tier ×3      🟢即时小奖励 / 🟡周末中等 / 🔵长线大奖（白果冻档位卡）
+      │     └── .rp-item   白果冻奖励卡（emoji + 名称 + 价目 + 兑换按钮 / 家长确认长按条）
+      └── .rp-history      最近兑换记录（白果冻账卡）
 -->
 <view class="reward-page" style="height: {{pageHeight}}rpx;">
+
+  <!-- v77 背景装饰层：果冻气泡 ×3 + 星心花 ×4（z-index 0，低于内容层，pointer-events none） -->
+  <view class="rp-candy">
+    <view class="rp-bubble rp-bubble--1"></view>
+    <view class="rp-bubble rp-bubble--2"></view>
+    <view class="rp-bubble rp-bubble--3"></view>
+    <text class="rp-star rp-star--1">★</text>
+    <text class="rp-star rp-star--2">★</text>
+    <text class="rp-star rp-star--3">♥</text>
+    <text class="rp-star rp-star--4">✿</text>
+  </view>
 
   <scroll-view scroll-y class="rp-scroll" show-scrollbar="{{false}}">
 

@@ -1,54 +1,138 @@
 /* pages/rewards/rewards.wxss - 亲子奖励中心样式 (v32)
- * v63「木语农场」重设计：
- *   · 页底：草甸渐变；钱包 = 皮革缝线零钱袋；档位卡 = 米黄纸签 + 彩色左缘压条
- *   · 奖励卡 = 挂签纸卡（打孔 + 麻绳痕）；兑换按钮 = 叶绿木印；记录 = 账本纸
+ * v77「糖果果冻」统一重设计（与首页 v76 蛋仔风同源）：
+ *   · 页底：糖果渐变（奶油黄→粉→淡蓝）+ 果冻气泡/星心花散布层
+ *   · 钱包 = 草莓粉果冻袋（白描边 + 白色虚线糖霜内圈 + 白果冻内袋）
+ *   · 档位卡 = 白果冻卡 + 三档彩色左缘糖条（薄荷/蜜橙/天蓝）
+ *   · 奖励卡 = 白果冻小卡（白描边+淡彩挤出）；兑换按钮 = 薄荷果冻（与首页弹窗 CTA 同款）
+ *   · 记录 = 白果冻账卡；布局度量与 v59/v63 保持一致（仅换肤不动结构）
  */
 
 .reward-page {
   display: flex;
   flex-direction: column;
   background:
-    radial-gradient(120% 60% at 50% -6%, #FFF7D6 0%, rgba(255,247,214,0) 55%),
-    linear-gradient(180deg, #B8E6FF 0%, #DDF3C8 30%, #F7EFCF 62%, #FFF9EA 100%);
+    radial-gradient(90% 40% at 12% 4%, rgba(255, 214, 235, 0.45) 0%, rgba(255, 214, 235, 0) 58%),
+    radial-gradient(84% 34% at 88% 20%, rgba(190, 226, 255, 0.4) 0%, rgba(190, 226, 255, 0) 60%),
+    radial-gradient(90% 30% at 50% 104%, rgba(255, 178, 92, 0.3) 0%, rgba(255, 178, 92, 0) 62%),
+    linear-gradient(180deg, #FFF2AE 0%, #FFE7BC 26%, #FFDFE4 52%, #EFE7F8 76%, #CFE6FA 100%);
   overflow: hidden;
+  position: relative;
 }
+
+/* ---- v77 果冻气泡 + 星心花散布层（绝对定位不入流，低于内容层，同首页 page-candy 公式） ---- */
+.rp-candy {
+  position: absolute;
+  left: 0; right: 0; top: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.rp-bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 26%,
+    rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.6) 24%,
+    rgba(255, 178, 226, 0.48) 52%, rgba(132, 198, 250, 0.5) 100%);
+  border: 4rpx solid rgba(255, 255, 255, 0.95);
+  box-shadow: inset -7rpx -10rpx 16rpx rgba(104, 158, 232, 0.42),
+              inset 7rpx 8rpx 13rpx rgba(255, 255, 255, 0.85),
+              0 9rpx 20rpx rgba(140, 110, 205, 0.28),
+              0 0 18rpx rgba(255, 178, 226, 0.35);
+  animation: rpFloat 4.2s ease-in-out infinite;
+}
+.rp-bubble::before {
+  content: "";
+  position: absolute;
+  left: 14%; top: 9%;
+  width: 44%; height: 32%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  transform: rotate(-22deg);
+  filter: blur(1rpx);
+}
+.rp-bubble::after {
+  content: "";
+  position: absolute;
+  right: 16%; bottom: 14%;
+  width: 18%; height: 13%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  filter: blur(0.5rpx);
+}
+.rp-bubble--1 { left: 6rpx;   top: 320rpx; width: 54rpx; height: 54rpx; }
+.rp-bubble--2 { right: 8rpx;  top: 760rpx; width: 42rpx; height: 42rpx; animation-delay: 0.7s; animation-duration: 3.6s; }
+.rp-bubble--3 { left: 8rpx;   bottom: 180rpx; width: 46rpx; height: 46rpx; animation-delay: 1.4s; animation-duration: 3.2s; }
+.rp-star {
+  position: absolute;
+  line-height: 1;
+  color: #FFD34D;
+  text-shadow:
+    3rpx 0 0 #FFFFFF, -3rpx 0 0 #FFFFFF, 0 3rpx 0 #FFFFFF, 0 -3rpx 0 #FFFFFF,
+    2.4rpx 2.4rpx 0 #FFFFFF, -2.4rpx -2.4rpx 0 #FFFFFF, 2.4rpx -2.4rpx 0 #FFFFFF, -2.4rpx 2.4rpx 0 #FFFFFF,
+    0 6rpx 0 rgba(245, 179, 1, 0.5),
+    0 0 16rpx rgba(255, 211, 77, 0.55);
+  animation: rpFloat 3.8s ease-in-out infinite;
+}
+.rp-star--1 { right: 10rpx; top: 300rpx; font-size: 48rpx; }                     /* 右上黄星 */
+.rp-star--2 { left: 6rpx;   top: 130rpx; font-size: 42rpx; color: #7CC8FA;       /* 左上蓝星 */
+  text-shadow:
+    3rpx 0 0 #FFFFFF, -3rpx 0 0 #FFFFFF, 0 3rpx 0 #FFFFFF, 0 -3rpx 0 #FFFFFF,
+    2.4rpx 2.4rpx 0 #FFFFFF, -2.4rpx -2.4rpx 0 #FFFFFF, 2.4rpx -2.4rpx 0 #FFFFFF, -2.4rpx 2.4rpx 0 #FFFFFF,
+    0 6rpx 0 rgba(72, 168, 238, 0.5),
+    0 0 16rpx rgba(124, 200, 250, 0.5);
+  animation-delay: 0.9s; }
+.rp-star--3 { right: 12rpx; bottom: 320rpx; font-size: 40rpx; color: #FF7BA9;    /* 右下粉爱心 */
+  text-shadow:
+    3rpx 0 0 #FFFFFF, -3rpx 0 0 #FFFFFF, 0 3rpx 0 #FFFFFF, 0 -3rpx 0 #FFFFFF,
+    2.4rpx 2.4rpx 0 #FFFFFF, -2.4rpx -2.4rpx 0 #FFFFFF, 2.4rpx -2.4rpx 0 #FFFFFF, -2.4rpx 2.4rpx 0 #FFFFFF,
+    0 6rpx 0 rgba(216, 79, 134, 0.5),
+    0 0 16rpx rgba(255, 123, 169, 0.45);
+  animation-delay: 1.6s; animation-duration: 3.3s; }
+.rp-star--4 { left: 10rpx;  bottom: 90rpx; font-size: 38rpx; color: #FFFFFF;     /* 左下白花 */
+  text-shadow:
+    3rpx 0 0 rgba(255, 190, 220, 0.95), -3rpx 0 0 rgba(255, 190, 220, 0.95),
+    0 3rpx 0 rgba(255, 190, 220, 0.95), 0 -3rpx 0 rgba(255, 190, 220, 0.95),
+    2.4rpx 2.4rpx 0 rgba(255, 190, 220, 0.95), -2.4rpx -2.4rpx 0 rgba(255, 190, 220, 0.95),
+    2.4rpx -2.4rpx 0 rgba(255, 190, 220, 0.95), -2.4rpx 2.4rpx 0 rgba(255, 190, 220, 0.95),
+    0 6rpx 0 rgba(216, 79, 134, 0.35),
+    0 0 16rpx rgba(255, 190, 220, 0.5);
+  animation-delay: 0.4s; }
+@keyframes rpFloat {
+  0%, 100% { transform: translateY(0) rotate(-8deg); }
+  50%      { transform: translateY(-10rpx) rotate(8deg); }
+}
+
 .rp-scroll {
   flex: 1 1 auto;
   min-height: 0;
   padding: 24rpx 28rpx 0;
   box-sizing: border-box;
+  position: relative;
+  z-index: 1;
 }
 
 /* ============ 积分钱包卡 ============ */
-/* v63：皮革零钱袋（棕革渐变 + 白色缝线 + 铜扣高光） */
+/* v77：草莓粉果冻零钱袋（白描边 + 白色虚线糖霜内圈，与首页牌匾同源） */
 .rp-wallet {
   padding: 26rpx 30rpx 20rpx;
   box-sizing: border-box;
-  border-radius: 26rpx 34rpx 28rpx 36rpx / 32rpx 26rpx 36rpx 28rpx;
-  background-image:
-    repeating-linear-gradient(178deg,
-      rgba(42, 24, 12, 0.06) 0 2rpx,
-      rgba(42, 24, 12, 0) 2rpx 18rpx),
-    linear-gradient(180deg,
-      rgba(255, 235, 200, 0.20) 0%,
-      rgba(255, 235, 200, 0) 40%,
-      rgba(42, 24, 12, 0.18) 100%),
-    linear-gradient(160deg, #C68A58 0%, #9A6238 55%, #74492A 100%);
-  border: 4rpx solid #6B4224;
+  border-radius: 32rpx;
+  background: linear-gradient(180deg, #FFB1CB 0%, #FF8FB5 55%, #F76E9C 100%);
+  border: 4rpx solid #FFFFFF;
   box-shadow:
-    0 10rpx 0 rgba(63, 38, 20, 0.35),
-    0 16rpx 32rpx rgba(74, 52, 42, 0.35),
-    inset 0 2rpx 0 rgba(255, 235, 200, 0.35);
-  color: #FFF8EA;
+    0 8rpx 0 rgba(216, 79, 134, 0.45),
+    0 16rpx 32rpx rgba(216, 79, 134, 0.3),
+    inset 0 6rpx 12rpx rgba(255, 255, 255, 0.85),
+    inset 0 -6rpx 12rpx rgba(199, 54, 110, 0.2);
+  color: #FFFFFF;
   position: relative;
 }
-/* 内圈白色缝线（皮革手缝感） */
+/* 内圈白色糖霜虚线（果冻袋手缝感） */
 .rp-wallet::after {
   content: "";
   position: absolute;
   inset: 8rpx;
-  border: 3rpx dashed rgba(255, 244, 214, 0.45);
-  border-radius: 20rpx 28rpx 22rpx 30rpx / 26rpx 20rpx 30rpx 22rpx;
+  border: 3rpx dashed rgba(255, 255, 255, 0.5);
+  border-radius: 26rpx;
   pointer-events: none;
 }
 .rp-wallet-head {
@@ -59,7 +143,7 @@
 .rp-wallet-icon {
   font-size: 64rpx;
   line-height: 1;
-  filter: drop-shadow(0 4rpx 8rpx rgba(0,0,0,0.18));
+  filter: drop-shadow(0 4rpx 8rpx rgba(199, 54, 110, 0.3));
   animation: walletBob 2.8s ease-in-out infinite;
 }
 @keyframes walletBob {
@@ -76,13 +160,13 @@
   line-height: 1.05;
   letter-spacing: 1rpx;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 3rpx 8rpx rgba(42, 24, 12, 0.35);
+  text-shadow: 0 3rpx 0 rgba(199, 54, 110, 0.45);
 }
 .rp-wallet-label {
   margin-top: 6rpx;   /* v59: 主数字-副标题呼吸感 */
   font-size: 20rpx;
   font-weight: 700;
-  opacity: 0.92;
+  opacity: 0.96;
   letter-spacing: 1rpx;
 }
 .rp-wallet-meta {
@@ -92,9 +176,10 @@
   justify-content: space-between;
   padding: 14rpx 18rpx;
   border-radius: 18rpx;
-  /* v63：皮革内袋（深色内凹） */
-  background: rgba(42, 24, 12, 0.28);
-  box-shadow: inset 0 3rpx 6rpx rgba(42, 24, 12, 0.4);
+  /* v77：白果冻内袋（白半透明内凹） */
+  background: rgba(255, 255, 255, 0.24);
+  border: 2rpx solid rgba(255, 255, 255, 0.45);
+  box-shadow: inset 0 2rpx 6rpx rgba(199, 54, 110, 0.2);
 }
 .rp-meta {
   flex: 1 1 0;
@@ -109,17 +194,18 @@
   font-weight: 900;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
+  text-shadow: 0 1rpx 0 rgba(199, 54, 110, 0.35);
 }
 .rp-meta-label {
   font-size: 15rpx;
   font-weight: 600;
-  opacity: 0.92;
+  opacity: 0.96;
 }
 .rp-meta-divider {
   flex: 0 0 auto;
   width: 2rpx;
   height: 40rpx;
-  background: rgba(255, 244, 214, 0.5);
+  background: rgba(255, 255, 255, 0.6);
   border-radius: 1rpx;
 }
 
@@ -136,29 +222,29 @@
   top: -14rpx;
   font-size: 24rpx;
   line-height: 1;
-  filter: drop-shadow(0 2rpx 2rpx rgba(180, 83, 9, 0.25));
+  filter: drop-shadow(0 2rpx 2rpx rgba(232, 168, 0, 0.3));
 }
 .rp-month-bar {
   height: 16rpx;   /* v59: 12→16 能量槽感（儿童游戏化进度） */
   border-radius: 999rpx;
-  background: #FFF3D9;
-  border: 1rpx solid #FFE082;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2rpx solid #FFFFFF;
   overflow: hidden;
-  box-shadow: inset 0 1rpx 3rpx rgba(180, 83, 9, 0.12);
+  box-shadow: inset 0 1rpx 3rpx rgba(120, 84, 160, 0.15);
 }
 .rp-month-fill {
   height: 100%;
   min-width: 0;
   border-radius: 999rpx;
-  background: linear-gradient(90deg, #FFD54F, #FB8C00);
-  box-shadow: 0 0 6rpx rgba(251, 140, 0, 0.5);
+  background: linear-gradient(90deg, #FFD34D, #FFA53D);   /* v77: 糖果柠黄→蜜橙 */
+  box-shadow: 0 0 6rpx rgba(255, 165, 61, 0.55);
   transition: width 0.6s cubic-bezier(.2,.9,.2,1);
 }
 .rp-month-text {
   margin-top: 6rpx;
   font-size: 16rpx;
   font-weight: 700;
-  color: #A1782B;
+  color: #8A5A28;
   text-align: center;
   letter-spacing: 0.5rpx;
 }
@@ -168,26 +254,23 @@
   margin-top: 28rpx;   /* v59: 模块间距呼吸感 */
   padding: 20rpx 20rpx 16rpx;
   box-sizing: border-box;
-  /* v63：米黄纸签卡（手绘抖动圆角 + 墨线 + 纸纹） */
-  border-radius: 20rpx 28rpx 24rpx 30rpx / 26rpx 20rpx 30rpx 24rpx;
-  background:
-    repeating-linear-gradient(180deg,
-      rgba(122, 100, 80, 0.04) 0 1rpx,
-      rgba(122, 100, 80, 0) 1rpx 26rpx),
-    linear-gradient(180deg, #FFFDF7 0%, #FFF6E0 100%);
-  border: 2rpx solid rgba(74, 52, 42, 0.45);
-  box-shadow: 2rpx 3rpx 0 rgba(74, 52, 42, 0.10),
-              0 8rpx 18rpx rgba(74, 52, 42, 0.12);
+  /* v77：白果冻档位卡（白描边 + 内发光 + 淡紫柔影） */
+  border-radius: 24rpx;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF6E9 100%);
+  border: 3rpx solid #FFFFFF;
+  box-shadow: 0 6rpx 0 rgba(150, 110, 60, 0.14),
+              0 14rpx 26rpx rgba(120, 84, 160, 0.16),
+              inset 0 4rpx 10rpx rgba(255, 255, 255, 0.9);
   animation: rise-in 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.05) both;   /* v63 错峰入场 */
 }
 /* v63: 三档错峰延迟（用档位类而非 nth-of-type，wx:if 场景下定位更稳） */
 .tier-instant { animation-delay: 0.02s; }
 .tier-weekend { animation-delay: 0.10s; }
 .tier-grand   { animation-delay: 0.18s; }
-/* 各档主题色（左缘厚压条 + 标题色，v63 保留识别色） */
-.tier-instant { border-left: 10rpx solid #5FC55E; }
-.tier-weekend { border-left: 10rpx solid #FFB300; }
-.tier-grand   { border-left: 10rpx solid #42A5F5; }
+/* 各档主题色（左缘糖条 + 标题色，v77 糖果化：薄荷/蜜橙/天蓝） */
+.tier-instant { border-left: 10rpx solid #7ED13E; }
+.tier-weekend { border-left: 10rpx solid #FFB020; }
+.tier-grand   { border-left: 10rpx solid #48A8EE; }
 
 .rp-tier-head {
   display: flex;
@@ -203,12 +286,12 @@
   min-width: 0;
   font-size: 30rpx;
   font-weight: 900;
-  color: #4A342A;
+  color: #7A4E22;
   letter-spacing: 1rpx;
 }
-.tier-instant .rp-tier-name { color: #2E7D32; }
-.tier-weekend .rp-tier-name { color: #B45309; }
-.tier-grand   .rp-tier-name { color: #1565C0; }
+.tier-instant .rp-tier-name { color: #1E9E71; }
+.tier-weekend .rp-tier-name { color: #C77500; }
+.tier-grand   .rp-tier-name { color: #2F7FC2; }
 
 .rp-tier-chip {
   flex-shrink: 0;
@@ -222,25 +305,36 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* v77：已解锁 = 三色果冻糖豆（薄荷/蜜橙/天蓝，白描边+挤出） */
 .rp-tier-chip.on {
   color: #FFFFFF;
-  background: linear-gradient(135deg, #81C784, #43A047);
-  box-shadow: 0 3rpx 8rpx rgba(67, 160, 71, 0.35);
+  text-shadow: 0 1rpx 0 rgba(30, 120, 90, 0.4);
+  background: linear-gradient(180deg, #7EE0A8, #3EC98C);
+  border: 2rpx solid #FFFFFF;
+  box-shadow: 0 3rpx 0 rgba(43, 164, 126, 0.5), inset 0 2rpx 4rpx rgba(255, 255, 255, 0.6);
 }
 .rp-tier-chip.off {
-  color: #7A6450;
-  background: #FFF9EA;                    /* v63: 纸底 */
-  border: 2rpx dashed rgba(74, 52, 42, 0.4);  /* v63: 虚线墨框 = 待解锁印记 */
+  color: #A9885E;
+  background: rgba(255, 255, 255, 0.85);               /* v77: 白果冻底 */
+  border: 2rpx dashed rgba(216, 79, 134, 0.45);        /* v77: 虚线糖霜框 = 待解锁印记 */
   box-shadow: none;
 }
-.tier-weekend .rp-tier-chip.on { background: linear-gradient(135deg, #FFD54F, #FB8C00); }
-.tier-grand   .rp-tier-chip.on { background: linear-gradient(135deg, #64B5F6, #1E88E5); }
+.tier-weekend .rp-tier-chip.on {
+  background: linear-gradient(180deg, #FFD95E, #FFB020);
+  text-shadow: 0 1rpx 0 rgba(200, 110, 10, 0.45);
+  box-shadow: 0 3rpx 0 rgba(232, 137, 27, 0.5), inset 0 2rpx 4rpx rgba(255, 255, 255, 0.6);
+}
+.tier-grand   .rp-tier-chip.on {
+  background: linear-gradient(180deg, #9ED8FF, #48A8EE);
+  text-shadow: 0 1rpx 0 rgba(30, 110, 170, 0.45);
+  box-shadow: 0 3rpx 0 rgba(47, 143, 212, 0.5), inset 0 2rpx 4rpx rgba(255, 255, 255, 0.6);
+}
 
 .rp-tier-sub {
   margin-top: 6rpx;
   font-size: 16rpx;
   font-weight: 600;
-  color: #7A6450;
+  color: #A9885E;
   letter-spacing: 0.4rpx;
 }
 
@@ -255,14 +349,13 @@
   width: calc((100% - 12rpx) / 2);
   box-sizing: border-box;
   padding: 14rpx 14rpx 12rpx;
-  /* v63：挂签纸卡（右上打孔 + 墨线框） */
-  border-radius: 12rpx 18rpx 14rpx 20rpx / 16rpx 12rpx 20rpx 14rpx;
-  background:
-    radial-gradient(circle at calc(100% - 12rpx) 12rpx, #FBF3E2 0 5rpx, rgba(74, 52, 42, 0.55) 5rpx 7rpx, rgba(74, 52, 42, 0) 8rpx),
-    linear-gradient(180deg, #FFFDF7 0%, #FFF6E0 100%);
-  border: 2rpx solid rgba(74, 52, 42, 0.45);
-  box-shadow: 1rpx 2rpx 0 rgba(74, 52, 42, 0.08),
-              0 4rpx 10rpx rgba(74, 52, 42, 0.10);
+  /* v77：白果冻奖励小卡（白描边 + 淡彩挤出） */
+  border-radius: 20rpx;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF7EA 100%);
+  border: 3rpx solid #FFFFFF;
+  box-shadow: 0 4rpx 0 rgba(150, 110, 60, 0.14),
+              0 8rpx 16rpx rgba(120, 84, 160, 0.1),
+              inset 0 3rpx 6rpx rgba(255, 255, 255, 0.92);
   transition: transform 150ms ease;
 }
 .rp-item.locked {
@@ -281,9 +374,11 @@
   align-items: center;
   justify-content: center;
   font-size: 36rpx;
-  background: #FFFDF5;
-  border-radius: 14rpx 20rpx 16rpx 22rpx / 18rpx 14rpx 22rpx 16rpx;
-  border: 2rpx dashed rgba(74, 52, 42, 0.4);
+  /* v77：白果冻糖珠底座 */
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF3E0 100%);
+  border-radius: 18rpx;
+  border: 2.5rpx solid #FFFFFF;
+  box-shadow: 0 3rpx 0 rgba(232, 168, 0, 0.25), inset 0 2rpx 4rpx rgba(255, 255, 255, 0.9);
 }
 .rp-item-info {
   flex: 1 1 auto;
@@ -292,7 +387,7 @@
 .rp-item-name {
   font-size: 22rpx;
   font-weight: 800;
-  color: #4A342A;
+  color: #7A4E22;
   line-height: 1.25;
 }
 .rp-item-cost {
@@ -310,7 +405,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 14rpx;
+  border-radius: 999rpx;
   font-size: 19rpx;
   font-weight: 800;
   letter-spacing: 0.5rpx;
@@ -321,27 +416,24 @@
   box-sizing: border-box;
 }
 .rp-item-btn.can {
-  /* v63：叶绿木印兑换钮 */
+  /* v77：薄荷果冻兑换钮（与首页弹窗 CTA 同款） */
   color: #FFFFFF;
-  text-shadow: 0 2rpx 0 rgba(43, 74, 21, 0.4);
-  background:
-    repeating-linear-gradient(0deg,
-      rgba(43, 74, 21, 0.10) 0 2rpx,
-      rgba(255, 255, 255, 0.05) 2rpx 4rpx,
-      rgba(43, 74, 21, 0) 4rpx 30rpx),
-    linear-gradient(180deg, #8ED44E 0%, #6FBF2E 55%, #4E9321 100%);
-  border: 2rpx solid #2E7D14;
-  box-shadow: 0 5rpx 0 #2E7D14, 0 8rpx 14rpx rgba(85, 160, 47, 0.35);
+  text-shadow: 0 2rpx 0 rgba(30, 120, 90, 0.45);
+  background: linear-gradient(180deg, #7EE0A8 0%, #3EC98C 62%, #2FB98C 100%);
+  border: 3rpx solid #FFFFFF;
+  box-shadow: 0 5rpx 0 rgba(43, 164, 126, 0.8), 0 10rpx 16rpx rgba(43, 164, 126, 0.28),
+              inset 0 3rpx 8rpx rgba(255, 255, 255, 0.55);
 }
 .rp-item-btn.nope {
-  color: #A9927D;
-  background: #FFF9EA;            /* v63: 纸底 */
-  border: 2rpx dashed rgba(74, 52, 42, 0.4);    /* v63: 虚线墨框 = 未开印记 */
+  color: #C58FA6;
+  background: rgba(255, 255, 255, 0.85);            /* v77: 白果冻底 */
+  border: 2.5rpx dashed rgba(216, 79, 134, 0.4);    /* v77: 虚线糖霜框 = 未开印记 */
   box-shadow: none;
 }
 .rp-btn-hover {
   transform: translateY(3rpx);
-  box-shadow: 0 2rpx 0 #2E7D14, 0 4rpx 8rpx rgba(85, 160, 47, 0.28);
+  box-shadow: 0 2rpx 0 rgba(43, 164, 126, 0.8), 0 4rpx 8rpx rgba(43, 164, 126, 0.22),
+              inset 0 3rpx 6rpx rgba(255, 255, 255, 0.5);
 }
 
 /* ============ 家长确认长按条 ============ */
@@ -351,7 +443,7 @@
 .rp-confirm-tip {
   font-size: 15rpx;
   font-weight: 700;
-  color: #8D6E63;
+  color: #A9885E;
   text-align: center;
   margin-bottom: 8rpx;
 }
@@ -362,23 +454,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12rpx 18rpx 14rpx 20rpx / 16rpx 12rpx 20rpx 14rpx;
+  border-radius: 999rpx;
   overflow: hidden;
-  background: linear-gradient(180deg, #FFF8E1, #FFEFC5);   /* v59: 暖琥珀 */
-  border: 2rpx solid #E0A82E;
-  box-shadow: 0 3rpx 0 rgba(169, 106, 0, 0.55);
+  /* v77：蜂蜜果冻长按条（白描边+挤出） */
+  background: linear-gradient(180deg, #FFE9A8 0%, #FFCF5E 100%);
+  border: 3rpx solid #FFFFFF;
+  box-shadow: 0 4rpx 0 rgba(232, 137, 27, 0.55), inset 0 3rpx 6rpx rgba(255, 255, 255, 0.8);
   animation: rpPulse 1.6s ease-in-out infinite;
 }
 @keyframes rpPulse {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 179, 0, 0.0); }
-  50%      { transform: scale(1.015); box-shadow: 0 0 0 6rpx rgba(255, 179, 0, 0.18); }
+  0%, 100% { transform: scale(1); box-shadow: 0 4rpx 0 rgba(232, 137, 27, 0.55), 0 0 0 0 rgba(255, 179, 0, 0.0); }
+  50%      { transform: scale(1.015); box-shadow: 0 4rpx 0 rgba(232, 137, 27, 0.55), 0 0 0 6rpx rgba(255, 179, 0, 0.18); }
 }
 .rp-confirm-text {
   position: relative;
   z-index: 2;
   font-size: 20rpx;
   font-weight: 900;
-  color: #A05E0B;   /* v59: 暗红褐→暖琥珀（去警示感, 呼应钱包金） */
+  color: #C77500;   /* v77: 蜜橙暖棕（呼应蜂蜜果冻） */
   letter-spacing: 1rpx;
 }
 .rp-confirm-fill {
@@ -388,7 +481,7 @@
   bottom: 0;
   z-index: 1;
   width: 0;
-  background: linear-gradient(90deg, #FFE082, #FFB300);
+  background: linear-gradient(90deg, #FFD34D, #FFA53D);
 }
 .rp-confirm-btn.run .rp-confirm-fill {
   width: 100%;
@@ -399,20 +492,18 @@
 .rp-history {
   margin-top: 28rpx;
   padding: 18rpx 22rpx;
-  /* v63：账本纸（横格线 + 墨线框） */
-  border-radius: 16rpx 22rpx 18rpx 24rpx / 20rpx 16rpx 24rpx 18rpx;
-  background:
-    repeating-linear-gradient(180deg,
-      rgba(122, 100, 80, 0.05) 0 1rpx,
-      rgba(122, 100, 80, 0) 1rpx 24rpx),
-    linear-gradient(180deg, #FFFDF7 0%, #FFF6E0 100%);
-  border: 2rpx solid rgba(74, 52, 42, 0.45);
-  box-shadow: 2rpx 2rpx 0 rgba(74, 52, 42, 0.08);
+  /* v77：白果冻账卡 */
+  border-radius: 20rpx;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF6E9 100%);
+  border: 3rpx solid #FFFFFF;
+  box-shadow: 0 4rpx 0 rgba(150, 110, 60, 0.12),
+              0 10rpx 20rpx rgba(120, 84, 160, 0.1),
+              inset 0 3rpx 6rpx rgba(255, 255, 255, 0.92);
 }
 .rp-history-head {
   font-size: 24rpx;
   font-weight: 900;
-  color: #4A342A;
+  color: #7A4E22;
   letter-spacing: 1rpx;
 }
 .rp-history-row {
@@ -430,7 +521,7 @@
   min-width: 0;
   font-size: 19rpx;
   font-weight: 700;
-  color: #6D5138;
+  color: #8A5A28;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -439,30 +530,26 @@
   flex-shrink: 0;
   font-size: 16rpx;
   font-weight: 800;
-  color: #D84315;
+  color: #E8548C;
 }
 .rp-history-time {
   flex-shrink: 0;
   font-size: 15rpx;
   font-weight: 600;
-  color: #A9927D;
+  color: #BFA38C;
 }
 
 /* ============ 底部说明 ============ */
 .rp-footer-tip {
   margin-top: 24rpx;
   padding: 16rpx 24rpx;
-  /* v63：牛皮纸提示条 */
-  border-radius: 14rpx 20rpx 16rpx 22rpx / 18rpx 14rpx 22rpx 16rpx;
-  background:
-    repeating-linear-gradient(180deg,
-      rgba(122, 100, 80, 0.045) 0 1rpx,
-      rgba(122, 100, 80, 0) 1rpx 22rpx),
-    linear-gradient(180deg, #FBF3E2 0%, #F3E5C8 100%);
-  border: 2rpx dashed rgba(74, 52, 42, 0.4);
+  /* v77：白果冻提示条 + 粉色虚线糖霜框 */
+  border-radius: 20rpx;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 246, 223, 0.85) 100%);
+  border: 2.5rpx dashed rgba(216, 79, 134, 0.4);
   font-size: 17rpx;
   font-weight: 600;
-  color: #6D5138;
+  color: #A9885E;
   line-height: 1.6;
   text-align: center;
 }

@@ -475,8 +475,8 @@ const QUIZ = {
     COUNTS: [26, 38, 52],            // 各档彩带片数
     STARS: [0, 2, 4],                // 各档星星 emoji 片数（童话感点缀）
     STAR_EMOJIS: ['⭐', '🌟', '✨', '💛'],
-    PALETTE: ['#FF6E40', '#FFD54F', '#66BB6A', '#42A5F5', '#AB47BC', '#FF80AB'],
-    PALETTE_GOLD: ['#FFC733', '#FF6E40', '#FFD54F', '#FF8F00', '#66BB6A', '#FF80AB'],   // 顶档金色调
+    PALETTE: ['#FF8FB5', '#FFD34D', '#7EE0A8', '#7CC8FA', '#C79BF2', '#FFA53D'],          // v77: 糖果果冻六色（与首页色板同源）
+    PALETTE_GOLD: ['#FFD34D', '#FFA53D', '#FF8FB5', '#FFC02E', '#FF6E9C', '#C79BF2'],     // v77: 顶档蜜糖金色调
     STRIP_W: 10,                     // 长条片宽(rpx)
     STRIP_H: 26,                     // 长条片高(rpx)
     DOT_SIZE: 14,                    // 圆点片径(rpx)

@@ -189,19 +189,19 @@
 
       <!-- 4 项核心数据（2×2 紧凑网格，保证空间利用率） -->
       <view class="go-stats">
-        <view class="go-stat">
+        <view class="go-stat go-stat--1">
           <view class="go-stat-num">{{gameOverSummary.level}}</view>
           <view class="go-stat-label">关卡</view>
         </view>
-        <view class="go-stat">
+        <view class="go-stat go-stat--2">
           <view class="go-stat-num">{{gameOverSummary.maxCombo}}x</view>
           <view class="go-stat-label">最高连击</view>
         </view>
-        <view class="go-stat">
+        <view class="go-stat go-stat--3">
           <view class="go-stat-num">{{gameOverSummary.correctCount}}/{{gameOverSummary.totalAnswered || 0}}</view>
           <view class="go-stat-label">答对</view>
         </view>
-        <view class="go-stat">
+        <view class="go-stat go-stat--4">
           <view class="go-stat-num">{{gameOverSummary.killedZombies}}</view>
           <view class="go-stat-label">消灭僵尸</view>
         </view>

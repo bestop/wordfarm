@@ -1,52 +1,51 @@
-/* app.wxss - 全局样式：「木语农场」木质手账拟物主题 (v63 基底 + v65 缤纷鲜化)
+/* app.wxss - 全局样式：糖果果冻主题 (v77 与首页 v73-v76 蛋仔风统一)
  *
- * 设计语言：
- *   · 农场木质纹理 —— 板条木纹（repeating-linear-gradient 拼缝 + 顺纹丝缕 + 顶部光泽）
- *   · 手绘感描边 —— 有机抖动圆角（不等半径 border-radius）+ 咖啡墨线描边
- *   · 拟物卡片 —— 牛皮纸卡 + 和纸胶带 + 火漆徽章 + 皮革缝线
- *   · 丰富微动效 —— 入场错峰浮现 / 木牌摇摆 / 火漆盖章 / 呼吸浮动 / 按压下沉
- *   · v65 缤纷鲜化 —— 全局色板提饱和提亮：蜜色橡木、鲜绿草甸、糖果点缀四色新增
+ * 设计语言（对齐 pages/index v76 果冻公式）：
+ *   · 果冻公式 —— 大圆角 + 白描边 3-4rpx + 浅顶深底渐变 + 底部挤出深色投影 + 顶部内发光
+ *   · 色板 —— 草莓粉 FF8FB5/柠黄 FFD34D/蜜橙 FFA53D/薄荷 7EE0A8/苹果绿 A8E86A/天蓝 7CC8FA/葡萄紫 C79BF2
+ *   · 按钮家族 —— 橙黄果冻(默认)/草莓粉(primary)/薄荷(mint)/天蓝(sky)/白果冻(ghost)
+ *   · 卡片 —— 白果冻卡 + 粉白双层描边（与首页弹窗同款）
+ *   · 微动效保留 —— 入场错峰浮现 / 呼吸浮动 / 按压下沉
  *
- * 兼容性策略（高配机优先）：毛玻璃 backdrop-filter 大胆使用；纹理全部为
- * 纯 CSS 渐变（零图片资源，不增加包体积）；老机型仅丢失模糊层不丢布局。
+ * 兼容性策略：--farm-* 变量名保留（旧页面回退安全），纹理类 wood/paper-surface 不再被页面引用
  */
 
-/* ============ 颜色变量（木语农场色系 · v65 缤纷版） ============ */
+/* ============ 颜色变量（糖果果冻色系 v77，变量名保留兼容旧引用） ============ */
 page {
-  /* 纸张（v65 提亮一档，更通透） */
-  --farm-paper: #FFF9EA;
+  /* 纸张（v77 糖果奶油底） */
+  --farm-paper: #FFF6E3;
   --farm-paper-light: #FFFDF7;
-  --farm-kraft: #FBEFD2;
-  /* 木材（v65 蜜色橡木：比旧版亮一档） */
+  --farm-kraft: #FFF3DC;
+  /* 木材变量退役保留（旧引用回退值，不再被页面使用） */
   --wood-light: #D8AC74;
   --wood-mid: #BC8048;
   --wood-deep: #9A6238;
   --wood-edge: #6B4224;
-  /* 墨色（手绘线稿） */
-  --farm-ink: #4A342A;
-  --farm-ink-soft: #7A6450;
-  --farm-ink-faint: #A9927D;
-  /* 点缀（v65 鲜化：叶绿/阳光/天空/珊瑚红全部提饱和） */
-  --farm-leaf: #5FC23A;
-  --farm-leaf-deep: #3F9420;
-  --farm-sun: #FFB300;
-  --farm-sky: #A5E3FF;
-  --farm-rust: #FF5252;
-  /* v65 新增糖果点缀色（胶带/徽章/强调） */
+  /* 墨色（v77 糖果暖棕） */
+  --farm-ink: #7A4E22;
+  --farm-ink-soft: #8A5A28;
+  --farm-ink-faint: #A9885E;
+  /* 点缀（糖果六色主色） */
+  --farm-leaf: #7ED13E;
+  --farm-leaf-deep: #5FBF2E;
+  --farm-sun: #FFD34D;
+  --farm-sky: #7CC8FA;
+  --farm-rust: #FF6E8C;
+  /* 糖果点缀色 */
   --farm-berry: #FF6E9C;
-  --farm-grape: #9C4DCC;
-  --farm-mint: #26BFA6;
-  --farm-coral: #FF7043;
+  --farm-grape: #C79BF2;
+  --farm-mint: #3EC98C;
+  --farm-coral: #FFA53D;
 
   /* 兼容旧变量名（部分页面 wxss 仍引用） */
-  --color-bg: #FFF9EA;
+  --color-bg: #FFF6E3;
   --color-card: #FFFDF7;
   --color-text: var(--farm-ink);
   --color-text-muted: var(--farm-ink-soft);
   --color-text-light: var(--farm-ink-faint);
   --color-danger: var(--farm-rust);
   --color-success: var(--farm-leaf);
-  --shadow-card: 0 12rpx 28rpx rgba(74, 52, 42, 0.14);
+  --shadow-card: 0 12rpx 28rpx rgba(120, 84, 160, 0.16);
   --radius-sm: 12rpx;
   --radius-md: 20rpx;
   --radius-lg: 32rpx;
@@ -107,129 +106,106 @@ view, text { box-sizing: border-box; }
     inset 0 2rpx 0 rgba(255, 255, 255, 0.85);
 }
 
-/* ============ 拟物按钮家族（沿用 kawaii-btn 类名，全面换装木牌质感） ============ */
+/* ============ 果冻按钮家族（沿用 kawaii-btn 类名，v77 全面换装糖果果冻） ============ */
 .kawaii-btn {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 24rpx 56rpx;
-  /* 手绘抖动圆角：不等半径制造「手工剪裁」轮廓 */
-  border-radius: 38rpx 26rpx 40rpx 24rpx / 26rpx 38rpx 24rpx 40rpx;
+  border-radius: 999rpx;
   font-size: 34rpx;
-  font-weight: 800;
-  color: #FFF8EA;
-  text-shadow: 0 2rpx 0 rgba(63, 38, 20, 0.35);
-  background-image:
-    repeating-linear-gradient(90deg,
-      rgba(63, 38, 20, 0.12) 0 3rpx,
-      rgba(255, 255, 255, 0.05) 3rpx 6rpx,
-      rgba(63, 38, 20, 0) 6rpx 64rpx),
-    linear-gradient(180deg,
-      rgba(255, 255, 255, 0.28) 0%,
-      rgba(255, 255, 255, 0) 38%,
-      rgba(63, 38, 20, 0.14) 100%),
-    linear-gradient(180deg, var(--wood-light) 0%, var(--wood-mid) 50%, var(--wood-deep) 100%);
-  border: 3rpx solid var(--wood-edge);
+  font-weight: 900;
+  color: #FFFFFF;
+  text-shadow: 0 2rpx 0 rgba(200, 110, 10, 0.4);
+  /* 默认：蜜橙果冻（与首页开始冒险按钮同款） */
+  background-image: linear-gradient(180deg, #FFD95E 0%, #FFB020 62%, #FF9C1B 100%);
+  border: 4rpx solid #FFFFFF;
   box-shadow:
-    0 8rpx 0 var(--wood-edge),
-    0 14rpx 26rpx rgba(74, 52, 42, 0.32),
-    inset 0 2rpx 0 rgba(255, 255, 255, 0.45);
+    0 8rpx 0 rgba(232, 137, 27, 0.85),
+    0 14rpx 26rpx rgba(232, 137, 27, 0.32),
+    inset 0 6rpx 12rpx rgba(255, 255, 255, 0.75),
+    inset 0 -6rpx 12rpx rgba(216, 110, 20, 0.22);
   transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
   line-height: 1.2;
 }
 .kawaii-btn:active {
-  transform: translateY(6rpx) scale(0.98);
-  filter: brightness(0.96);
+  transform: translateY(5rpx) scale(0.98);
+  filter: brightness(0.97);
   box-shadow:
-    0 2rpx 0 var(--wood-edge),
-    0 6rpx 14rpx rgba(74, 52, 42, 0.28),
-    inset 0 2rpx 0 rgba(255, 255, 255, 0.35);
+    0 3rpx 0 rgba(232, 137, 27, 0.85),
+    0 8rpx 16rpx rgba(232, 137, 27, 0.26),
+    inset 0 5rpx 10rpx rgba(255, 255, 255, 0.7);
 }
-/* 主按钮：阳光漆木（v65 亮琥珀） */
+/* 主按钮：草莓粉果冻（与首页牌匾同源） */
 .kawaii-btn-primary {
-  color: #5A3A10;
-  text-shadow: 0 1rpx 0 rgba(255, 255, 255, 0.4);
-  background-image:
-    repeating-linear-gradient(90deg,
-      rgba(122, 74, 10, 0.10) 0 3rpx,
-      rgba(255, 255, 255, 0.08) 3rpx 6rpx,
-      rgba(122, 74, 10, 0) 6rpx 64rpx),
-    linear-gradient(180deg, #FFE082 0%, #FFC940 52%, #F0A800 100%);
-  border-color: #A96A00;
+  text-shadow: 0 2rpx 0 rgba(199, 54, 110, 0.45);
+  background-image: linear-gradient(180deg, #FFB1CB 0%, #FF8FB5 55%, #F76E9C 100%);
+  border-color: #FFFFFF;
   box-shadow:
-    0 8rpx 0 #A96A00,
-    0 14rpx 26rpx rgba(240, 168, 0, 0.35),
-    inset 0 2rpx 0 rgba(255, 255, 255, 0.6);
+    0 8rpx 0 rgba(216, 79, 134, 0.5),
+    0 14rpx 26rpx rgba(216, 79, 134, 0.32),
+    inset 0 6rpx 12rpx rgba(255, 255, 255, 0.85),
+    inset 0 -6rpx 12rpx rgba(199, 54, 110, 0.2);
 }
-.kawaii-btn-primary:active { box-shadow: 0 2rpx 0 #A96A00, 0 6rpx 14rpx rgba(240,168,0,0.28), inset 0 2rpx 0 rgba(255,255,255,0.5); }
-/* 薄荷→鲜叶绿漆木（继续/再来一局；v65 提鲜） */
+.kawaii-btn-primary:active { box-shadow: 0 3rpx 0 rgba(216, 79, 134, 0.5), 0 8rpx 16rpx rgba(216,79,134,0.26), inset 0 5rpx 10rpx rgba(255,255,255,0.8); }
+/* 薄荷果冻（继续/再来一局；与首页弹窗 CTA 同款） */
 .kawaii-btn-mint {
   color: #FFFFFF;
-  background-image:
-    repeating-linear-gradient(90deg,
-      rgba(43, 74, 21, 0.12) 0 3rpx,
-      rgba(255, 255, 255, 0.06) 3rpx 6rpx,
-      rgba(43, 74, 21, 0) 6rpx 64rpx),
-    linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0) 38%, rgba(43,74,21,0.16) 100%),
-    linear-gradient(180deg, #9CCC65 0%, #7DBE33 52%, #558B2F 100%);
-  border-color: #33691E;
+  text-shadow: 0 2rpx 0 rgba(30, 120, 90, 0.45);
+  background-image: linear-gradient(180deg, #7EE0A8 0%, #3EC98C 62%, #2FB98C 100%);
+  border-color: #FFFFFF;
   box-shadow:
-    0 8rpx 0 #33691E,
-    0 14rpx 26rpx rgba(85, 139, 47, 0.35),
-    inset 0 2rpx 0 rgba(255, 255, 255, 0.45);
+    0 8rpx 0 rgba(43, 164, 126, 0.8),
+    0 14rpx 26rpx rgba(43, 164, 126, 0.28),
+    inset 0 6rpx 12rpx rgba(255, 255, 255, 0.55),
+    inset 0 -6rpx 12rpx rgba(30, 140, 100, 0.22);
 }
-.kawaii-btn-mint:active { box-shadow: 0 2rpx 0 #33691E, 0 6rpx 14rpx rgba(85,139,47,0.28), inset 0 2rpx 0 rgba(255,255,255,0.35); }
-/* 天空漆木（次要强调） */
+.kawaii-btn-mint:active { box-shadow: 0 3rpx 0 rgba(43, 164, 126, 0.8), 0 8rpx 16rpx rgba(43,164,126,0.22), inset 0 5rpx 10rpx rgba(255,255,255,0.5); }
+/* 天蓝果冻（次要强调） */
 .kawaii-btn-sky {
-  color: #14384D;
-  text-shadow: none;
-  background-image:
-    repeating-linear-gradient(90deg,
-      rgba(20, 56, 77, 0.08) 0 3rpx,
-      rgba(255, 255, 255, 0.10) 3rpx 6rpx,
-      rgba(20, 56, 77, 0) 6rpx 64rpx),
-    linear-gradient(180deg, #D8F0FF 0%, #A5DCF5 52%, #7FC4E8 100%);
-  border-color: #3E7A9E;
+  text-shadow: 0 2rpx 0 rgba(30, 110, 170, 0.45);
+  background-image: linear-gradient(180deg, #9ED8FF 0%, #7CC8FA 55%, #48A8EE 100%);
+  border-color: #FFFFFF;
   box-shadow:
-    0 8rpx 0 #3E7A9E,
-    0 14rpx 26rpx rgba(110, 193, 228, 0.35),
-    inset 0 2rpx 0 rgba(255, 255, 255, 0.65);
+    0 8rpx 0 rgba(47, 143, 212, 0.75),
+    0 14rpx 26rpx rgba(47, 143, 212, 0.28),
+    inset 0 6rpx 12rpx rgba(255, 255, 255, 0.7),
+    inset 0 -6rpx 12rpx rgba(30, 110, 170, 0.2);
 }
-.kawaii-btn-sky:active { box-shadow: 0 2rpx 0 #3E7A9E, 0 6rpx 14rpx rgba(110,193,228,0.28), inset 0 2rpx 0 rgba(255,255,255,0.5); }
-/* 纸签按钮（退出等次级操作：牛皮纸签 + 墨线） */
+.kawaii-btn-sky:active { box-shadow: 0 3rpx 0 rgba(47, 143, 212, 0.75), 0 8rpx 16rpx rgba(47,143,212,0.22), inset 0 5rpx 10rpx rgba(255,255,255,0.65); }
+/* 白果冻按钮（退出等次级操作：白果冻 + 粉柔影） */
 .kawaii-btn-ghost {
-  color: var(--farm-ink-soft);
+  color: #A9885E;
   text-shadow: none;
-  background: var(--farm-paper-light);
-  border: 3rpx dashed rgba(74, 52, 42, 0.45);
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF3E9 100%);
+  border: 3rpx solid #FFFFFF;
   box-shadow:
-    0 6rpx 0 rgba(74, 52, 42, 0.22),
-    0 10rpx 18rpx rgba(74, 52, 42, 0.12);
+    0 5rpx 0 rgba(216, 79, 134, 0.22),
+    0 10rpx 18rpx rgba(120, 84, 160, 0.12),
+    inset 0 4rpx 8rpx rgba(255, 255, 255, 0.9);
 }
 .kawaii-btn-ghost:active {
   transform: translateY(4rpx) scale(0.98);
-  box-shadow: 0 2rpx 0 rgba(74, 52, 42, 0.22), 0 4rpx 10rpx rgba(74, 52, 42, 0.10);
+  box-shadow: 0 2rpx 0 rgba(216, 79, 134, 0.22), 0 4rpx 10rpx rgba(120, 84, 160, 0.1), inset 0 3rpx 6rpx rgba(255,255,255,0.85);
 }
 
-/* ============ 拟物卡片（亮米黄纸卡 + 抖动墨线描边；v65 纸色提亮） ============ */
+/* ============ 白果冻卡片（v77：与首页弹窗同款粉白双层描边） ============ */
 .kawaii-card {
-  background:
-    repeating-linear-gradient(180deg,
-      rgba(122, 100, 80, 0.04) 0 1rpx,
-      rgba(122, 100, 80, 0) 1rpx 26rpx),
-    linear-gradient(180deg, #FFFDF7 0%, #FFF9EA 100%);
-  border-radius: 40rpx 30rpx 42rpx 28rpx / 30rpx 40rpx 28rpx 42rpx;
-  border: 4rpx solid rgba(74, 52, 42, 0.55);
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF6E9 100%);
+  border-radius: 40rpx;
+  border: 6rpx solid #FFFFFF;
   box-shadow:
-    0 16rpx 36rpx rgba(74, 52, 42, 0.22),
-    inset 0 3rpx 0 rgba(255, 255, 255, 0.9);
+    0 12rpx 0 rgba(216, 79, 134, 0.16),
+    0 26rpx 48rpx rgba(120, 84, 160, 0.28),
+    inset 0 0 0 3rpx rgba(255, 205, 225, 0.5),
+    inset 0 4rpx 0 rgba(255, 255, 255, 0.9);
   padding: 32rpx;
 }
 
-/* ============ 渐变文字（v65 鲜果蜜语渐变） ============ */
+/* ============ 渐变文字（v77 糖果蜜橙→莓粉→天蓝） ============ */
 .kawaii-gradient-text {
-  background: linear-gradient(120deg, #FFA726, #3F9420 45%, #FFC400 80%);
+  background: linear-gradient(120deg, #FF9C1B, #FF6E9C 45%, #38BDF0 80%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
