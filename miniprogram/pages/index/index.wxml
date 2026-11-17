@@ -19,17 +19,18 @@
     · 导航只保留居中木牌匾→糖果牌匾；玩法徽章可点击打开「怎么玩」弹窗
     · 「开始冒险」居中；奖励中心锚定卡右下角（绝对定位）
   v67-v70 历史见 git log；数据绑定与事件零破坏
-  布局结构（v71）：
+  布局结构（v74）：
     .page (flex column, 高度 {{pageHeight}}rpx, overflow:hidden)
-      ├── page-flora         底部灌木装饰（绝对定位，不入流）
-      ├── nav-bar            自定义导航（仅居中木牌匾 + 🌻 图标）
+      ├── page-flora         页底橙色果冻波浪（绝对定位，不入流）
+      ├── page-candy         背景果冻气泡+糖星散布层（v74，绝对定位不入流）
+      ├── nav-bar            自定义导航（仅居中糖果牌匾，v74 去🌻）
       ├── .main-view         纯 flex 主体，禁止滚动
       │   ├── brand-sub      副标题
       │   ├── hud-strip      数据胶囊条（最高分/游戏次数/音效/亲子积分）
       │   ├── hero-banner    PvZ 插画横幅（图 + VS 大字）
-      │   ├── diff-pills     词库木牌 ×6
+      │   ├── diff-pills     词库果冻胶囊 ×6
       │   ├── pack-bar       自定义词包信息条（条件渲染）
-      │   └── adventure-card 大冒险卡（左插画 + 右文案/2×2徽章可点开玩法 + 居中开始按钮 + 右下角奖励中心）
+      │   └── adventure-card 大冒险卡（左插画+龙珠一星 + 右文案/2×2徽章可点开玩法 + 居中开始按钮 + 右下角奖励球）
       └── km-mask            「立即了解」玩法弹窗
 -->
 <view class="page" style="height: {{pageHeight}}rpx;">
