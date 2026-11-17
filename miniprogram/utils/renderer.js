@@ -702,6 +702,22 @@ class Renderer {
     const walkTilt = Math.sin(zombie.wobble) * ZOMBIE.WALK_TILT;
     const eatLunge = isEating ? Math.max(0, Math.sin(zombie.wobble)) * ZOMBIE.EAT_LUNGE_RATIO * r : 0;
 
+    // v79 地面阴影：与植物统一 Tokens 椭圆，贴脚底锚点（不入后续体态变换，
+    //   不随走路倾斜/倒地旋转；出场淡入与倒地渐隐时同步衰减）
+    {
+      const dieT = zombie.state === 'dying' ? Math.min(1, zombie.stateTimer / ZOMBIE.DYING_DURATION_MS) : 0;
+      const shA = (1 - dieT) * spawnAlpha;
+      if (shA > 0.02) {
+        ctx.save();
+        ctx.globalAlpha = shA;
+        ctx.fillStyle = this.T.COLORS.SHADOW;
+        ctx.beginPath();
+        ctx.ellipse(pos.x, pos.y + r * 1.06, r * 0.72, r * 0.20, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
     ctx.save();
     ctx.translate(pos.x, pos.y + wobbleY);
     // v64 出场透明度（乘入后续受击闪烁，互不覆盖）
@@ -764,6 +780,26 @@ class Renderer {
       ctx.beginPath();
       ctx.arc(0, 0, r, 0, Math.PI * 2);
       ctx.fill();
+    }
+
+    // v79 啃食碎屑：嘴前（+y 朝向植物）溅出 3 枚植物碎屑（交替两档绿），
+    //   与喈食 wobble 同频抛物线散开，间歇出现不糊屏
+    if (isEating && r > 20) {
+      const crumbBase = ctx.globalAlpha;
+      for (let i = 0; i < 3; i++) {
+        const fly = Math.sin(zombie.wobble * 2 + i * 2.1);
+        if (fly < 0.15) continue;                          // 只画飞出段，自然间歇
+        const ang = -0.62 + i * 0.62;                      // 三枚不同横向散射角
+        ctx.save();
+        ctx.globalAlpha = crumbBase * (0.30 + 0.70 * fly);
+        ctx.fillStyle = i % 2 === 0 ? '#9CCC65' : '#7CB342';
+        ctx.beginPath();
+        ctx.arc(Math.cos(ang) * r * (0.20 + 0.30 * fly),
+                r * 0.52 + fly * r * 0.14,
+                r * (0.050 + 0.018 * fly), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
 
     // v29 舞王巡场音符（常态识别符号：设定图脚下音符的游戏化——
@@ -1407,9 +1443,9 @@ class Renderer {
     ctx.stroke();
     ctx.restore();
 
-    // ---- 8. 表情：smile 微笑（嘴部位置让给炮管，保留眼+腮红+微笑弧）----
+    // ---- 8. 表情：待机微笑 / 发射瞬间张口吐豆（v79：fx>0.35 换 'o' 嘴，与炮口闪光同节奏）----
     this._drawCuteFace(ctx, headR, headY + headR * H.SHOOTER_EYE_Y, {
-      mouth: 'smile', wobblePhase: wobblePhase
+      mouth: fx > 0.35 ? 'o' : 'smile', wobblePhase: wobblePhase
     });
   }
 
@@ -1688,6 +1724,9 @@ class Renderer {
     const F = T.FACE;
     const headR = r * 1.02;
     const headY = r * 0.02;
+    // v79 耐久分级：按血量比画壳面裂纹（>2/3 无裂纹 → <2/3 轻裂 → <1/3 重裂+委屈嘴）
+    const wallHp = (plant && typeof plant === 'object' && plant.maxHealth > 0)
+      ? Math.max(0, plant.health / plant.maxHealth) : 1;
 
     // ---- 1. 顶部深褐三角突起（替代原绿色椭圆嫩芽，附件图核心特征）----
     ctx.fillStyle = '#5D4037';
@@ -1754,6 +1793,62 @@ class Renderer {
     }
     ctx.restore();
 
+    // ---- 3.5 v79 耐久裂纹：轻裂 2 道斜裂；重裂追加顶部竖裂+右下裂+两处崩口+凿刻高光边 ----
+    if (wallHp < 0.66) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(0, headY, headR * 1.02, headR * 1.16, 0, 0, Math.PI * 2);
+      ctx.clip();
+      this._setStroke(ctx, 'rgba(46,22,4,0.82)', this._strokeW(T.STROKE.MAIN));
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      // 右上斜裂
+      ctx.beginPath();
+      ctx.moveTo(headR * 0.46, headY - headR * 0.78);
+      ctx.quadraticCurveTo(headR * 0.30, headY - headR * 0.60, headR * 0.46, headY - headR * 0.44);
+      ctx.quadraticCurveTo(headR * 0.58, headY - headR * 0.30, headR * 0.44, headY - headR * 0.14);
+      ctx.stroke();
+      // 左中横裂
+      ctx.beginPath();
+      ctx.moveTo(-headR * 0.62, headY - headR * 0.10);
+      ctx.quadraticCurveTo(-headR * 0.44, headY + headR * 0.06, -headR * 0.60, headY + headR * 0.24);
+      ctx.quadraticCurveTo(-headR * 0.72, headY + headR * 0.38, -headR * 0.56, headY + headR * 0.50);
+      ctx.stroke();
+      if (wallHp < 0.33) {
+        // 顶部竖裂
+        ctx.beginPath();
+        ctx.moveTo(-headR * 0.06, headY - headR * 1.12);
+        ctx.quadraticCurveTo(headR * 0.08, headY - headR * 0.92, -headR * 0.04, headY - headR * 0.74);
+        ctx.stroke();
+        // 右下裂
+        ctx.beginPath();
+        ctx.moveTo(headR * 0.34, headY + headR * 0.48);
+        ctx.quadraticCurveTo(headR * 0.18, headY + headR * 0.64, headR * 0.32, headY + headR * 0.82);
+        ctx.stroke();
+        // 崩口小三角 ×2
+        ctx.fillStyle = 'rgba(46,22,4,0.55)';
+        ctx.beginPath();
+        ctx.moveTo(headR * 0.44, headY - headR * 0.30);
+        ctx.lineTo(headR * 0.20, headY - headR * 0.26);
+        ctx.lineTo(headR * 0.36, headY - headR * 0.12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-headR * 0.56, headY + headR * 0.46);
+        ctx.lineTo(-headR * 0.34, headY + headR * 0.52);
+        ctx.lineTo(-headR * 0.50, headY + headR * 0.64);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // 凿刻高光边（主裂纹右侧平行细白线，立体感）
+      this._setStroke(ctx, 'rgba(255,224,190,0.35)', this._strokeW(T.STROKE.THIN));
+      ctx.beginPath();
+      ctx.moveTo(headR * 0.50, headY - headR * 0.74);
+      ctx.quadraticCurveTo(headR * 0.34, headY - headR * 0.56, headR * 0.50, headY - headR * 0.40);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     // ---- 4. 左上高光月牙 ----
     ctx.fillStyle = 'rgba(255,255,255,' + H.HLIGHT_ALPHA + ')';
     ctx.beginPath();
@@ -1781,9 +1876,9 @@ class Renderer {
     ctx.quadraticCurveTo(eyeDX + eyeR * 0.10, browY + eyeR * 0.05, eyeDX + eyeR * 0.75, browY + eyeR * 0.55);
     ctx.stroke();
 
-    // ---- 6. 表情（眼+抿嘴直线；v20 去掉腮红 + mouth='flat' 严肃嘴型，与怒眉协调）----
+    // ---- 6. 表情（眼+抿嘴直线；v20 去掉腮红 + 严肃嘴型与怒眉协调；v79 重伤换委屈 pout）----
     this._drawCuteFace(ctx, headR, headY + headR * H.WALL_EYE_Y, {
-      mouth: 'flat', wobblePhase: wobblePhase, blushColor: 'rgba(0,0,0,0)'  // 透明腮红
+      mouth: wallHp < 0.33 ? 'pout' : 'flat', wobblePhase: wobblePhase, blushColor: 'rgba(0,0,0,0)'  // 透明腮红
     });
   }
 
@@ -2004,7 +2099,7 @@ class Renderer {
 
     // ---- 7. 表情：冷酷半垂眼睑 + 抿嘴 + 冰蓝腮红（"拽"感参照附件）----
     this._drawCuteFace(ctx, headR, headY + headR * H.FREEZER_EYE_Y, {
-      mouth: 'flat', wobblePhase: wobblePhase, blushColor: C.BLUSH_COOL
+      mouth: fx > 0.35 ? 'o' : 'flat', wobblePhase: wobblePhase, blushColor: C.BLUSH_COOL  // v79: 发射瞬间张口吐气
     });
     // 半垂眼睑：盖住每只眼上部 ~35%，冷傲眼神
     const eyeY2 = headY + headR * H.FREEZER_EYE_Y;
@@ -2495,12 +2590,12 @@ class Renderer {
     // 恢复默认线宽
     ctx.lineWidth = Math.max(1, r * 0.04);
 
-    // === v65 中环花瓣 ×8（暖橙 #FFB74D，填补花盘与外环间的空隙，花型更饱满） ===
+    // === v65 中环花瓣 ×8（暖橙 #FFB74D，填补花盘与外环间的空隙，花型更饱满；v79 反相微摆） ===
     ctx.fillStyle = '#FFB74D';
     ctx.strokeStyle = '#E65100';
     ctx.lineWidth = Math.max(0.8, r * 0.03);
     for (let i = 0; i < 8; i++) {
-      const angle = (i / 8) * Math.PI * 2 + Math.PI / 8 + wobble;
+      const angle = (i / 8) * Math.PI * 2 + Math.PI / 8 + wobble * -1.1;
       const px = Math.cos(angle) * headR * 0.63;
       const py = headY + Math.sin(angle) * headR * 0.63;
       ctx.save();
@@ -2513,12 +2608,12 @@ class Renderer {
     }
     ctx.lineWidth = Math.max(1, r * 0.04);  // 恢复默认线宽（外层花瓣沿用）
 
-    // === 12 片外层水滴形花瓣（柠檬黄 #FFD54F） ===
+    // === 12 片外层水滴形花瓣（柠檬黄 #FFD54F；v79 摆幅加大至 1.6×，与中环形成波浪差） ===
     // 外层描边：深橙 #E65100，强化立体感
     ctx.fillStyle = '#FFD54F';
     ctx.strokeStyle = '#E65100';
     for (let i = 0; i < 12; i++) {
-      const angle = (i / 12) * Math.PI * 2 + wobble;
+      const angle = (i / 12) * Math.PI * 2 + wobble * 1.6;
       const px = Math.cos(angle) * headR * 0.78;
       const py = headY + Math.sin(angle) * headR * 0.78;
       ctx.save();
@@ -2536,7 +2631,7 @@ class Renderer {
     ctx.strokeStyle = '#E65100';
     ctx.lineWidth = Math.max(0.8, r * 0.03);
     for (let i = 0; i < 6; i++) {
-      const angle = (i / 6) * Math.PI * 2 + Math.PI / 12 + wobble;  // 与外层错位
+      const angle = (i / 6) * Math.PI * 2 + Math.PI / 12 + wobble * 0.8;  // 与外层错位（v79 弱摆）
       const px = Math.cos(angle) * headR * 0.45;
       const py = headY + Math.sin(angle) * headR * 0.45;
       ctx.save();
