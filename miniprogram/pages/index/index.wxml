@@ -1,4 +1,10 @@
-<!-- pages/index/index.wxml — v73 糖果果冻主题（在 v72 基础上整体换皮）
+<!-- pages/index/index.wxml — v74 糖果果冻打磨（在 v73 基础上细节优化）
+  v74 更新（信息架构与事件零变化）：
+    · 背景装饰重做：emoji 星星→CSS 果冻气泡 ×3 + 可上色四尖/五尖星星 ×3（黄星白描边）
+    · 牌匾去掉🌻图标，题字更纯净居中
+    · 奖励球去掉「奖励中心」字样，只留果冻球图标（点击不变）
+    · 大冒险卡插画右上角新增「龙珠一星」果冻球（红四尖星）
+    · 大冒险卡整体高度紧凑：卡 padding/gap/插画/标题/徽章/按钮全面收紧
   v73 更新（保留 v67-v72 信息架构与 PvZ 插画，仅视觉换皮）：
     · 木纹体系→糖果果冻：牌匾粉果冻+白描边+黄糖珠（铆钉退役）、题字白字粉描边
     · 页面背景换奶油黄→粉→淡蓝糖果渐变，新增 page-candy 糖果星星散布层
@@ -38,17 +44,17 @@
     <view class="fb fb--6"></view>
   </view>
 
-  <!-- ============ v73: 糖果星星散布层（蛋仔风点缀，不入流） ============ -->
+  <!-- ============ v74: 背景果冻气泡 + 糖星散布层（蛋仔风点缀，不入流） ============ -->
   <view class="page-candy">
-    <text class="pc pc--1">⭐</text>
-    <text class="pc pc--2">✨</text>
-    <text class="pc pc--3">🍬</text>
-    <text class="pc pc--4">🔵</text>
-    <text class="pc pc--5">⭐</text>
-    <text class="pc pc--6">🍬</text>
+    <view class="pc-bubble pc-bubble--1"></view>
+    <view class="pc-bubble pc-bubble--2"></view>
+    <view class="pc-bubble pc-bubble--3"></view>
+    <text class="pc-star pc-star--1">★</text>
+    <text class="pc-star pc-star--2">★</text>
+    <text class="pc-star pc-star--3">✦</text>
   </view>
 
-  <!-- ============ 自定义导航栏（居中糖果牌匾：🌻 图标 + 白字题名，双糖珠） ============ -->
+  <!-- ============ 自定义导航栏（居中糖果牌匾：白字题名 + 双糖珠，v74 去🌻） ============ -->
   <view
     class="nav-bar"
     style="padding-top: {{statusBarHeight}}px; height: calc({{statusBarHeight}}px + {{navBarHeight}}px);"
@@ -56,7 +62,6 @@
     <view class="nav-bar-inner" style="height: {{navBarHeight}}px; padding: 0 20rpx;">
       <view class="nav-title">
         <view class="candy-bead candy-bead--l"></view>
-        <text class="nav-logo-ico">🌻</text>
         <text class="nav-title-text">单词农场</text>
         <view class="candy-bead candy-bead--r"></view>
       </view>
@@ -134,6 +139,8 @@
         <view class="ac-illu">
           <image class="ac-img" src="/images/card-plants.jpg" mode="aspectFill" />
           <view class="ac-illu-ring"></view>
+          <!-- v74: 龙珠一星（橙黄果冻球 + 红四尖星） -->
+          <view class="db-star"><view class="db-star-shape"></view></view>
         </view>
         <view class="ac-main">
           <view class="ac-title"><text class="ac-title-a">单词农场</text><text class="ac-title-b">大冒险</text></view>
@@ -152,7 +159,7 @@
           </view>
         </view>
       </view>
-      <!-- 卡内底部：开始冒险居中 + 奖励中心锚定右下角（绝对定位，v71） -->
+      <!-- 卡内底部：开始冒险居中 + 奖励球锚定右下角（v74 去字样，点击不变） -->
       <view class="ac-start">
         <view class="start-btn" bindtap="onStart" hover-class="start-btn-hover">
           <text class="start-btn-label">开始冒险</text>
@@ -161,7 +168,6 @@
           <view class="fab-ico">
             <view class="fab-spark"></view>
           </view>
-          <view class="fab-label">奖励中心</view>
         </view>
       </view>
     </view>

@@ -1,7 +1,12 @@
-/* pages/index/index.wxss — v73 糖果果冻主题（v72 基础上的整体换皮）
+/* pages/index/index.wxss — v74 糖果果冻打磨（v73 基础上的细节优化）
    设计体系：蛋仔派对风糖果果冻（圆润、高饱和、轻 3D）
    - 果冻公式：大圆角 + 白描边 3-4rpx + 浅顶深底渐变 + 底部挤出深色投影 + 顶部内发光
    - 色板：草莓粉 FF8FB5/柠黄 FFD34D/蜜橙 FFA53D/薄荷 7EE0A8/苹果绿 A8E86A/天蓝 7CC8FA/葡萄紫 C79BF2
+   v74 更新：
+   - 背景装饰重做：emoji→CSS 果冻气泡 ×3（透明高光+白描边）+ 黄星白描边 ×3（★/★/✦）
+   - 牌匾去🌻图标；奖励球去「奖励中心」字样，球体加大补偿视觉分量
+   - 大冒险卡插画右上角新增龙珠一星（橙黄果冻球+红四尖星 clip-path）
+   - 大冒险卡整体紧凑：padding/gap/插画/标题/徽章/按钮全面收紧，横幅上限微增吸收余量
    v73 更新：
    - 页面背景换奶油黄→粉→淡蓝糖果渐变，新增 page-candy 糖星散布层；灌木→橙色果冻波浪
    - 牌匾粉果冻+白描边+黄糖珠（铆钉退役），题字白字粉描边
@@ -28,26 +33,43 @@
 .page > .nav-bar,
 .page > .main-view { position: relative; z-index: 1; }
 
-/* ---- v73 糖果星星散布层（蛋仔风点缀，绝对定位不入流，低于主体层） ---- */
+/* ---- v74 果冻气泡 + 糖星散布层（蛋仔风点缀，绝对定位不入流，低于主体层） ---- */
 .page-candy {
   position: absolute;
   left: 0; right: 0; top: 0; bottom: 0;
   pointer-events: none;
   z-index: 0;
 }
-.pc {
+/* 果冻气泡：半透明糖果膜 + 白描边 + 内外双高光，大小错落 */
+.pc-bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%,
+    rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.5) 20%,
+    rgba(255, 205, 238, 0.30) 48%, rgba(178, 222, 252, 0.34) 100%);
+  border: 3rpx solid rgba(255, 255, 255, 0.9);
+  box-shadow: inset -4rpx -6rpx 10rpx rgba(146, 186, 240, 0.28),
+              inset 4rpx 5rpx 9rpx rgba(255, 255, 255, 0.72),
+              0 5rpx 12rpx rgba(150, 120, 200, 0.16);
+  animation: pcFloat 4.2s ease-in-out infinite;
+}
+.pc-bubble--1 { left: 10rpx;  top: 288rpx; width: 46rpx; height: 46rpx; }
+.pc-bubble--2 { right: 12rpx; top: 452rpx; width: 32rpx; height: 32rpx; animation-delay: 0.7s; animation-duration: 3.6s; }
+.pc-bubble--3 { left: 14rpx;  top: 668rpx; width: 26rpx; height: 26rpx; animation-delay: 1.3s; animation-duration: 3.1s; }
+/* 糖星：柠黄实色 + 白描边（text-shadow 四向）+ 糖果投影，可上色比 emoji 更精致 */
+.pc-star {
   position: absolute;
   line-height: 1;
-  opacity: 0.9;
-  filter: drop-shadow(0 3rpx 4rpx rgba(216, 120, 80, 0.28));
-  animation: pcFloat 3.6s ease-in-out infinite;
+  color: #FFD34D;
+  text-shadow:
+    2rpx 0 0 #FFFFFF, -2rpx 0 0 #FFFFFF, 0 2rpx 0 #FFFFFF, 0 -2rpx 0 #FFFFFF,
+    1.6rpx 1.6rpx 0 #FFFFFF, -1.6rpx -1.6rpx 0 #FFFFFF, 1.6rpx -1.6rpx 0 #FFFFFF, -1.6rpx 1.6rpx 0 #FFFFFF,
+    0 4rpx 0 rgba(245, 179, 1, 0.45);
+  animation: pcFloat 3.8s ease-in-out infinite;
 }
-.pc--1 { left: 14rpx;  top: 250rpx;  font-size: 34rpx; }
-.pc--2 { right: 16rpx; top: 330rpx;  font-size: 28rpx; animation-delay: 0.6s; }
-.pc--3 { left: 12rpx;  top: 640rpx;  font-size: 30rpx; animation-delay: 1.2s; }
-.pc--4 { right: 14rpx; top: 760rpx;  font-size: 26rpx; animation-delay: 0.9s; }
-.pc--5 { left: 16rpx;  bottom: 430rpx; font-size: 30rpx; animation-delay: 1.5s; }
-.pc--6 { right: 18rpx; bottom: 320rpx; font-size: 32rpx; animation-delay: 0.3s; }
+.pc-star--1 { right: 14rpx; top: 268rpx; font-size: 38rpx; }
+.pc-star--2 { left: 8rpx;  top: 540rpx; font-size: 30rpx; animation-delay: 0.9s; }
+.pc-star--3 { right: 18rpx; bottom: 300rpx; font-size: 24rpx; color: #FFA0C0; animation-delay: 1.6s; animation-duration: 3.3s; }
 @keyframes pcFloat {
   0%, 100% { transform: translateY(0) rotate(-8deg); }
   50%      { transform: translateY(-10rpx) rotate(8deg); }
@@ -89,7 +111,7 @@
   box-sizing: border-box;
 }
 
-/* v73：中央糖果牌匾（粉果冻 + 白描边 + 黄糖珠 + 白字粉描边） */
+/* v73/v74：中央糖果牌匾（粉果冻 + 白描边 + 黄糖珠 + 白字粉描边，v74 去🌻题字更纯净） */
 .nav-title {
   flex: 0 1 auto;
   min-width: 0;
@@ -122,14 +144,6 @@
 }
 .candy-bead--l { left: 16rpx; }
 .candy-bead--r { right: 16rpx; }
-/* v72: 牌匾左侧农场图标（向日葵，与游戏内阳光/向日葵主题呼应） */
-.nav-logo-ico {
-  font-size: 38rpx;
-  line-height: 1;
-  margin-right: 12rpx;
-  flex-shrink: 0;
-  filter: drop-shadow(0 2rpx 1rpx rgba(199, 54, 110, 0.35));
-}
 .nav-title-text {
   color: #FFFFFF;
   font-size: 40rpx;
@@ -241,7 +255,7 @@
 .hero-banner {
   flex: 1 1 0;
   min-height: 290rpx;
-  max-height: 390rpx;
+  max-height: 412rpx;        /* v74: 390→412，大冒险卡紧凑后吸收余量避免空隙拉大 */
   position: relative;
   width: 100%;
   border-radius: 36rpx;
@@ -472,16 +486,16 @@
 }
 
 /* ================================================================
-   v73 大冒险卡（粉→蓝糖果果冻渐变 + 白描边 + 糖星装饰；上段左插画右文案，下段按钮排）
+   v73/v74 大冒险卡（粉→蓝糖果果冻渐变 + 白描边 + 糖星装饰；v74 整体高度紧凑）
    ================================================================ */
 .adventure-card {
   flex: 1.5 1 0;
-  min-height: 410rpx;
-  max-height: 560rpx;
+  min-height: 350rpx;        /* v74: 410→350 紧凑 */
+  max-height: 500rpx;        /* v74: 560→500 紧凑 */
   display: flex;
   flex-direction: column;
-  gap: 10rpx;
-  padding: 20rpx 22rpx 18rpx;
+  gap: 8rpx;                 /* v74: 10→8 */
+  padding: 16rpx 18rpx 14rpx; /* v74: 20/22/18→16/18/14 */
   position: relative;        /* v73: 糖星装饰锚 */
   border-radius: 36rpx;
   background: linear-gradient(168deg, #FFDFEB 0%, #FFF6EC 38%, #E9F7E4 66%, #CFE9FA 100%);
@@ -516,11 +530,11 @@
   gap: 14rpx;                /* v72: 图文水平间距收紧 */
 }
 /* 左侧插画合影（白框圆角小图，向日葵+坚果+寒冰射手+金杯）
-   v72: 定高居中（不再 stretch），高度与右侧文案块基本相当 */
+   v72 定高居中；v74 尺寸随卡紧凑同步收紧（224×216→208×192） */
 .ac-illu {
   position: relative;
-  width: 224rpx;
-  height: 216rpx;            /* v72: 定高，与右侧文案块等高 */
+  width: 208rpx;
+  height: 192rpx;            /* v74: 216→192，与收紧后右侧文案块等高 */
   align-self: center;        /* v72: 中心线与右侧文案对齐 */
   flex-shrink: 0;
   border-radius: 26rpx;
@@ -543,6 +557,42 @@
   box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.55);
   pointer-events: none;
 }
+/* v74: 龙珠一星——橙黄半透明果冻珠 + 红四尖星，叠在插画右上角 */
+.db-star {
+  position: absolute;
+  right: 8rpx;
+  top: 8rpx;
+  width: 62rpx;
+  height: 62rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 34% 26%,
+    rgba(255, 246, 201, 0.96) 0%, rgba(255, 222, 107, 0.94) 34%,
+    rgba(255, 182, 39, 0.94) 70%, rgba(240, 154, 26, 0.94) 100%);
+  border: 3rpx solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4rpx 0 rgba(216, 120, 20, 0.4),
+              0 8rpx 14rpx rgba(216, 120, 20, 0.3),
+              inset 0 4rpx 8rpx rgba(255, 255, 255, 0.65),
+              inset 0 -4rpx 8rpx rgba(216, 110, 20, 0.3);
+  animation: dbFloat 3s ease-in-out infinite;
+  z-index: 2;
+}
+/* 红四尖星（龙珠星形）：clip-path 八点四尖，微倾斜更生动 */
+.db-star-shape {
+  width: 32rpx;
+  height: 32rpx;
+  margin-top: -3rpx;
+  background: linear-gradient(180deg, #FF6A3D 0%, #F0350E 100%);
+  clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
+  transform: rotate(-14deg);
+  filter: drop-shadow(0 2rpx 2rpx rgba(180, 40, 10, 0.45));
+}
+@keyframes dbFloat {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50%      { transform: translateY(-4rpx) rotate(4deg); }
+}
 /* 右侧文案区 */
 .ac-main {
   flex: 1 1 auto;
@@ -550,7 +600,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 12rpx;                /* v72: 内容纵向收紧，与插画等高紧凑成组 */
+  gap: 10rpx;                /* v74: 12→10 */
 }
 /* v73: 卡标题双色分段（粉橙「单词农场」+ 天蓝「大冒险」，白描边蛋仔字） */
 .ac-title {
@@ -563,7 +613,7 @@
 }
 .ac-title-a,
 .ac-title-b {
-  font-size: 40rpx;
+  font-size: 36rpx;          /* v74: 40→36 紧凑 */
   font-weight: 900;
 }
 .ac-title-a {
@@ -591,15 +641,15 @@
 .ac-chips {
   display: grid;             /* v70: 两列网格，四个标签严格两排两列 */
   grid-template-columns: 1fr 1fr;
-  gap: 10rpx;                /* v72: 徽章排间距收紧 */
+  gap: 8rpx;                 /* v74: 10→8 */
   margin-top: 0;             /* v72: 依赖 ac-main gap，去除额外偏移 */
 }
-/* 白果冻玩法徽章（2×2 两排两列；v73 淡彩描边挂钩 bchip--id，可点开「怎么玩」） */
+/* 白果冻玩法徽章（2×2 两排两列；v74 padding/字号同步收紧） */
 .bchip {
   display: flex;
   align-items: center;
-  gap: 10rpx;
-  padding: 10rpx 14rpx;
+  gap: 8rpx;                 /* v74: 10→8 */
+  padding: 8rpx 12rpx;       /* v74: 10/14→8/12 */
   border-radius: 999rpx;
   background: linear-gradient(180deg, #FFFFFF 0%, #FFF7EA 100%);
   border: 3rpx solid #FFFFFF;
@@ -634,12 +684,12 @@
               inset 0 3rpx 6rpx rgba(255, 255, 255, 0.8);
 }
 .bchip-ico {
-  font-size: 24rpx;
+  font-size: 22rpx;          /* v74: 24→22 */
   line-height: 1;
   flex-shrink: 0;
 }
 .bchip-txt {
-  font-size: 21rpx;
+  font-size: 20rpx;          /* v74: 21→20 */
   font-weight: 800;
   color: #7A4E22;
   letter-spacing: 0.3rpx;
@@ -664,7 +714,7 @@
 .start-btn {
   width: 58%;
   margin: 0 auto;
-  height: 96rpx;
+  height: 82rpx;             /* v74: 96→82 紧凑 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -686,11 +736,11 @@
               inset 0 6rpx 12rpx rgba(255, 255, 255, 0.7);
 }
 .start-btn-label {
-  font-size: 42rpx;
+  font-size: 36rpx;          /* v74: 42→36 紧凑 */
   font-weight: 900;
   color: #FFFFFF;
-  letter-spacing: 8rpx;
-  margin-right: -8rpx;    /* 抵消末字字距，视觉居中 */
+  letter-spacing: 6rpx;      /* v74: 8→6 */
+  margin-right: -6rpx;    /* 抵消末字字距，视觉居中 */
   line-height: 1.1;
   /* v73: 白字橙描边——8 向 text-shadow 模拟（保字芯） */
   text-shadow:
@@ -982,13 +1032,13 @@
 }
 
 /* ================================================================
-   v73 「奖励中心」粉橙果冻圆球——绝对定位锚定大冒险卡右下角（ac-start 内）
-   不占按钮排流内空间，保证「开始冒险」居中；与上段徽章留有安全间距
+   v73 「奖励中心」粉橙果冻圆球——v74 去掉文字标签，只留果冻球图标（点击不变）
+   绝对定位锚定大冒险卡右下角（ac-start 内）；不占按钮排流内空间
    ================================================================ */
 .reward-fab {
   position: absolute;
-  right: 6rpx;
-  bottom: 0;
+  right: 4rpx;               /* v74: 球加大后贴角微调 */
+  bottom: 2rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -999,8 +1049,8 @@
 .reward-fab-hover { transform: scale(0.92); }
 .fab-ico {
   position: relative;
-  width: 84rpx;
-  height: 84rpx;
+  width: 92rpx;              /* v74: 84→92 去字样后加大补偿视觉分量 */
+  height: 92rpx;
   border-radius: 50%;
   /* v73: 粉→橙糖果渐变球 */
   background: radial-gradient(circle at 32% 26%, #FFD1A8 0%, #FF9FB8 40%, #F76FA0 72%, #E8548C 100%);
@@ -1019,10 +1069,10 @@
 .fab-spark::before {
   content: "";
   position: absolute;
-  left: 16rpx;
-  top: 12rpx;
-  width: 16rpx;
-  height: 10rpx;
+  left: 18rpx;
+  top: 14rpx;
+  width: 18rpx;
+  height: 11rpx;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.8);
   transform: rotate(-24deg);
@@ -1031,24 +1081,12 @@
 .fab-spark::after {
   content: "✦";
   position: absolute;
-  right: 12rpx;
-  bottom: 10rpx;
-  font-size: 20rpx;
+  right: 14rpx;
+  bottom: 12rpx;
+  font-size: 22rpx;
   line-height: 1;
   color: rgba(255, 255, 255, 0.95);
   text-shadow: 0 1rpx 2rpx rgba(180, 40, 90, 0.5);
-}
-.fab-label {
-  padding: 2rpx 12rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.94);
-  border: 2rpx solid #FFFFFF;
-  color: #E8548C;
-  font-size: 16rpx;
-  font-weight: 800;
-  letter-spacing: 0.5rpx;
-  white-space: nowrap;
-  box-shadow: 0 3rpx 8rpx rgba(216, 79, 134, 0.3);
 }
 @keyframes fabBob {
   0%, 100% { transform: translateY(0) rotate(-3deg); }
