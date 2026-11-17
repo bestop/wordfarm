@@ -1,9 +1,9 @@
-// pages/index/index.js - 欢迎页（v70 布局回调版）：木牌匾导航 + 数据胶囊条
+// pages/index/index.js - 欢迎页（v71 布局精简版）：木牌匾导航 + 数据胶囊条
 //   + PvZ 插画横幅（/images/banner-hero.jpg + CSS「VS」大字）+ 柠绿词库牌
-//   + 大冒险卡（/images/card-plants.jpg 合影插画 + 2×2 白胶囊徽章 + 卡内「开始冒险」主按钮）
-//   + 奖励中心移至大冒险卡右下角（红浆果钮）
-// v70 变化：① 右侧⚙️钮避让改为按胶囊左缘计算（navRightInset），不再被胶囊遮挡
-//   ② 开始按钮/奖励中心移入大冒险卡，start-wrap 浮层取消；事件与数据绑定零增减
+//   + 大冒险卡（左插画 + 右文案/2×2 玩法徽章 + 卡内居中「开始冒险」主按钮 + 右下角奖励中心）
+// v71 变化：① 导航只保留居中木牌匾（返回/⚙️ 钮取消，onBack/navRightInset 随之移除）
+//   ② 玩法徽章（四个标签）点击即打开「怎么玩」弹窗（onKnowMore 由徽章承接）
+//   ③ 右侧文案/徽章放大至与插画高度相当；「开始冒险」居中，卡内空隙收紧
 // v7 设计 tokens（基于模块节奏 = 18rpx 的 1/3/2/3 比例）：
 //   字号 5 级 / 圆角 3 级 / 间距 3 级 / 文本色 3 级
 
@@ -30,10 +30,9 @@ Page({
     knowMoreVisible: false,   // v33: 「立即了解」玩法弹窗显隐
     customPackInfo: null,     // v35: 已导入词包 {name, count} | null
 
-    // 自定义导航栏（与 capsule 按钮对齐）
+    // 自定义导航栏（v71：仅居中木牌匾，无左右按钮）
     statusBarHeight: 20,
     navBarHeight: 44,          // 44px 为 iOS 标准导航条
-    navRightInset: 105,        // v70: 右缘到胶囊左缘的安全避让宽度(px)，防止⚙️被胶囊遮挡
 
     // 自适应
     safeTop: 0,
@@ -80,20 +79,17 @@ Page({
 
   onLoad() {
     const g = app.globalData;
-    // 设备胶囊信息 + 状态栏高度（自定义导航栏必备）
+    // 状态栏高度（自定义导航栏必备；v71 无左右按钮，无需胶囊矩形）
     let statusBar = 20;
     let navBarInner = 44;
-    let navRightInset = 105;
     try {
       const sys = wx.getSystemInfoSync();
       statusBar = sys.statusBarHeight || 20;
       const m = wx.getMenuButtonBoundingClientRect && wx.getMenuButtonBoundingClientRect();
       if (m) {
-        // 导航条高度 = 胶囊顶到状态栏的距离 * 2 + 胶囊高度
+        // 导航条高度 = 胶囊顶到状态栏的距离 * 2 + 胶囊高度（保持与胶囊垂直对齐的节奏）
         const topGap = m.top - statusBar;
         navBarInner = topGap * 2 + m.height;
-        // v70: 避让宽度按胶囊【左缘】计算（胶囊宽约 87px，仅让出右缘会被胶囊主体压住）
-        navRightInset = sys.windowWidth - m.left + 8;
       }
     } catch (e) { /* ignore */ }
 
@@ -107,8 +103,7 @@ Page({
       safeTop: g.safeAreaInset.top,
       safeBottom: g.safeAreaInset.bottom,
       statusBarHeight: statusBar,
-      navBarHeight: navBarInner,
-      navRightInset: Math.max(96, navRightInset)
+      navBarHeight: navBarInner
     });
     applyLayout(this);
   },
@@ -140,11 +135,6 @@ Page({
   },
 
   /* ============ 事件 ============ */
-
-  onBack() {
-    // 首页无上一页，轻弹提示
-    wx.showToast({ title: '已经是首页啦', icon: 'none', duration: 800 });
-  },
 
   onSelectDifficulty(e) {
     const key = e.currentTarget.dataset.key;

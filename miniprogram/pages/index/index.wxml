@@ -1,23 +1,21 @@
-<!-- pages/index/index.wxml — v70 布局回调（在 v69 插画版基础上按反馈调整）
-  v70 更新：
-    · 导航牌匾「单词农场」加大加高、整体下移；右侧⚙️钮避让宽度改按胶囊左缘计算（navRightInset），
-      彻底避开小程序右上角胶囊（关闭/退出按钮）
-    · 大冒险卡内玩法徽章 2×2 固定两排两列（grid，不再依赖 calc/换行）
-    · 「开始冒险」木纹大按钮移入大冒险卡内部（卡底部主 CTA）
-    · 奖励中心红浆果钮移入大冒险卡右下角（与开始按钮同排）
-    · 取消卡下方 start-wrap 与页缘 reward-fab 浮层；page-flora 灌木装饰保留
-  v67-v69 历史见 git log；全部事件与数据绑定复用零改动
-  布局结构（v70）：
+<!-- pages/index/index.wxml — v71 布局精简（在 v70 基础上按反馈调整）
+  v71 更新：
+    · 导航只保留居中木牌匾「单词农场」（居中、靠下）；左侧返回钮与右侧⚙️钮取消
+    · 「怎么玩」弹窗改由大冒险卡内四个玩法徽章点击打开（onKnowMore 由 bchip 承接）
+    · 右侧文案/徽章放大（标题/副标/白胶囊字号与内衬加大），与左侧插画高度基本相当
+    · 「开始冒险」在卡内水平居中，卡内空隙收紧；奖励中心红浆果钮仍锚定卡右下角（绝对定位）
+  v67-v70 历史见 git log；数据绑定与事件零破坏（onBack 移除、onKnowMore 换承载点）
+  布局结构（v71）：
     .page (flex column, 高度 {{pageHeight}}rpx, overflow:hidden)
       ├── page-flora         底部灌木装饰（绝对定位，不入流）
-      ├── nav-bar            自定义导航（返回 / 木牌匾 / ⚙️玩法）
+      ├── nav-bar            自定义导航（仅居中木牌匾）
       ├── .main-view         纯 flex 主体，禁止滚动
       │   ├── brand-sub      副标题
       │   ├── hud-strip      数据胶囊条（最高分/游戏次数/音效/亲子积分）
       │   ├── hero-banner    PvZ 插画横幅（图 + VS 大字）
       │   ├── diff-pills     词库木牌 ×6
       │   ├── pack-bar       自定义词包信息条（条件渲染）
-      │   └── adventure-card 大冒险卡（左插画 + 右文案/2×2徽章 + 底部开始按钮 + 右下角奖励中心）
+      │   └── adventure-card 大冒险卡（左插画 + 右文案/2×2徽章可点开玩法 + 居中开始按钮 + 右下角奖励中心）
       └── km-mask            「立即了解」玩法弹窗
 -->
 <view class="page" style="height: {{pageHeight}}rpx;">
@@ -37,27 +35,11 @@
     class="nav-bar"
     style="padding-top: {{statusBarHeight}}px; height: calc({{statusBarHeight}}px + {{navBarHeight}}px);"
   >
-    <view class="nav-bar-inner" style="height: {{navBarHeight}}px; padding-left: 20rpx; padding-right: {{navRightInset}}px;">
-      <view
-        class="nav-btn"
-        style="width: {{navBarHeight - 6}}px; height: {{navBarHeight - 6}}px;"
-        bindtap="onBack"
-        hover-class="nav-btn-hover"
-      >
-        <text class="nav-icon">‹</text>
-      </view>
+    <view class="nav-bar-inner" style="height: {{navBarHeight}}px; padding: 0 20rpx;">
       <view class="nav-title">
         <view class="board-screw board-screw--l"></view>
         <text class="nav-title-text">单词农场</text>
         <view class="board-screw board-screw--r"></view>
-      </view>
-      <view
-        class="nav-btn"
-        style="width: {{navBarHeight - 6}}px; height: {{navBarHeight - 6}}px;"
-        bindtap="onKnowMore"
-        hover-class="nav-btn-hover"
-      >
-        <text class="nav-gear">⚙️</text>
       </view>
     </view>
   </view>
@@ -137,7 +119,11 @@
           <view class="ac-sub">背单词、养植物、闯关拿奖励</view>
           <view class="ac-chips">
             <block wx:for="{{howtoList}}" wx:key="id">
-              <view class="bchip">
+              <view
+                class="bchip"
+                bindtap="onKnowMore"
+                hover-class="bchip-hover"
+              >
                 <text class="bchip-ico">{{item.icon}}</text>
                 <text class="bchip-txt">{{item.title}}</text>
               </view>
@@ -145,7 +131,7 @@
           </view>
         </view>
       </view>
-      <!-- 卡内底部：开始冒险主按钮 + 右下角奖励中心（同排，v70） -->
+      <!-- 卡内底部：开始冒险居中 + 奖励中心锚定右下角（绝对定位，v71） -->
       <view class="ac-start">
         <view class="start-btn" bindtap="onStart" hover-class="start-btn-hover">
           <text class="start-btn-label">开始冒险</text>
