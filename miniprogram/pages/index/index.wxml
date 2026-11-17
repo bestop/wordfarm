@@ -1,18 +1,13 @@
-<!-- pages/index/index.wxml — v69 严格按参考图重绘（含插画图片）
-  v69 更新（布局/UI/图片内容与位置 逐像素对齐参考图）：
-    · 导航：木盘返回钮 + 中央木牌匾「单词农场」（双铆钉）+ 右侧⚙️木盘钮（承接玩法弹窗）
-    · 副标题「背单词，保卫农场」紧贴牌匾下方
-    · 数据条：卡其木胶囊横排（🏆最高分/🎮游戏次数/🔊音效/👤亲子积分，深棕白框数字徽章）
-    · 横幅：新增 PvZ 插画大图 /images/banner-hero.jpg（向日葵+豌豆+坚果 VS 僵尸，
-      太阳草地蓝天），中偏右压橙色描边大字「VS」——替代原纯 CSS 角色条与 CSS 农场场景
-    · 词库牌：单排六枚木牌（小学/初中/高中/KET/PET/导入词库），选中亮柠绿+白光圈+顶部小芽
-    · 大冒险卡：左 /images/card-plants.jpg 角色合影插画（向日葵+坚果+寒冰射手+金杯），
-      右侧橙金标题「单词农场大冒险」+ 副标 + 2×2 白胶囊玩法徽章（答对消除/连击加速/连击翻倍/防线守卫）
-    · 「开始冒险」独立木纹大按钮移至卡片下方（参考图底部位置），两侧草丛装饰
-    · 右下角奖励中心浮动钮改为红浆果圆钮（参考图红色圆钮）
-    · 新增页面底部左右深绿灌木丛装饰（page-flora）
-  v67/v68 历史见 git log；全部事件与数据绑定复用零改动
-  布局结构（v69）：
+<!-- pages/index/index.wxml — v70 布局回调（在 v69 插画版基础上按反馈调整）
+  v70 更新：
+    · 导航牌匾「单词农场」加大加高、整体下移；右侧⚙️钮避让宽度改按胶囊左缘计算（navRightInset），
+      彻底避开小程序右上角胶囊（关闭/退出按钮）
+    · 大冒险卡内玩法徽章 2×2 固定两排两列（grid，不再依赖 calc/换行）
+    · 「开始冒险」木纹大按钮移入大冒险卡内部（卡底部主 CTA）
+    · 奖励中心红浆果钮移入大冒险卡右下角（与开始按钮同排）
+    · 取消卡下方 start-wrap 与页缘 reward-fab 浮层；page-flora 灌木装饰保留
+  v67-v69 历史见 git log；全部事件与数据绑定复用零改动
+  布局结构（v70）：
     .page (flex column, 高度 {{pageHeight}}rpx, overflow:hidden)
       ├── page-flora         底部灌木装饰（绝对定位，不入流）
       ├── nav-bar            自定义导航（返回 / 木牌匾 / ⚙️玩法）
@@ -22,9 +17,7 @@
       │   ├── hero-banner    PvZ 插画横幅（图 + VS 大字）
       │   ├── diff-pills     词库木牌 ×6
       │   ├── pack-bar       自定义词包信息条（条件渲染）
-      │   ├── adventure-card 大冒险卡（左插画 + 右文案/徽章）
-      │   └── start-wrap     开始冒险木按钮 + 草丛
-      ├── reward-fab         右下角奖励中心
+      │   └── adventure-card 大冒险卡（左插画 + 右文案/2×2徽章 + 底部开始按钮 + 右下角奖励中心）
       └── km-mask            「立即了解」玩法弹窗
 -->
 <view class="page" style="height: {{pageHeight}}rpx;">
@@ -44,7 +37,7 @@
     class="nav-bar"
     style="padding-top: {{statusBarHeight}}px; height: calc({{statusBarHeight}}px + {{navBarHeight}}px);"
   >
-    <view class="nav-bar-inner" style="height: {{navBarHeight}}px; padding-left: 20rpx; padding-right: {{capsuleRight + 12}}px;">
+    <view class="nav-bar-inner" style="height: {{navBarHeight}}px; padding-left: 20rpx; padding-right: {{navRightInset}}px;">
       <view
         class="nav-btn"
         style="width: {{navBarHeight - 6}}px; height: {{navBarHeight - 6}}px;"
@@ -132,57 +125,40 @@
       <text class="pack-bar-action">管理 ›</text>
     </view>
 
-    <!-- 5. 大冒险卡（参考图：左角色合影插画 + 右橙金标题/副标/2×2 白胶囊徽章） -->
+    <!-- 5. 大冒险卡（v70：左插画 + 右文案/2×2徽章 + 卡内底部「开始冒险」 + 右下角奖励中心） -->
     <view class="adventure-card">
-      <view class="ac-illu">
-        <image class="ac-img" src="/images/card-plants.jpg" mode="aspectFill" />
-        <view class="ac-illu-ring"></view>
+      <view class="ac-body">
+        <view class="ac-illu">
+          <image class="ac-img" src="/images/card-plants.jpg" mode="aspectFill" />
+          <view class="ac-illu-ring"></view>
+        </view>
+        <view class="ac-main">
+          <view class="ac-title">单词农场大冒险</view>
+          <view class="ac-sub">背单词、养植物、闯关拿奖励</view>
+          <view class="ac-chips">
+            <block wx:for="{{howtoList}}" wx:key="id">
+              <view class="bchip">
+                <text class="bchip-ico">{{item.icon}}</text>
+                <text class="bchip-txt">{{item.title}}</text>
+              </view>
+            </block>
+          </view>
+        </view>
       </view>
-      <view class="ac-main">
-        <view class="ac-title">单词农场大冒险</view>
-        <view class="ac-sub">背单词、养植物、闯关拿奖励</view>
-        <view class="ac-chips">
-          <block wx:for="{{howtoList}}" wx:key="id">
-            <view class="bchip">
-              <text class="bchip-ico">{{item.icon}}</text>
-              <text class="bchip-txt">{{item.title}}</text>
-            </view>
-          </block>
+      <!-- 卡内底部：开始冒险主按钮 + 右下角奖励中心（同排，v70） -->
+      <view class="ac-start">
+        <view class="start-btn" bindtap="onStart" hover-class="start-btn-hover">
+          <text class="start-btn-label">开始冒险</text>
+        </view>
+        <view class="reward-fab" bindtap="onOpenRewards" hover-class="reward-fab-hover">
+          <view class="fab-ico">
+            <view class="fab-spark"></view>
+          </view>
+          <view class="fab-label">奖励中心</view>
         </view>
       </view>
     </view>
 
-    <!-- 6. 开始冒险木纹大按钮（参考图底部主 CTA，两侧草丛） -->
-    <view class="start-wrap">
-      <view class="tuft tuft--l">
-        <view class="blade blade--1"></view>
-        <view class="blade blade--2"></view>
-        <view class="blade blade--3"></view>
-      </view>
-      <view class="start-btn" bindtap="onStart" hover-class="start-btn-hover">
-        <text class="start-btn-label">开始冒险</text>
-      </view>
-      <view class="tuft tuft--r">
-        <view class="blade blade--1"></view>
-        <view class="blade blade--2"></view>
-        <view class="blade blade--3"></view>
-      </view>
-    </view>
-
-  </view>
-
-  <!-- ============ v69: 右下角「奖励中心」红浆果圆钮（参考图） ============ -->
-  <view
-    class="reward-fab"
-    style="bottom: {{safeBottomRpx + 10}}rpx;"
-    bindtap="onOpenRewards"
-    hover-class="reward-fab-hover"
-  >
-    <view class="fab-ico">
-      <view class="fab-berry"></view>
-      <view class="fab-spark"></view>
-    </view>
-    <view class="fab-label">奖励中心</view>
   </view>
 
   <!-- ============ v33: 「立即了解」玩法介绍弹窗（左对齐卡片式，替代原生 showModal） ============ -->

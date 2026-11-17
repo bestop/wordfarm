@@ -1,7 +1,9 @@
-// pages/index/index.js - 欢迎页（v69 严格按参考图重绘·插画版）：木牌匾导航 + 数据胶囊条
+// pages/index/index.js - 欢迎页（v70 布局回调版）：木牌匾导航 + 数据胶囊条
 //   + PvZ 插画横幅（/images/banner-hero.jpg + CSS「VS」大字）+ 柠绿词库牌
-//   + 大冒险卡（/images/card-plants.jpg 合影插画 + 2×2 白胶囊徽章）+ 独立开始按钮 + 红浆果奖励钮
-// v69 变化：纯视觉重绘，全部事件与数据绑定复用零改动（onBannerStart 保留但不再被 WXML 引用）
+//   + 大冒险卡（/images/card-plants.jpg 合影插画 + 2×2 白胶囊徽章 + 卡内「开始冒险」主按钮）
+//   + 奖励中心移至大冒险卡右下角（红浆果钮）
+// v70 变化：① 右侧⚙️钮避让改为按胶囊左缘计算（navRightInset），不再被胶囊遮挡
+//   ② 开始按钮/奖励中心移入大冒险卡，start-wrap 浮层取消；事件与数据绑定零增减
 // v7 设计 tokens（基于模块节奏 = 18rpx 的 1/3/2/3 比例）：
 //   字号 5 级 / 圆角 3 级 / 间距 3 级 / 文本色 3 级
 
@@ -31,7 +33,7 @@ Page({
     // 自定义导航栏（与 capsule 按钮对齐）
     statusBarHeight: 20,
     navBarHeight: 44,          // 44px 为 iOS 标准导航条
-    capsuleRight: 12,          // 胶囊右侧距边
+    navRightInset: 105,        // v70: 右缘到胶囊左缘的安全避让宽度(px)，防止⚙️被胶囊遮挡
 
     // 自适应
     safeTop: 0,
@@ -81,7 +83,7 @@ Page({
     // 设备胶囊信息 + 状态栏高度（自定义导航栏必备）
     let statusBar = 20;
     let navBarInner = 44;
-    let capsuleRight = 12;
+    let navRightInset = 105;
     try {
       const sys = wx.getSystemInfoSync();
       statusBar = sys.statusBarHeight || 20;
@@ -90,7 +92,8 @@ Page({
         // 导航条高度 = 胶囊顶到状态栏的距离 * 2 + 胶囊高度
         const topGap = m.top - statusBar;
         navBarInner = topGap * 2 + m.height;
-        capsuleRight = sys.windowWidth - m.right;
+        // v70: 避让宽度按胶囊【左缘】计算（胶囊宽约 87px，仅让出右缘会被胶囊主体压住）
+        navRightInset = sys.windowWidth - m.left + 8;
       }
     } catch (e) { /* ignore */ }
 
@@ -105,7 +108,7 @@ Page({
       safeBottom: g.safeAreaInset.bottom,
       statusBarHeight: statusBar,
       navBarHeight: navBarInner,
-      capsuleRight: Math.max(12, capsuleRight)
+      navRightInset: Math.max(96, navRightInset)
     });
     applyLayout(this);
   },

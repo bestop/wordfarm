@@ -1,16 +1,12 @@
-/* pages/index/index.wxss — v69 严格按参考图重绘（含插画图片版）
-   v69 更新（布局 / UI / 图片内容与位置 逐区对齐参考图）：
-   - 页面背景：鲜绿草坪渐变 + 顶部晨光晕 + 页缘左右深绿灌木丛（page-flora）
-   - 导航：木盘返回钮 + 中央木牌匾「单词农场」（双铆钉）+ 右侧 ⚙️ 木盘钮
-   - 数据条 hud-strip：卡其木胶囊横排（图标 + 标签 + 深棕白框数字徽章）
-   - 横幅 hero-banner：PvZ 插画大图 /images/banner-hero.jpg + 橙色白描边大字「VS」
-     （替代 v68 的 char-strip 纯 CSS 角色条与 CSS 农场场景，图片内容/位置对齐参考图）
-   - 词库牌 diff-pill：单排六枚木牌，选中亮柠绿 + 白光圈 + 顶部小芽（参考图选中态）
-   - 大冒险卡 adventure-card：左 /images/card-plants.jpg 角色合影插画（白框圆角），
-     右侧橙金标题「单词农场大冒险」+ 副标 + 2×2 白胶囊玩法徽章
-   - 「开始冒险」独立木纹大按钮（卡片下方，参考图底部位置，两侧草丛装饰）
-   - reward-fab：红浆果圆钮 + 深棕标签（参考图右下角红色圆钮）
-   - km-* 弹窗 / pack-bar 样式自 v68 原样保留
+/* pages/index/index.wxss — v70 布局回调（v69 插画版基础上的反馈调整）
+   v70 更新：
+   - 导航牌匾「单词农场」加大（36rpx/加宽内衬）并整体下移
+   - 右侧 ⚙️ 钮避让宽度改由 JS 按胶囊【左缘】计算（navRightInset），不再被小程序胶囊遮挡
+   - 大冒险卡改纵向两段：上段（左插画 + 右文案/2×2 白胶囊）+ 下段（卡内「开始冒险」主按钮
+     + 右下角红浆果「奖励中心」）
+   - 玩法徽章 ac-chips 改 grid 两列，四个标签严格两排两列（不再依赖 calc/换行）
+   - 取消 start-wrap / tuft / blade 与页缘 reward-fab 绝对定位浮层
+   - km-* 弹窗 / pack-bar / hud-strip / hero-banner / diff-pills 样式自 v69 原样保留
    v7 设计 tokens：字号 5 级 / 圆角 3 级 / 间距 3 级 / 文本色 3 级
 */
 
@@ -60,7 +56,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* padding 由内联 style 动态设置：padding-left:20rpx; padding-right:{capsuleRight+12}px */
+  /* padding 由内联 style 动态设置：padding-left:20rpx; padding-right:{navRightInset}px（v70 按胶囊左缘避让） */
   box-sizing: border-box;
 }
 .nav-btn {
@@ -105,8 +101,8 @@
   align-items: center;
   justify-content: center;
   align-self: center;
-  margin: 0 18rpx;
-  padding: 10rpx 50rpx;
+  margin: 8rpx 14rpx 0;      /* v70: 牌匾整体下移一点 */
+  padding: 12rpx 44rpx;      /* v70: 随字号加大牌匾（内衬适中，预留窄屏余量） */
   position: relative;
   border-radius: 16rpx 22rpx 18rpx 24rpx / 22rpx 16rpx 24rpx 18rpx;
   background:
@@ -134,9 +130,10 @@
 .board-screw--r { right: 16rpx; }
 .nav-title-text {
   color: #5C3A1E;
-  font-size: 32rpx;
+  font-size: 36rpx;          /* v70: 「单词农场」稍微加大 */
   font-weight: 900;
   letter-spacing: 4rpx;
+  white-space: nowrap;       /* v70: 窄屏下禁止牌匾题字换行 */
   line-height: 1.2;
   text-shadow: 0 1.5rpx 0 rgba(255, 244, 214, 0.65);
 }
@@ -162,7 +159,9 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 10rpx 26rpx 0;
+  padding: 10rpx 26rpx 16rpx;
+  /* v70: 底部留出安全区（开始按钮已入卡贴底，避免被 Home 条遮挡） */
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
   gap: 18rpx;
   box-sizing: border-box;
   justify-content: space-between;
@@ -234,8 +233,8 @@
    ================================================================ */
 .hero-banner {
   flex: 1 1 0;
-  min-height: 322rpx;
-  max-height: 420rpx;
+  min-height: 290rpx;
+  max-height: 390rpx;
   position: relative;
   width: 100%;
   border-radius: 28rpx;
@@ -450,16 +449,16 @@
 }
 
 /* ================================================================
-   v69 大冒险卡（参考图：浅绿大圆角卡 · 左插画合影 · 右橙金标题 + 2×2 白胶囊）
+   v70 大冒险卡（上段：左插画合影 + 右橙金标题/2×2 白胶囊；下段：卡内主按钮 + 奖励中心）
    ================================================================ */
 .adventure-card {
-  flex: 1 1 0;
-  min-height: 340rpx;
-  max-height: 440rpx;
+  flex: 1.7 1 0;
+  min-height: 430rpx;
+  max-height: 640rpx;
   display: flex;
-  align-items: center;
-  gap: 20rpx;
-  padding: 24rpx;
+  flex-direction: column;    /* v70: 上段插画区 + 下段按钮排 */
+  gap: 14rpx;
+  padding: 20rpx 22rpx 18rpx;
   border-radius: 32rpx 26rpx 34rpx 28rpx / 26rpx 32rpx 28rpx 34rpx;
   background:
     repeating-linear-gradient(180deg,
@@ -474,11 +473,22 @@
   animation-delay: 0.26s;
   box-sizing: border-box;
 }
-/* 左侧插画合影（参考图：白框圆角小图 280×360，向日葵+坚果+寒冰射手+金杯） */
+/* v70: 上段（左插画 + 右文案/徽章），高度自适应吃掉余量 */
+.ac-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+}
+/* 左侧插画合影（白框圆角小图，向日葵+坚果+寒冰射手+金杯），v70 高度随卡体自适应 */
 .ac-illu {
   position: relative;
-  width: 280rpx;
-  height: 360rpx;
+  width: 232rpx;
+  height: auto;
+  align-self: stretch;
+  min-height: 220rpx;
+  max-height: 330rpx;
   flex-shrink: 0;
   border-radius: 22rpx;
   overflow: hidden;
@@ -528,14 +538,13 @@
   line-height: 1.3;
 }
 .ac-chips {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;             /* v70: 两列网格，四个标签严格两排两列 */
+  grid-template-columns: 1fr 1fr;
   gap: 10rpx;
   margin-top: 2rpx;
 }
-/* 白胶囊玩法徽章（2 列换行，参考图） */
+/* 白胶囊玩法徽章（2×2 固定两排两列，参考图） */
 .bchip {
-  width: calc(50% - 5rpx);
   display: flex;
   align-items: center;
   gap: 8rpx;
@@ -564,21 +573,21 @@
 }
 
 /* ================================================================
-   v69 开始冒险：独立木纹大按钮（参考图底部主 CTA + 两侧草丛）
+   v70 大冒险卡下段：卡内「开始冒险」主按钮 + 右下角奖励中心（同排）
    ================================================================ */
-.start-wrap {
+.ac-start {
   flex: 0 0 auto;
-  position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 8rpx 0 18rpx;
+  gap: 16rpx;
+  padding: 2rpx 2rpx 0;
   animation: rise-in 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.05) both;
   animation-delay: 0.32s;
 }
 .start-btn {
-  width: 82%;
-  height: 100rpx;
+  flex: 1 1 auto;
+  width: auto;
+  height: 96rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -612,40 +621,6 @@
   margin-right: -8rpx;    /* 抵消末字字距，视觉居中 */
   line-height: 1.1;
   text-shadow: 0 1.5rpx 0 rgba(255, 244, 214, 0.65);
-}
-/* 按钮两侧草丛（参考图：木牌底部冒出的嫩草） */
-.tuft {
-  position: absolute;
-  bottom: 8rpx;
-  width: 56rpx;
-  height: 40rpx;
-  pointer-events: none;
-}
-.tuft--l { left: 5%; }
-.tuft--r { right: 5%; transform: scaleX(-1); }
-.blade {
-  position: absolute;
-  bottom: 0;
-  width: 14rpx;
-  border-radius: 100% 100% 0 0;
-  transform-origin: 50% 100%;
-}
-.blade--1 {
-  left: 2rpx;
-  height: 22rpx;
-  background: linear-gradient(180deg, #8FD14F, #4E8C2F);
-  transform: rotate(-16deg);
-}
-.blade--2 {
-  left: 20rpx;
-  height: 34rpx;
-  background: linear-gradient(180deg, #6FBF3A, #3F7C1E);
-}
-.blade--3 {
-  left: 38rpx;
-  height: 24rpx;
-  background: linear-gradient(180deg, #A3DB63, #5FA23C);
-  transform: rotate(15deg);
 }
 
 /* ================================================================
@@ -939,25 +914,23 @@
 }
 
 /* ================================================================
-   v69 右下角浮动「奖励中心」红浆果圆钮（参考图红色圆钮）
-   绝对定位于 .page（不入 flex 流），bottom 由内联 style 按 safeBottomRpx 下发
+   v70 「奖励中心」红浆果圆钮——移入大冒险卡右下角（ac-start 同排）
+   不再绝对定位于页面右下，随卡片布局排列
    ================================================================ */
 .reward-fab {
-  position: absolute;
-  right: 14rpx;
-  z-index: 30;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5rpx;
+  gap: 4rpx;
   -webkit-tap-highlight-color: transparent;
   transition: transform 150ms ease;
 }
 .reward-fab-hover { transform: scale(0.92); }
 .fab-ico {
   position: relative;
-  width: 72rpx;
-  height: 72rpx;
+  width: 84rpx;
+  height: 84rpx;
   border-radius: 50%;
   background: radial-gradient(circle at 32% 26%, #FFA388 0%, #FF6A4D 46%, #E04A2E 78%, #C23A22 100%);
   border: 3rpx solid rgba(255, 255, 255, 0.9);
@@ -1000,7 +973,7 @@
   background: rgba(74, 52, 42, 0.72);
   border: 1rpx solid rgba(255, 255, 255, 0.4);
   color: #FFF8EA;
-  font-size: 15rpx;
+  font-size: 16rpx;
   font-weight: 800;
   letter-spacing: 0.5rpx;
   white-space: nowrap;
