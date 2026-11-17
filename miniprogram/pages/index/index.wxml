@@ -1,4 +1,8 @@
-<!-- pages/index/index.wxml — v71 布局精简（在 v70 基础上按反馈调整）
+<!-- pages/index/index.wxml — v72 牌匾升级与卡内紧凑（在 v71 基础上按反馈调整）
+  v72 更新：
+    · 牌匾「单词农场」再靠下（margin-top 加大）、题字加大（36→40rpx），左侧新增🌻农场图标
+    · 大冒险卡：左侧插画改为定高居中（不再 stretch），与右侧文案块高度基本相当、中心线对齐
+    · 右侧文案/徽章间距收紧（ac-main gap 18→12、徽章内衬 12→10rpx 等），图文整体更紧凑
   v71 更新：
     · 导航只保留居中木牌匾「单词农场」（居中、靠下）；左侧返回钮与右侧⚙️钮取消
     · 「怎么玩」弹窗改由大冒险卡内四个玩法徽章点击打开（onKnowMore 由 bchip 承接）
@@ -8,7 +12,7 @@
   布局结构（v71）：
     .page (flex column, 高度 {{pageHeight}}rpx, overflow:hidden)
       ├── page-flora         底部灌木装饰（绝对定位，不入流）
-      ├── nav-bar            自定义导航（仅居中木牌匾）
+      ├── nav-bar            自定义导航（仅居中木牌匾 + 🌻 图标）
       ├── .main-view         纯 flex 主体，禁止滚动
       │   ├── brand-sub      副标题
       │   ├── hud-strip      数据胶囊条（最高分/游戏次数/音效/亲子积分）
@@ -30,7 +34,7 @@
     <view class="fb fb--6"></view>
   </view>
 
-  <!-- ============ 自定义导航栏（木盘钮 + 木牌匾 + ⚙️） ============ -->
+  <!-- ============ 自定义导航栏（居中木牌匾：🌻 图标 + 题字，双铆钉） ============ -->
   <view
     class="nav-bar"
     style="padding-top: {{statusBarHeight}}px; height: calc({{statusBarHeight}}px + {{navBarHeight}}px);"
@@ -38,6 +42,7 @@
     <view class="nav-bar-inner" style="height: {{navBarHeight}}px; padding: 0 20rpx;">
       <view class="nav-title">
         <view class="board-screw board-screw--l"></view>
+        <text class="nav-logo-ico">🌻</text>
         <text class="nav-title-text">单词农场</text>
         <view class="board-screw board-screw--r"></view>
       </view>
@@ -107,7 +112,7 @@
       <text class="pack-bar-action">管理 ›</text>
     </view>
 
-    <!-- 5. 大冒险卡（v70：左插画 + 右文案/2×2徽章 + 卡内底部「开始冒险」 + 右下角奖励中心） -->
+    <!-- 5. 大冒险卡（v72：左插画定高与右文案块等高居中 + 卡内底部「开始冒险」 + 右下角奖励中心） -->
     <view class="adventure-card">
       <view class="ac-body">
         <view class="ac-illu">

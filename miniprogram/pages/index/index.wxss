@@ -1,9 +1,13 @@
-/* pages/index/index.wxss — v71 布局精简（v70 基础上的反馈调整）
+/* pages/index/index.wxss — v72 牌匾升级与卡内紧凑（v71 基础上的反馈调整）
+   v72 更新：
+   - 牌匾靠下加大：margin-top 14→22rpx、题字 36→40rpx、内衬收紧，左侧新增🌻农场图标
+   - 大冒险卡紧凑：插画改定高 216rpx 居中（不再 stretch），与右侧文案块中心线对齐、高度相当
+   - 右侧文案/徽章间距收紧：ac-main gap 18→12rpx、chips gap 12→10、徽章内衬 12/16→10/14rpx
+   - 标题 44→40rpx、副标 24→22rpx，图文两块紧凑成组居中于卡体
    v71 更新：
-   - 导航只保留居中木牌匾（返回/⚙️ 钮删除，.nav-btn/.nav-icon/.nav-gear 移除），牌匾靠下
+   - 导航只保留居中木牌匾（返回/⚙️ 钮删除），牌匾靠下
    - 玩法徽章 bchip 可点击（hover 反馈），点击打开「怎么玩」弹窗
-   - 右侧文案/徽章整体放大（标题 44rpx/副标 24rpx/徽章内衬与字号加大），与插画高度基本相当
-   - 大冒险卡：插画 stretch 自适应限高（240-300rpx），卡分配权重收紧（flex 1.5，max 560rpx）
+   - 大冒险卡：插画 stretch 自适应限高，卡分配权重收紧（flex 1.5，max 560rpx）
    - 「开始冒险」width 58% 水平居中；奖励中心改卡内绝对定位锚定右下角；卡内 gap 收紧
    - km-* 弹窗 / pack-bar / hud-strip / hero-banner / diff-pills 样式自 v70 原样保留
    v7 设计 tokens：字号 5 级 / 圆角 3 级 / 间距 3 级 / 文本色 3 级
@@ -59,7 +63,7 @@
   box-sizing: border-box;
 }
 
-/* v71：中央木牌匾标题（居中靠下，双铆钉 + 深棕刻字） */
+/* v72：中央木牌匾标题（居中靠下，🌻 图标 + 双铆钉 + 深棕刻字） */
 .nav-title {
   flex: 0 1 auto;
   min-width: 0;
@@ -67,8 +71,8 @@
   align-items: center;
   justify-content: center;
   align-self: center;
-  margin: 14rpx 0 0;         /* v71: 牌匾居中且靠下 */
-  padding: 12rpx 44rpx;
+  margin: 22rpx 0 0;         /* v72: 再靠下一些 */
+  padding: 8rpx 40rpx;       /* v72: 内衬收紧，容纳加大后的题字 */
   position: relative;
   border-radius: 16rpx 22rpx 18rpx 24rpx / 22rpx 16rpx 24rpx 18rpx;
   background:
@@ -81,6 +85,14 @@
   box-shadow: 0 5rpx 0 rgba(95, 59, 34, 0.5),
               0 10rpx 18rpx rgba(95, 59, 34, 0.24),
               inset 0 2rpx 0 rgba(255, 248, 224, 0.8);
+}
+/* v72: 牌匾左侧农场图标（向日葵，与游戏内阳光/向日葵主题呼应） */
+.nav-logo-ico {
+  font-size: 38rpx;
+  line-height: 1;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2rpx 1rpx rgba(95, 59, 34, 0.35));
 }
 .board-screw {
   position: absolute;
@@ -96,11 +108,11 @@
 .board-screw--r { right: 16rpx; }
 .nav-title-text {
   color: #5C3A1E;
-  font-size: 36rpx;          /* v70: 「单词农场」稍微加大 */
+  font-size: 40rpx;          /* v72: 「单词农场」再加大 */
   font-weight: 900;
-  letter-spacing: 4rpx;
-  white-space: nowrap;       /* v70: 窄屏下禁止牌匾题字换行 */
-  line-height: 1.2;
+  letter-spacing: 5rpx;
+  white-space: nowrap;       /* 窄屏下禁止牌匾题字换行 */
+  line-height: 1.15;
   text-shadow: 0 1.5rpx 0 rgba(255, 244, 214, 0.65);
 }
 
@@ -125,8 +137,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 10rpx 26rpx 16rpx;
-  /* v70: 底部留出安全区（开始按钮已入卡贴底，避免被 Home 条遮挡） */
+  padding: 14rpx 26rpx 16rpx;
+  /* v72: 顶部微增，给下移后的牌匾留出缓冲；v70 底部留出安全区 */
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
   gap: 18rpx;
   box-sizing: border-box;
@@ -444,17 +456,16 @@
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
-  align-items: center;
-  gap: 18rpx;
+  align-items: center;       /* v72: 图文两块垂直居中，中心线对齐 */
+  gap: 14rpx;                /* v72: 图文水平间距收紧 */
 }
-/* 左侧插画合影（白框圆角小图，向日葵+坚果+寒冰射手+金杯），v70 高度随卡体自适应 */
+/* 左侧插画合影（白框圆角小图，向日葵+坚果+寒冰射手+金杯）
+   v72: 改定高居中（不再 stretch），高度与右侧文案块基本相当 */
 .ac-illu {
   position: relative;
-  width: 232rpx;
-  height: auto;
-  align-self: stretch;
-  min-height: 240rpx;
-  max-height: 300rpx;
+  width: 224rpx;
+  height: 216rpx;            /* v72: 定高，与右侧文案块等高 */
+  align-self: center;        /* v72: 中心线与右侧文案对齐 */
   flex-shrink: 0;
   border-radius: 22rpx;
   overflow: hidden;
@@ -482,10 +493,10 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 18rpx;                /* v71: 内容纵向拉开，与插画高度相当 */
+  gap: 12rpx;                /* v72: 内容纵向收紧，与插画等高紧凑成组 */
 }
 .ac-title {
-  font-size: 44rpx;          /* v71: 放大与插画高度协调 */
+  font-size: 40rpx;          /* v72: 紧凑回调（v71 44rpx） */
   font-weight: 900;
   color: #F59B0B;
   letter-spacing: 2rpx;
@@ -497,7 +508,7 @@
   text-overflow: ellipsis;
 }
 .ac-sub {
-  font-size: 24rpx;          /* v71: 放大 */
+  font-size: 22rpx;          /* v72: 紧凑回调（v71 24rpx） */
   font-weight: 700;
   color: #6D5B33;
   letter-spacing: 1rpx;
@@ -506,15 +517,15 @@
 .ac-chips {
   display: grid;             /* v70: 两列网格，四个标签严格两排两列 */
   grid-template-columns: 1fr 1fr;
-  gap: 12rpx;
-  margin-top: 6rpx;
+  gap: 10rpx;                /* v72: 徽章排间距收紧 */
+  margin-top: 0;             /* v72: 依赖 ac-main gap，去除额外偏移 */
 }
-/* 白胶囊玩法徽章（2×2 固定两排两列；v71 可点击，打开「怎么玩」弹窗） */
+/* 白胶囊玩法徽章（2×2 固定两排两列；可点击，打开「怎么玩」弹窗） */
 .bchip {
   display: flex;
   align-items: center;
   gap: 10rpx;
-  padding: 12rpx 16rpx;
+  padding: 10rpx 14rpx;      /* v72: 内衬收紧 */
   border-radius: 999rpx;
   background: linear-gradient(180deg, #FFFFFF 0%, #FDFBF2 100%);
   border: 2rpx solid rgba(74, 52, 42, 0.16);
@@ -531,12 +542,12 @@
               inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
 }
 .bchip-ico {
-  font-size: 26rpx;
+  font-size: 24rpx;
   line-height: 1;
   flex-shrink: 0;
 }
 .bchip-txt {
-  font-size: 22rpx;
+  font-size: 21rpx;
   font-weight: 800;
   color: #4A3B2A;
   letter-spacing: 0.3rpx;
