@@ -185,7 +185,8 @@
   box-sizing: border-box;
 }
 
-/* v73/v74：中央糖果牌匾（粉果冻 + 白描边 + 黄糖珠 + 白字粉描边，v74 去🌻题字更纯净） */
+/* v73/v74：中央糖果牌匾（粉果冻 + 白描边 + 黄糖珠 + 白字粉描边，v74 去🌻题字更纯净）
+   v80：题字 40→46rpx 牌匾同步加宽加高；margin 34→28 补偿，底缘位置不变不压副标题 */
 .nav-title {
   flex: 0 1 auto;
   min-width: 0;
@@ -193,8 +194,8 @@
   align-items: center;
   justify-content: center;
   align-self: center;
-  margin: 34rpx 0 0;         /* v75: 22→34 整体下移 */
-  padding: 8rpx 40rpx;
+  margin: 28rpx 0 0;         /* v80: 34→28（牌匾变高后回收下移量，底缘不动） */
+  padding: 10rpx 46rpx;      /* v80: 8/40→10/46 随题字放大 */
   position: relative;
   border-radius: 999rpx;
   background: linear-gradient(180deg, #FFB1CB 0%, #FF8FB5 55%, #F76E9C 100%);
@@ -208,28 +209,29 @@
 .candy-bead {
   position: absolute;
   top: 50%;
-  width: 16rpx;
-  height: 16rpx;
-  margin-top: -8rpx;
+  width: 18rpx;              /* v80: 16→18 随牌匾放大 */
+  height: 18rpx;
+  margin-top: -9rpx;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #FFF3B0 0%, #FFD34D 55%, #F5B301 100%);
   box-shadow: 0 2rpx 3rpx rgba(180, 120, 20, 0.35),
               inset 0 1rpx 2rpx rgba(255, 255, 255, 0.8);
 }
-.candy-bead--l { left: 16rpx; }
-.candy-bead--r { right: 16rpx; }
+.candy-bead--l { left: 18rpx; }   /* v80: 16→18 随牌匾外移 */
+.candy-bead--r { right: 18rpx; }
 .nav-title-text {
   color: #FFFFFF;
-  font-size: 40rpx;
+  font-size: 46rpx;          /* v80: 40→46 题字再大一点（v72 曾 36→40） */
   font-weight: 900;
-  letter-spacing: 5rpx;
+  letter-spacing: 6rpx;      /* v80: 5→6 随字号 */
   white-space: nowrap;
   line-height: 1.15;
-  /* v73: 白字粉描边——用 8 向 text-shadow 模拟（text-stroke 会吞字芯，弃用） */
+  /* v73: 白字粉描边——用 8 向 text-shadow 模拟（text-stroke 会吞字芯，弃用）
+     v80: 描边 3→3.5rpx、投影 6→7rpx 随字号加粗 */
   text-shadow:
-    3rpx 0 0 #E8548C, -3rpx 0 0 #E8548C, 0 3rpx 0 #E8548C, 0 -3rpx 0 #E8548C,
-    3rpx 3rpx 0 #E8548C, -3rpx -3rpx 0 #E8548C, 3rpx -3rpx 0 #E8548C, -3rpx 3rpx 0 #E8548C,
-    0 6rpx 0 rgba(199, 54, 110, 0.4);
+    3.5rpx 0 0 #E8548C, -3.5rpx 0 0 #E8548C, 0 3.5rpx 0 #E8548C, 0 -3.5rpx 0 #E8548C,
+    3.5rpx 3.5rpx 0 #E8548C, -3.5rpx -3.5rpx 0 #E8548C, 3.5rpx -3.5rpx 0 #E8548C, -3.5rpx 3.5rpx 0 #E8548C,
+    0 7rpx 0 rgba(199, 54, 110, 0.4);
 }
 
 /* v73 副标题（糖果暖棕，保持参考图深色粗体） */
@@ -327,9 +329,9 @@
    v73 插画横幅（白描边 + 青蓝光晕，保留 PvZ 插画与橙色 VS）
    ================================================================ */
 .hero-banner {
-  flex: 1.25 1 0;            /* v76: 1→1.25 主视觉吸收卡片回压余量 */
-  min-height: 300rpx;
-  max-height: 496rpx;        /* v76: 430→496，大冒险卡高度回压后由横幅吸收 */
+  flex: 1.55 1 0;            /* v80: 1.25→1.55 吸收大冒险卡回压余量 */
+  min-height: 320rpx;        /* v80: 300→320 */
+  max-height: 560rpx;        /* v80: 496→560，主视觉接住卡片让出高度，避免底部留白（v75 经验） */
   position: relative;
   width: 100%;
   border-radius: 36rpx;
@@ -564,13 +566,13 @@
    v73/v74 大冒险卡（粉→蓝糖果果冻渐变 + 白描边 + 糖星装饰；v74 整体高度紧凑）
    ================================================================ */
 .adventure-card {
-  flex: 1.15 1 0;            /* v76: 1.5→1.15 整体高度回压 */
-  min-height: 330rpx;        /* v76: 370→330 */
-  max-height: 456rpx;        /* v76: 524→456 整体高度小些，余量交给横幅 */
+  flex: 0.9 1 0;             /* v80: 1.15→0.9 单元高度再小一点 */
+  min-height: 296rpx;        /* v80: 330→296 */
+  max-height: 408rpx;        /* v80: 456→408 整体再矮一档，余量交横幅 */
   display: flex;
   flex-direction: column;
-  gap: 6rpx;                 /* v76: 8→6 */
-  padding: 14rpx 16rpx 12rpx; /* v76: 16/18/14→14/16/12 */
+  gap: 5rpx;                 /* v80: 6→5 */
+  padding: 12rpx 14rpx 10rpx; /* v80: 14/16/12→12/14/10 */
   position: relative;        /* v73: 糖星装饰锚 */
   border-radius: 36rpx;
   background: linear-gradient(168deg, #FFDFEB 0%, #FFF6EC 38%, #E9F7E4 66%, #CFE9FA 100%);
@@ -605,11 +607,11 @@
   gap: 14rpx;                /* v72: 图文水平间距收紧 */
 }
 /* 左侧插画合影（白框圆角小图，向日葵+坚果+寒冰射手+金杯）
-   v72 定高居中；v76 随卡回压同步收紧（208×192→200×186） */
+   v72 定高居中；v80 随卡再回压同步收紧（200×186→188×172） */
 .ac-illu {
   position: relative;
-  width: 200rpx;
-  height: 186rpx;            /* v76: 208×192→200×186 */
+  width: 188rpx;
+  height: 172rpx;            /* v80: 200×186→188×172 */
   align-self: center;        /* v72: 中心线与右侧文案对齐 */
   flex-shrink: 0;
   border-radius: 26rpx;
@@ -639,7 +641,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 8rpx;                 /* v76: 10→8 */
+  gap: 7rpx;                 /* v80: 8→7 */
 }
 /* v73: 卡标题双色分段（粉橙「单词农场」+ 天蓝「大冒险」，白描边蛋仔字） */
 .ac-title {
@@ -652,7 +654,7 @@
 }
 .ac-title-a,
 .ac-title-b {
-  font-size: 36rpx;          /* v74: 40→36 紧凑 */
+  font-size: 38rpx;          /* v80: 36→38 卡题字微放大（用户：单词农场再大一点） */
   font-weight: 900;
 }
 .ac-title-a {
@@ -753,7 +755,7 @@
 .start-btn {
   width: 58%;
   margin: 0 auto;
-  height: 78rpx;             /* v76: 82→78 随卡回压 */
+  height: 74rpx;             /* v80: 78→74 随卡再回压 */
   display: flex;
   align-items: center;
   justify-content: center;
