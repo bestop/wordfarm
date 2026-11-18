@@ -1,4 +1,10 @@
-<!-- pages/index/index.wxml — v84 弹窗新增人教版 PEP 词库组（DOM 结构零变化，仅 index.js 弹窗数据 + 新增 data/pepWords.js）
+<!-- pages/index/index.wxml — v85 词库信息条同步 + 首页底部填满（DOM 结构零变化，改动在 index.js 与 index.wxss）
+  v85 更新：
+    · pack-bar「当前词库条」实时跟随最新档位：弹窗选中词库 / 点首页经典胶囊 / 从游戏页返回，
+      下方信息条不再残留「更多词库」里旧选择的信息（index.js onSelectDict/onSelectDifficulty/onShow）
+    · 首页底部不再留空：横幅 max-height 560→640rpx，高屏余量继续由主视觉吸收（index.wxss）
+    · onLoad 整体 try-catch 兜底：任何初始化异常都不再让首屏只剩背景
+  v84 弹窗新增人教版 PEP 词库组（DOM 结构零变化，仅 index.js 弹窗数据 + 新增 data/pepWords.js）
   v84 更新：
     · 分组列表由两组变三组：沪教版（十档）→ 人教版 PEP · 人民教育出版社
       （一~六年级上/下册十二档，pep1~pep6/pep1b~pep6b，data/pepWords.js）→ 我的词库

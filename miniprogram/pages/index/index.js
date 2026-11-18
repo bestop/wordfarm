@@ -1,6 +1,11 @@
 // pages/index/index.js - 欢迎页（v76 糖果果冻打磨版）：糖果牌匾导航 + 数据胶囊条
 //   + PvZ 插画横幅（/images/banner-hero.jpg + CSS「VS」大字）+ 六色果冻词库牌
 //   + 大冒险卡（左插画 + 右双色标题/2×2 玩法徽章 + 卡内居中「开始冒险」果冻按钮 + 右下角龙珠奖励球）
+// v85 变化（词库信息条同步 + 首屏兜底）：
+//   · pack-bar「当前词库条」三处同步：弹窗选中词库 / 点首页经典胶囊切档 / onShow 回到首页，
+//     信息条实时跟随最新档位——修复「从更多词库选完，下方仍显示旧词库信息」
+//   · _buildPackBar 查表防御：元信息与词池表错配时回退 null，绝不在 onLoad/onShow 抛错
+//   · onLoad 整体 try-catch 兜底 + applyLayout 必执行：任何初始化异常都不再阻塞首屏渲染
 // v84 变化（逻辑零新增，纯数据扩展）：「更多词库」弹窗新增「人教版 PEP · 人民教育出版社」组
 //   （一~六年级上/下册十二档，data/pepWords.js）；pack-bar/胶囊动态改名同步支持 pep 档
 // v76 变化（仅视觉微调，逻辑零改动）：背景果冻气泡与星心花加大加立体、
@@ -95,44 +100,56 @@ Page({
   },
 
   onLoad() {
-    const g = app.globalData;
-    // 状态栏高度（自定义导航栏必备；v71 无左右按钮，无需胶囊矩形）
-    let statusBar = 20;
-    let navBarInner = 44;
+    // v85: 初始化整体 try-catch 兜底——存档异常、词库表错配等极端情况降级为默认值，
+    //   绝不让首屏停在空数据（applyLayout 移出 try，保证 pageHeight 必被设置）
     try {
-      const sys = wx.getSystemInfoSync();
-      statusBar = sys.statusBarHeight || 20;
-      const m = wx.getMenuButtonBoundingClientRect && wx.getMenuButtonBoundingClientRect();
-      if (m) {
-        // 导航条高度 = 胶囊顶到状态栏的距离 * 2 + 胶囊高度（保持与胶囊垂直对齐的节奏）
-        const topGap = m.top - statusBar;
-        navBarInner = topGap * 2 + m.height;
-      }
-    } catch (e) { /* ignore */ }
+      const g = app.globalData;
+      // 状态栏高度（自定义导航栏必备；v71 无左右按钮，无需胶囊矩形）
+      let statusBar = 20;
+      let navBarInner = 44;
+      try {
+        const sys = wx.getSystemInfoSync();
+        statusBar = sys.statusBarHeight || 20;
+        const m = wx.getMenuButtonBoundingClientRect && wx.getMenuButtonBoundingClientRect();
+        if (m) {
+          // 导航条高度 = 胶囊顶到状态栏的距离 * 2 + 胶囊高度（保持与胶囊垂直对齐的节奏）
+          const topGap = m.top - statusBar;
+          navBarInner = topGap * 2 + m.height;
+        }
+      } catch (e) { /* ignore */ }
 
-    this.setData({
-      difficulty: g.difficulty,
-      soundEnabled: g.soundEnabled,
-      highestScore: g.highestScore,
-      totalGames: g.totalGames,
-      rewardPoints: rewardManager.getWallet().points,
-      packBar: this._buildPackBar(g.difficulty, g.customPack),
-      dictOptions: this._buildDictOptions(g.customPack),
-      safeTop: g.safeAreaInset.top,
-      safeBottom: g.safeAreaInset.bottom,
-      statusBarHeight: statusBar,
-      navBarHeight: navBarInner
-    });
-    this._syncMorePill();
+      this.setData({
+        difficulty: g.difficulty,
+        soundEnabled: g.soundEnabled,
+        highestScore: g.highestScore,
+        totalGames: g.totalGames,
+        rewardPoints: rewardManager.getWallet().points,
+        packBar: this._buildPackBar(g.difficulty, g.customPack),
+        dictOptions: this._buildDictOptions(g.customPack),
+        safeTop: g.safeAreaInset.top,
+        safeBottom: g.safeAreaInset.bottom,
+        statusBarHeight: statusBar,
+        navBarHeight: navBarInner
+      });
+      this._syncMorePill();
+    } catch (e) {
+      console.error('[Index] onLoad 初始化降级:', e);
+    }
     applyLayout(this);
   },
 
   onShow() {
+    // v85: 回到首页同步全局词库档——从游戏页返回/后台切回时，difficulty、pack-bar 与第 6 枚
+    //   胶囊名跟随最新档位，不再残留上一次会话的词库信息
+    const diff = app.globalData.difficulty;
     this.setData({
       highestScore: app.globalData.highestScore,
       totalGames: app.globalData.totalGames,
-      rewardPoints: rewardManager.getWallet().points
+      rewardPoints: rewardManager.getWallet().points,
+      difficulty: diff,
+      packBar: this._buildPackBar(diff, app.globalData.customPack)
     });
+    this._syncMorePill();
   },
 
   /**
@@ -170,7 +187,7 @@ Page({
       wx.showToast({ title: '词库已保留，随时切回', icon: 'none', duration: 1200 });
     }
 
-    this.setData({ difficulty: key });
+    this.setData({ difficulty: key, packBar: this._buildPackBar(key, app.globalData.customPack) });
     app.globalData.difficulty = key;
     storageManager.saveUserData({
       highestScore: app.globalData.highestScore,
@@ -208,7 +225,8 @@ Page({
     if (!key) return;
     this.setData({ dictSheetVisible: false });
     if (key === this.data.difficulty) return;   // 重复选中直接收起
-    this.setData({ difficulty: key });
+    // v85: pack-bar 同步跟随最新档位（修复「弹窗选完词库，下方信息条仍是旧档」）
+    this.setData({ difficulty: key, packBar: this._buildPackBar(key, app.globalData.customPack) });
     app.globalData.difficulty = key;
     storageManager.saveUserData({
       highestScore: app.globalData.highestScore,
@@ -286,8 +304,11 @@ Page({
     }
     const g = ALL_GRADE_INFO.find(x => x.key === difficulty);
     if (g) {
-      const count = PEP_WORD_BANKS[g.key] ? PEP_WORD_BANKS[g.key].length : SHANGHAI_WORD_BANKS[g.key].length;
-      return { name: g.name, count: count, isCustom: false };
+      // v85 防御：元信息与词池表错配（旧存档 key 在新词池表缺失等极端情况）时回退 null，
+      //   绝不在 onLoad/onShow 抛错阻塞首屏渲染
+      const bank = PEP_WORD_BANKS[g.key] || SHANGHAI_WORD_BANKS[g.key];
+      if (!bank) return null;
+      return { name: g.name, count: bank.length, isCustom: false };
     }
     return null;
   },
