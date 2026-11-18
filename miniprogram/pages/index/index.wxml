@@ -287,7 +287,7 @@
     </view>
   </view>
 
-  <!-- ============ v82: 词库选择弹窗（「更多词库」入口：三组果冻列表 + 文件导入入口） ============ -->
+  <!-- ============ v82: 词库选择弹窗（「更多词库」入口）· v86: 三级筛选（版本/年级/册别）+ 命中结果 + 文件导入 ============ -->
   <view wx:if="{{dictSheetVisible}}" class="dict-mask" bindtap="closeDictSheet" catchtouchmove="noop">
     <view class="dict-card" catchtap="noop">
 
@@ -305,9 +305,70 @@
 
       <view class="dict-divider"></view>
 
-      <!-- 分组列表（v84: 沪教版上/下册 + 人教版PEP上/下册 / 我的词库，scroll 滚动） -->
+      <!-- 三级筛选（v86: 版本 → 年级 → 册别，替代 34+ 行长列表） -->
+      <view class="dict-filter">
+        <view class="dict-filter-label">版本</view>
+        <view class="dict-chips">
+          <view
+            wx:for="{{dictEditions}}"
+            wx:key="key"
+            class="dict-chip {{dictFilter.ed === item.key ? 'dict-chip--active' : ''}}"
+            data-ed="{{item.key}}"
+            bindtap="onDictEd"
+            hover-class="dict-chip-hover"
+          >{{item.name}}</view>
+        </view>
+      </view>
+      <view class="dict-filter">
+        <view class="dict-filter-label">年级</view>
+        <view class="dict-chips">
+          <view
+            wx:for="{{dictGrades}}"
+            wx:key="g"
+            class="dict-chip {{dictFilter.grade === item.g ? 'dict-chip--active' : ''}}"
+            data-g="{{item.g}}"
+            bindtap="onDictGrade"
+            hover-class="dict-chip-hover"
+          >{{item.label}}</view>
+        </view>
+      </view>
+      <view class="dict-filter">
+        <view class="dict-filter-label">册别</view>
+        <view class="dict-chips">
+          <view
+            wx:for="{{dictVols}}"
+            wx:key="key"
+            class="dict-chip {{dictFilter.vol === item.key ? 'dict-chip--active' : ''}}"
+            data-vol="{{item.key}}"
+            bindtap="onDictVol"
+            hover-class="dict-chip-hover"
+          >{{item.label}}</view>
+        </view>
+      </view>
+
+      <view class="dict-divider"></view>
+
+      <!-- 命中结果（恰 0~1 档：三选齐 → 一行）+ 我的词库组，scroll 兜底 -->
       <scroll-view class="dict-list" scroll-y="true">
-        <block wx:for="{{dictOptions}}" wx:key="title" wx:for-item="group">
+        <view
+          wx:for="{{dictResult}}"
+          wx:key="key"
+          class="dict-row {{difficulty === item.key ? 'dict-row--active' : ''}}"
+          data-key="{{item.key}}"
+          bindtap="onSelectDict"
+          hover-class="dict-row-hover"
+        >
+          <view class="dict-dot" style="background: {{item.color}};"></view>
+          <view class="dict-info">
+            <view class="dict-name">{{item.name}}</view>
+            <view class="dict-desc">{{item.desc}}</view>
+          </view>
+          <view wx:if="{{difficulty === item.key}}" class="dict-check">✓</view>
+        </view>
+
+        <view wx:if="{{!dictResult.length}}" class="dict-empty">这个词库还没上架，换一个筛选试试～</view>
+
+        <block wx:for="{{dictCustom}}" wx:key="title" wx:for-item="group">
           <view class="dict-group-title">{{group.title}}</view>
           <view
             wx:for="{{group.items}}"

@@ -238,7 +238,7 @@ App({
    * 兼容老用户 storage 数据，未识别的值回退到 'junior'（v50 前默认为 middle）
    * @param {string} raw
    * @returns {string} primary | junior | senior | ket | pet | custom | sh1~sh5 / sh1b~sh5b（v82~v83）
-   *   | pep1~pep6 / pep1b~pep6b（v84）
+   *   | pep1~pep6 / pep1b~pep6b（v84）| wy1~wy6 / wy1b~wy6b（v86）
    */
   _migrateDifficulty(raw) {
     // v50: middle/medium → junior，college/hard → senior（大学档退役，词池并入高中）
@@ -247,10 +247,11 @@ App({
       return map[raw];
     }
     // 已经是新 key 或未知值，做合法性校验（v82: +沪教版上册 sh1~sh5；v83: +下册 sh1b~sh5b；
-    // v84: +人教版 PEP 上/下册 pep1~pep6 / pep1b~pep6b）
+    // v84: +人教版 PEP 上/下册 pep1~pep6 / pep1b~pep6b；v86: +外研版 wy1~wy6 / wy1b~wy6b）
     const valid = ['primary', 'junior', 'senior', 'ket', 'pet', 'custom',
       'sh1', 'sh2', 'sh3', 'sh4', 'sh5', 'sh1b', 'sh2b', 'sh3b', 'sh4b', 'sh5b',
-      'pep1', 'pep2', 'pep3', 'pep4', 'pep5', 'pep6', 'pep1b', 'pep2b', 'pep3b', 'pep4b', 'pep5b', 'pep6b'];
+      'pep1', 'pep2', 'pep3', 'pep4', 'pep5', 'pep6', 'pep1b', 'pep2b', 'pep3b', 'pep4b', 'pep5b', 'pep6b',
+      'wy1', 'wy2', 'wy3', 'wy4', 'wy5', 'wy6', 'wy1b', 'wy2b', 'wy3b', 'wy4b', 'wy5b', 'wy6b'];
     return valid.indexOf(raw) >= 0 ? raw : 'junior';
   }
 });

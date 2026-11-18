@@ -1,6 +1,11 @@
 // pages/index/index.js - 欢迎页（v76 糖果果冻打磨版）：糖果牌匾导航 + 数据胶囊条
 //   + PvZ 插画横幅（/images/banner-hero.jpg + CSS「VS」大字）+ 六色果冻词库牌
 //   + 大冒险卡（左插画 + 右双色标题/2×2 玩法徽章 + 卡内居中「开始冒险」果冻按钮 + 右下角龙珠奖励球）
+// v86 变化（外研版词库 + 弹窗三级筛选）：
+//   · 「更多词库」弹窗新增「外研版（一年级起点）· 外语教学与研究出版社」组
+//     （一~六年级上/下册十二档，data/wyWords.js）；pack-bar/胶囊动态改名同步支持 wy 档
+//   · 弹窗列表改三级筛选：版本（外研/人教PEP/沪教）→ 年级（一~六）→ 册别（上/下），
+//     结果区只显示命中档位——修 34+ 行长列表一屏滚不完、找目标册麻烦的问题
 // v85 变化（词库信息条同步 + 首屏兜底）：
 //   · pack-bar「当前词库条」三处同步：弹窗选中词库 / 点首页经典胶囊切档 / onShow 回到首页，
 //     信息条实时跟随最新档位——修复「从更多词库选完，下方仍显示旧词库信息」
@@ -28,8 +33,27 @@ const { rewardManager } = require('../../utils/rewardManager.js');
 const customWordPack = require('../../utils/customWordPack.js');
 const { SH_GRADE_INFO, SHANGHAI_WORD_BANKS } = require('../../data/shanghaiWords.js');  // v82: 沪教版词库元信息
 const { PEP_GRADE_INFO, PEP_WORD_BANKS } = require('../../data/pepWords.js');          // v84: 人教版PEP词库元信息
-// v84: 全部教材/启蒙词库元信息合表 —— pack-bar 与胶囊动态改名共用（pep 在前，新表优先）
-const ALL_GRADE_INFO = PEP_GRADE_INFO.concat(SH_GRADE_INFO);
+const { WY_GRADE_INFO, WY_WORD_BANKS } = require('../../data/wyWords.js');             // v86: 外研版词库元信息
+// v86: 全部教材/启蒙词库元信息合表（外研在前，新表优先）—— pack-bar 与胶囊动态改名共用
+const ALL_GRADE_INFO = WY_GRADE_INFO.concat(PEP_GRADE_INFO, SH_GRADE_INFO);
+// v86: 词池合表 —— _buildPackBar 防御性查表（任一系列 key 均能找到对应词池）
+const ALL_BANK_TABLE = Object.assign({}, SHANGHAI_WORD_BANKS, PEP_WORD_BANKS, WY_WORD_BANKS);
+// v86: 弹窗三级筛选 —— 版本元表（年级上限/主色/副注），editions 按新增时间倒序展示
+const DICT_EDITION_TABLE = {
+  wy:  { info: WY_GRADE_INFO,       bank: WY_WORD_BANKS,       maxGrade: 6, color: '#7EE0A8', name: '外研版',  desc: '外研社 · 一年级起点' },
+  pep: { info: PEP_GRADE_INFO,      bank: PEP_WORD_BANKS,      maxGrade: 6, color: '#7CC8FA', name: '人教PEP', desc: '人民教育出版社 · 三年级起点' },
+  sh:  { info: SH_GRADE_INFO,       bank: SHANGHAI_WORD_BANKS, maxGrade: 5, color: '#C79BF2', name: '沪教版',  desc: '上海教育出版社 · 五四制' }
+};
+const DICT_EDITIONS = [
+  { key: 'wy',  name: '外研版' },
+  { key: 'pep', name: '人教PEP' },
+  { key: 'sh',  name: '沪教版' }
+];
+const DICT_VOLS = [
+  { key: 'up',   label: '上册' },
+  { key: 'down', label: '下册' }
+];
+const GRADE_CN = ['', '一', '二', '三', '四', '五', '六'];
 
 Page({
   data: {
@@ -66,8 +90,15 @@ Page({
 
     // v82: 词库选择弹窗（果冻风果冻卡片列表）— v83: 移除经典词库组，仅沪教版上/下册 + 我的词库
     //   v84: 新增人教版 PEP 组（pep1~pep6 / pep1b~pep6b 十二档）
+    //   v86: 改三级筛选 —— dictEditions 版本 chips / dictGrades 年级 chips / dictVols 册别 chips /
+    //     dictFilter 当前筛选 { ed, grade, vol } / dictResult 命中结果行（0~1 行）/ dictCustom 我的词库组
     dictSheetVisible: false,
-    dictOptions: [],
+    dictEditions: DICT_EDITIONS,
+    dictGrades: [],
+    dictVols: DICT_VOLS,
+    dictFilter: { ed: 'wy', grade: 1, vol: 'up' },
+    dictResult: [],
+    dictCustom: [],
     moreActive: false,        // v82: 第 6 枚胶囊（更多词库）选中态
     // v82: 当前词库信息条（替换 v35 customPackInfo —— shX/pepX/custom 均展示；点击：custom→管理、其余→开弹窗）
     packBar: null,
@@ -125,7 +156,7 @@ Page({
         totalGames: g.totalGames,
         rewardPoints: rewardManager.getWallet().points,
         packBar: this._buildPackBar(g.difficulty, g.customPack),
-        dictOptions: this._buildDictOptions(g.customPack),
+        dictCustom: this._buildCustomGroups(g.customPack),
         safeTop: g.safeAreaInset.top,
         safeBottom: g.safeAreaInset.bottom,
         statusBarHeight: statusBar,
@@ -201,12 +232,20 @@ Page({
 
   /* ============ v82: 词库选择弹窗（更多词库） ============ */
 
-  /** 打开弹窗：重建列表（含最新导入词包状态） */
+  /** 打开弹窗：从当前档位反推三级筛选初值，重建筛选条与结果区（含最新导入词包状态） */
   openDictSheet() {
     if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
+    const parsed = this._parsePackKey(this.data.difficulty);
+    let filter = parsed || { ed: 'wy', grade: 1, vol: 'up' };   // 无教材档在选时默认外研一上
+    const ed = DICT_EDITION_TABLE[filter.ed];
+    if (!ed) filter = { ed: 'wy', grade: 1, vol: 'up' };        // 防御：未知版本回默认
+    else if (filter.grade > ed.maxGrade) filter.grade = 1;      // 沪教无六年级：越界回一年级
     this.setData({
       dictSheetVisible: true,
-      dictOptions: this._buildDictOptions(app.globalData.customPack)
+      dictFilter: filter,
+      dictGrades: this._buildGradeChips(filter.ed),
+      dictResult: this._buildDictResult(filter),
+      dictCustom: this._buildCustomGroups(app.globalData.customPack)
     });
   },
 
@@ -254,39 +293,81 @@ Page({
   },
 
   /**
-   * v82: 构建词库选择弹窗数据 — v83: 移除「经典词库」组（小学/初中/高中/KET/PET 保留主界面胶囊直选），
-   *   列表仅沪教版（一~五年级上/下册十档）与我的词库
-   * v84: 新增人教版 PEP 组（一~六年级上/下册十二档，置沪教组之后、我的词库之前）
-   * @param {Object|null} pack - 已导入自定义词包
+   * v86: 从档位 key 反推三级筛选初值（wy3b → { ed:'wy', grade:3, vol:'down' }）
+   *   非教材档（经典/custom/未知）返回 null —— openDictSheet 里再落默认值
+   * @param {string} key
+   * @returns {Object|null} { ed, grade, vol }
    */
-  _buildDictOptions(pack) {
-    const groups = [
-      {
-        title: '沪教版 · 上海教育出版社（五四制）',
-        items: SH_GRADE_INFO.map(g => ({
-          key: g.key,
-          name: g.name,
-          desc: g.desc + ' · ' + SHANGHAI_WORD_BANKS[g.key].length + ' 词',
-          color: '#C79BF2'
-        }))
-      },
-      {
-        title: '人教版 PEP · 人民教育出版社',
-        items: PEP_GRADE_INFO.map(g => ({
-          key: g.key,
-          name: g.name,
-          desc: g.desc + ' · ' + PEP_WORD_BANKS[g.key].length + ' 词',
-          color: '#7CC8FA'
-        }))
-      }
-    ];
+  _parsePackKey(key) {
+    const m = /^(wy|pep|sh)([1-6])b?$/.exec(key || '');
+    if (!m) return null;
+    return { ed: m[1], grade: parseInt(m[2], 10), vol: key.charAt(key.length - 1) === 'b' ? 'down' : 'up' };
+  },
+
+  /** v86: 生成当前版本的年级 chips（沪教 1-5 / 外研·PEP 1-6） */
+  _buildGradeChips(ed) {
+    const t = DICT_EDITION_TABLE[ed];
+    const max = t ? t.maxGrade : 6;
+    const chips = [];
+    for (let i = 1; i <= max; i++) chips.push({ g: i, label: GRADE_CN[i] + '年级' });
+    return chips;
+  },
+
+  /**
+   * v86: 按三级筛选构建命中结果行（版本 + 年级 + 册别 → 恰 0~1 档）
+   *   词池缺失（数据表错配）时返回空数组，结果区显示占位提示
+   * @param {Object} filter - { ed, grade, vol }
+   */
+  _buildDictResult(filter) {
+    if (!filter) return [];
+    const ed = DICT_EDITION_TABLE[filter.ed];
+    if (!ed) return [];
+    const key = filter.ed + filter.grade + (filter.vol === 'down' ? 'b' : '');
+    const g = ed.info.find(x => x.key === key);
+    const bank = ed.bank[key];
+    if (!g || !bank) return [];
+    // 副注沿用各档元信息说明（沪教「牛津上海本地版·五四制」/ PEP「启蒙衔接词池·教材」/ 外研「一年级起点」）
+    return [{ key: key, name: g.name, desc: g.desc + ' · ' + bank.length + ' 词', color: ed.color }];
+  },
+
+  /** v86: 我的词库组（无导入词包时为空数组，结果区不渲染） */
+  _buildCustomGroups(pack) {
     if (pack && pack.words && pack.words.length) {
-      groups.push({
-        title: '我的词库',
-        items: [{ key: 'custom', name: pack.name || '导入词库', desc: '自定义导入 · ' + pack.count + ' 词', color: '#FFD34D' }]
-      });
+      return [{ title: '我的词库', items: [{ key: 'custom', name: pack.name || '导入词库', desc: '自定义导入 · ' + pack.count + ' 词', color: '#FFD34D' }] }];
     }
-    return groups;
+    return [];
+  },
+
+  /** v86: 筛选条事件 — 切版本（年级越界回一年级，册别保留） */
+  onDictEd(e) {
+    const ed = e.currentTarget.dataset.ed;
+    if (!DICT_EDITION_TABLE[ed]) return;
+    const filter = { ed: ed, grade: this.data.dictFilter.grade, vol: this.data.dictFilter.vol };
+    if (filter.grade > DICT_EDITION_TABLE[ed].maxGrade) filter.grade = 1;
+    if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
+    this.setData({
+      dictFilter: filter,
+      dictGrades: this._buildGradeChips(ed),
+      dictResult: this._buildDictResult(filter)
+    });
+  },
+
+  /** v86: 筛选条事件 — 切年级 */
+  onDictGrade(e) {
+    const grade = parseInt(e.currentTarget.dataset.g, 10);
+    if (!grade) return;
+    const filter = { ed: this.data.dictFilter.ed, grade: grade, vol: this.data.dictFilter.vol };
+    if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
+    this.setData({ dictFilter: filter, dictResult: this._buildDictResult(filter) });
+  },
+
+  /** v86: 筛选条事件 — 切册别（上/下） */
+  onDictVol(e) {
+    const vol = e.currentTarget.dataset.vol;
+    if (vol !== 'up' && vol !== 'down') return;
+    const filter = { ed: this.data.dictFilter.ed, grade: this.data.dictFilter.grade, vol: vol };
+    if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
+    this.setData({ dictFilter: filter, dictResult: this._buildDictResult(filter) });
   },
 
   /**
@@ -306,7 +387,7 @@ Page({
     if (g) {
       // v85 防御：元信息与词池表错配（旧存档 key 在新词池表缺失等极端情况）时回退 null，
       //   绝不在 onLoad/onShow 抛错阻塞首屏渲染
-      const bank = PEP_WORD_BANKS[g.key] || SHANGHAI_WORD_BANKS[g.key];
+      const bank = ALL_BANK_TABLE[g.key];
       if (!bank) return null;
       return { name: g.name, count: bank.length, isCustom: false };
     }
@@ -316,6 +397,7 @@ Page({
   /**
    * v82: 同步第 6 枚胶囊（更多词库）名称与选中态 — v83: 支持下册（沪教一下~沪教五下）——
    *   选 shX/shXb → 「沪教X上/下」+ active；v84: 选 pepX/pepXb → 「PEP X上/下」+ active；
+   *   v86: 选 wyX/wyXb → 「外研X上/下」+ active（ALL_GRADE_INFO 已合外研表）；
    *   选 custom → 「我的词库」+ active；其余 → 「更多词库」
    */
   _syncMorePill() {

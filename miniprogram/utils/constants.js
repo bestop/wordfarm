@@ -264,6 +264,118 @@ const DIFFICULTY_CONFIG = {
     difficultyWeights: { 1: 0.55, 2: 0.45 },
     levelTime: 58000
   },
+  // v86: 外研版（一年级起点）一~六年级上册六档 —— 独立词池模式（整库出题），
+  //   词库见 data/wyWords.js。一/二年级有真实教材（外研一起系列），参数承袭 PEP 同级温和值；
+  //   三~六年级渐进提速，与 PEP/沪教同级保持一致难度曲线。
+  wy1: {
+    name: '外研一上',
+    spawnInterval: 4200,
+    baseSpeed: 28,
+    maxZombies: 6,
+    questionTimeLimit: 20000,
+    difficultyWeights: { 1: 1 },
+    levelTime: 48000
+  },
+  wy2: {
+    name: '外研二上',
+    spawnInterval: 4100,
+    baseSpeed: 29,
+    maxZombies: 6,
+    questionTimeLimit: 20000,
+    difficultyWeights: { 1: 1 },
+    levelTime: 50000
+  },
+  wy3: {
+    name: '外研三上',
+    spawnInterval: 4000,
+    baseSpeed: 30,
+    maxZombies: 6,
+    questionTimeLimit: 18000,
+    difficultyWeights: { 1: 1 },
+    levelTime: 52000
+  },
+  wy4: {
+    name: '外研四上',
+    spawnInterval: 3800,
+    baseSpeed: 32,
+    maxZombies: 7,
+    questionTimeLimit: 17000,
+    difficultyWeights: { 1: 0.75, 2: 0.25 },
+    levelTime: 54000
+  },
+  wy5: {
+    name: '外研五上',
+    spawnInterval: 3600,
+    baseSpeed: 33,
+    maxZombies: 7,
+    questionTimeLimit: 16000,
+    difficultyWeights: { 1: 0.65, 2: 0.35 },
+    levelTime: 56000
+  },
+  wy6: {
+    name: '外研六上',
+    spawnInterval: 3400,
+    baseSpeed: 34,
+    maxZombies: 7,
+    questionTimeLimit: 15000,
+    difficultyWeights: { 1: 0.55, 2: 0.45 },
+    levelTime: 58000
+  },
+  // v86: 外研版（一年级起点）一~六年级下册六档 —— 参数与同年级上册一致，词库见 data/wyWords.js#WYxB
+  wy1b: {
+    name: '外研一下',
+    spawnInterval: 4200,
+    baseSpeed: 28,
+    maxZombies: 6,
+    questionTimeLimit: 20000,
+    difficultyWeights: { 1: 1 },
+    levelTime: 48000
+  },
+  wy2b: {
+    name: '外研二下',
+    spawnInterval: 4100,
+    baseSpeed: 29,
+    maxZombies: 6,
+    questionTimeLimit: 20000,
+    difficultyWeights: { 1: 1 },
+    levelTime: 50000
+  },
+  wy3b: {
+    name: '外研三下',
+    spawnInterval: 4000,
+    baseSpeed: 30,
+    maxZombies: 6,
+    questionTimeLimit: 18000,
+    difficultyWeights: { 1: 1 },
+    levelTime: 52000
+  },
+  wy4b: {
+    name: '外研四下',
+    spawnInterval: 3800,
+    baseSpeed: 32,
+    maxZombies: 7,
+    questionTimeLimit: 17000,
+    difficultyWeights: { 1: 0.75, 2: 0.25 },
+    levelTime: 54000
+  },
+  wy5b: {
+    name: '外研五下',
+    spawnInterval: 3600,
+    baseSpeed: 33,
+    maxZombies: 7,
+    questionTimeLimit: 16000,
+    difficultyWeights: { 1: 0.65, 2: 0.35 },
+    levelTime: 56000
+  },
+  wy6b: {
+    name: '外研六下',
+    spawnInterval: 3400,
+    baseSpeed: 34,
+    maxZombies: 7,
+    questionTimeLimit: 15000,
+    difficultyWeights: { 1: 0.55, 2: 0.45 },
+    levelTime: 58000
+  },
   // v35: 自定义词库档 — 用户导入词库文件(如「上海五年级英语·新教材」),
   // 游戏仅从导入词库出题。难度参数取 primary 同款温和值(导入场景多为家长
   // 给小学生定制); 权重三档混合 — 若导入词库某档无词, quizManager
@@ -385,6 +497,18 @@ const ZOMBIE_TYPE_WEIGHTS = {
   pep5b:   { bucket: 0.55, imp: 0.24, football: 0.12, dancer: 0.09 },
   pep6:    { bucket: 0.50, imp: 0.26, football: 0.14, dancer: 0.10 },
   pep6b:   { bucket: 0.50, imp: 0.26, football: 0.14, dancer: 0.10 },
+  wy1:     { bucket: 0.70, imp: 0.18, football: 0.07, dancer: 0.05 },
+  wy1b:    { bucket: 0.70, imp: 0.18, football: 0.07, dancer: 0.05 },
+  wy2:     { bucket: 0.68, imp: 0.19, football: 0.07, dancer: 0.06 },
+  wy2b:    { bucket: 0.68, imp: 0.19, football: 0.07, dancer: 0.06 },
+  wy3:     { bucket: 0.65, imp: 0.20, football: 0.08, dancer: 0.07 },
+  wy3b:    { bucket: 0.65, imp: 0.20, football: 0.08, dancer: 0.07 },
+  wy4:     { bucket: 0.60, imp: 0.22, football: 0.10, dancer: 0.08 },
+  wy4b:    { bucket: 0.60, imp: 0.22, football: 0.10, dancer: 0.08 },
+  wy5:     { bucket: 0.55, imp: 0.24, football: 0.12, dancer: 0.09 },
+  wy5b:    { bucket: 0.55, imp: 0.24, football: 0.12, dancer: 0.09 },
+  wy6:     { bucket: 0.50, imp: 0.26, football: 0.14, dancer: 0.10 },
+  wy6b:    { bucket: 0.50, imp: 0.26, football: 0.14, dancer: 0.10 },
   junior:  { bucket: 0.50, imp: 0.28, football: 0.12, dancer: 0.10 },
   senior:  { bucket: 0.35, imp: 0.30, football: 0.20, dancer: 0.15 },
   ket:     { bucket: 0.55, imp: 0.25, football: 0.11, dancer: 0.09 },

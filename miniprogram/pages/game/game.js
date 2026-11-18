@@ -16,19 +16,22 @@ const { WORD_BANK } = require('../../data/words.js');
 const { EXAM_WORD_BANK } = require('../../data/examWords.js');   // v50: KET/PET 剑桥考试词库
 const { SHANGHAI_WORD_BANKS, SH_GRADE_INFO } = require('../../data/shanghaiWords.js');  // v82~v83: 沪教版 1-5 年级上/下册词库
 const { PEP_WORD_BANKS, PEP_GRADE_INFO } = require('../../data/pepWords.js');           // v84: 人教版 PEP 1-6 年级上/下册词库
-// v84: 两系列词库合表（独立词池查找）与元信息合表（词库提示 toast 共用，按 GRADE_INFO 展示全名）
-const ALL_WORD_BANKS = Object.assign({}, SHANGHAI_WORD_BANKS, PEP_WORD_BANKS);
+const { WY_WORD_BANKS, WY_GRADE_INFO } = require('../../data/wyWords.js');               // v86: 外研版（一年级起点）1-6 年级上/下册词库
+// v86: 三系列词库合表（独立词池查找）与元信息合表（词库提示 toast 共用，按 GRADE_INFO 展示全名）
+const ALL_WORD_BANKS = Object.assign({}, SHANGHAI_WORD_BANKS, PEP_WORD_BANKS, WY_WORD_BANKS);
 const WORD_BANK_INFO = {};
-SH_GRADE_INFO.concat(PEP_GRADE_INFO).forEach(g => { WORD_BANK_INFO[g.key] = g; });
+SH_GRADE_INFO.concat(PEP_GRADE_INFO, WY_GRADE_INFO).forEach(g => { WORD_BANK_INFO[g.key] = g; });
 // v50: 内置六档喂全量词库（基础 1274 + 考试 679）；custom 档在 onLoad/onRestart 单独喂导入词库
 // v82~v83: sh1~sh5 / sh1b~sh5b 沪教十档同样独立喂库（整库出题，不混全量池）
 // v84: pep1~pep6 / pep1b~pep6b 人教版 PEP 十二档同机制接入 ALL_WORD_BANKS
+// v86: wy1~wy6 / wy1b~wy6b 外研版（一年级起点）十二档同机制接入 ALL_WORD_BANKS
 const FULL_WORD_BANK = WORD_BANK.concat(EXAM_WORD_BANK);
 const customWordPack = require('../../utils/customWordPack.js');
 
 /**
  * v82: 按难度档取本局词库 ——
- *   custom → 导入词包；sh1~sh5 / sh1b~sh5b / pep1~pep6 / pep1b~pep6b（v84）→ 对应教材档整库；
+ *   custom → 导入词包；sh1~sh5 / sh1b~sh5b / pep1~pep6 / pep1b~pep6b（v84）
+ *   / wy1~wy6 / wy1b~wy6b（v86）→ 对应教材档整库；
  *   其余 → 全量内置池（quizManager 按 difficultyWeights 抽取）
  * @param {string} difficulty
  * @returns {Array} 词库
@@ -113,7 +116,8 @@ Page({
     // 应用自适应布局
     applyLayout(this);
 
-    // 初始化游戏（题库 + 难度）— v35: custom 档优先用导入词库；v82~v83: sh 档喂沪教对应年级册整库；v84: pep 档喂 PEP 对应年级册整库
+    // 初始化游戏（题库 + 难度）— v35: custom 档优先用导入词库；v82~v83: sh 档喂沪教对应年级册整库；
+    //   v84: pep 档喂 PEP 对应年级册整库；v86: wy 档喂外研对应年级册整库
     const bank = pickWordBank(difficulty);
     gameManager.initGame(difficulty, bank);
     if (difficulty === 'custom') {
@@ -812,7 +816,7 @@ Page({
     });
     // 重新初始化游戏管理器
     // v39 附带修复：custom 档重开沿用导入词库（原硬编码 WORD_BANK，重开后自定义词库被静默丢弃）
-    // v82~v83: 词库选取统一收口到 pickWordBank（custom/sh/pep 档独立词池，重开不丢库）
+    // v82~v83: 词库选取统一收口到 pickWordBank（custom/sh/pep/wy 档独立词池，重开不丢库）
     gameManager.initGame(difficulty, pickWordBank(difficulty));
     this.setData({ quizTimeLimit: gameManager.getQuizTimeLimit() });   // v39: 重读限时（同页重开局）
     gameManager.start();   // v6 修复：start() 内部会 transition 到 PLAYING 并启动 _loop

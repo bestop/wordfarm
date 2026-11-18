@@ -1162,9 +1162,72 @@
   border-radius: 3rpx;
   background: linear-gradient(90deg, rgba(199, 155, 242, 0) 0%, rgba(199, 155, 242, 0.55) 50%, rgba(199, 155, 242, 0) 100%);
 }
-/* 分组列表：内容多，滚动兜底（同 km-list） */
+/* ================================================================
+   v86 三级筛选条：版本 / 年级 / 册别 —— 果冻圆角 chips，选中态淡紫果冻底
+   左侧小标签（紫果冻字），右侧 chips 弹性换行；替代 v82~v84 的 34+ 行长列表
+   ================================================================ */
+.dict-filter {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 14rpx;
+}
+.dict-filter:first-of-type { margin-top: 2rpx; }
+.dict-filter-label {
+  flex-shrink: 0;
+  width: 76rpx;
+  text-align: center;
+  font-size: 22rpx;
+  font-weight: 900;
+  color: #FFFFFF;
+  line-height: 44rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(180deg, #D8BCF7 0%, #B98AEF 100%);
+  border: 3rpx solid #FFFFFF;
+  box-shadow: 0 3rpx 0 rgba(140, 95, 190, 0.28), inset 0 2rpx 4rpx rgba(255, 255, 255, 0.5);
+}
+.dict-chips {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+}
+.dict-chip {
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  font-size: 21rpx;
+  font-weight: 800;
+  color: #8C6FA8;
+  line-height: 1.3;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF8F0 100%);
+  border: 3rpx solid #FFFFFF;
+  box-shadow: 0 3rpx 0 rgba(199, 155, 242, 0.22),
+              0 6rpx 10rpx rgba(150, 110, 60, 0.08),
+              inset 0 2rpx 4rpx rgba(255, 255, 255, 0.92);
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+.dict-chip-hover { transform: scale(0.94); }
+.dict-chip--active {
+  color: #8C5FBE;
+  background: linear-gradient(180deg, #F3EBFE 0%, #FDF7FF 100%);
+  border-color: #D8BCF7;
+  box-shadow: 0 3rpx 0 rgba(140, 95, 190, 0.3),
+              0 6rpx 10rpx rgba(140, 95, 190, 0.14),
+              inset 0 2rpx 4rpx rgba(255, 255, 255, 0.92);
+}
+/* 结果空态：数据表错配/筛选无命中时的兜底占位 */
+.dict-empty {
+  padding: 26rpx 0 10rpx;
+  text-align: center;
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #B49DD0;
+}
+
+/* 命中结果列表：v86 三选齐后仅 1~2 行 + 我的词库 + 导入入口，滚动兜底（同 km-list） */
 .dict-list {
-  max-height: 680rpx;   /* v83: 560→680 —— 上/下册十档一屏多露 2 行，下册不再完全藏进滚动区 */
+  max-height: 460rpx;   /* v86: 680→460 —— 三级筛选后结果区只需 1~3 行，弹窗整体更紧凑 */
 }
 .dict-group-title {
   font-size: 22rpx; font-weight: 900; color: #8C5FBE;
