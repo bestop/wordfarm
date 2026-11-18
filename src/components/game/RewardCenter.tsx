@@ -17,11 +17,22 @@ export default function RewardCenter({ onClose, onChanged }: Props) {
   const [holdProgress, setHoldProgress] = useState(0)
   const holdTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const holdValue = useRef(0)
+  const closeRef = useRef<HTMLButtonElement>(null)
 
   const refresh = () => {
     setData(getPageData())
     onChanged?.()
   }
+
+  // v89: ESC 关闭 + 打开时聚焦关闭按钮（对齐 MenuScreen 玩法弹窗的无障碍行为）
+  useEffect(() => {
+    closeRef.current?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   useEffect(() => {
     return () => {
@@ -60,18 +71,28 @@ export default function RewardCenter({ onClose, onChanged }: Props) {
   const wallet = data.wallet
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm p-3" role="dialog" aria-modal="true" aria-label="亲子奖励中心">
-      <div className="wf-glass-strong w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-3xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm p-3"
+      role="dialog"
+      aria-modal="true"
+      aria-label="亲子奖励中心"
+      onClick={onClose}
+    >
+      <div
+        className="wf-glass-strong w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-3xl animate-[popIn_0.3s_ease-out]"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* 头部 */}
-        <div className="sticky top-0 bg-white/60 backdrop-blur-xl px-5 py-4 border-b border-white/80 flex items-center justify-between">
+        <div className="sticky top-0 bg-white/60 backdrop-blur-xl px-5 py-4 border-b border-white/80 flex items-center justify-between rounded-t-3xl">
           <div>
             <h2 className="text-lg font-black text-[#5D4037]">🎁 亲子奖励中心</h2>
             <p className="text-[11px] text-[#8D6E63]">攒积分 · 和爸妈兑换心仪的奖励</p>
           </div>
           <button
+            ref={closeRef}
             onClick={onClose}
             className="wf-glass-btn wf-focus w-9 h-9 rounded-full font-bold text-[#5D4037]"
-            aria-label="关闭"
+            aria-label="关闭奖励中心"
           >
             ✕
           </button>
@@ -187,7 +208,13 @@ function TierSection({
                 <span className="text-sm font-bold text-[#5D4037]">
                   {item.emoji} {item.name}
                 </span>
-                <span className={`text-[11px] font-bold whitespace-nowrap ${item.canRedeem ? 'text-[#66BB6A]' : 'text-[#B08080]'}`}>
+                <span
+                  className={`relative shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${
+                    item.canRedeem
+                      ? 'bg-[#E8F5E9] text-[#2E7D32]'
+                      : 'bg-white/70 text-[#B08080]'
+                  }`}
+                >
                   {isHolding ? '松开取消…' : item.canRedeem ? '长按 2s 兑换' : item.statusText}
                 </span>
               </span>

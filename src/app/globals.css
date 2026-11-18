@@ -133,6 +133,48 @@
   }
 }
 
+/* v89: 上浮弹入（入场阶梯动效基元，比 popIn 更「轻」适合区块级） */
+@keyframes wfRise {
+  0% {
+    transform: translate3d(0, 14px, 0) scale(0.985);
+    opacity: 0;
+  }
+  62% {
+    transform: translate3d(0, -3px, 0) scale(1.005);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* v89: 果冻晃（hover 弹一下，蛋仔派质感） */
+@keyframes wfJelly {
+  0% { transform: scale(1, 1); }
+  28% { transform: scale(1.06, 0.94); }
+  52% { transform: scale(0.96, 1.05); }
+  76% { transform: scale(1.02, 0.99); }
+  100% { transform: scale(1, 1); }
+}
+
+/* v89: 倒计时告警闪烁 */
+@keyframes wfDanger {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* v89: 尊重系统减弱动效偏好——装饰动画全部关闭，入场直达终态 */
+@media (prefers-reduced-motion: reduce) {
+  .wf-rise,
+  .wf-jelly:hover,
+  .wf-blob,
+  .wf-shine::after,
+  [class*='animate-['] {
+    animation: none !important;
+  }
+}
+
 /* ================================================================
    单词农场 · 暖调玻璃拟态设计系统 (Farm Glassmorphism)
    统一磨砂质感: 半透明白渐变 + backdrop-blur + 高光描边 + 多层柔影
@@ -299,5 +341,47 @@
       0 0 0 2px #fff,
       0 0 0 4.5px rgba(87, 170, 74, 0.65),
       0 8px 28px rgba(93, 64, 55, 0.09);
+  }
+
+  /* v89: 果冻题字——糖果渐变 + 白描边 + 柔影（对应小程序牌匾题字 8 向 text-shadow） */
+  .wf-plaque-title {
+    background: linear-gradient(180deg, #7A4F2E 0%, #5D4037 58%, #4E342E 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 0 rgba(255, 255, 255, 0.92)) drop-shadow(0 7px 16px rgba(246, 184, 198, 0.5));
+  }
+
+  /* v89: 果冻图标底衬——难度卡/入口按钮 emoji 的彩色圆底 */
+  .wf-icon-jelly {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    box-shadow:
+      inset 0 2px 3px rgba(255, 255, 255, 0.75),
+      inset 0 -2px 4px rgba(93, 64, 55, 0.1),
+      0 2px 5px rgba(93, 64, 55, 0.14);
+  }
+
+  /* v89: 区块入场（上浮弹入），延迟用 inline style animationDelay 阶梯 */
+  .wf-rise {
+    animation: wfRise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* v89: 果冻晃 hover（作用于已有形状，不改变布局） */
+  .wf-jelly:hover {
+    animation: wfJelly 0.5s ease-in-out;
+  }
+
+  /* v89: 商店横滚条——隐藏滚动条 + 平滑滚动（右缘渐隐提示可滑） */
+  .wf-shop-scroll {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-behavior: smooth;
+  }
+  .wf-shop-scroll::-webkit-scrollbar {
+    display: none;
   }
 }

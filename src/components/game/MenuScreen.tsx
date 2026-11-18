@@ -25,6 +25,19 @@ const DIFF_ICONS: Record<CoreDifficultyKey, string> = {
   custom: '📦',
 }
 
+// v89: 难度卡图标果冻底衬色（与选中卡绿色区分，未选中也能快速识别）
+const DIFF_ICON_BG: Record<CoreDifficultyKey, string> = {
+  primary: '#C8ECB0',
+  junior: '#B5E4A5',
+  senior: '#CFE8BF',
+  ket: '#FDF09E',
+  pet: '#FCE1B8',
+  custom: '#FBE3E9',
+}
+
+// v89: 入场阶梯延迟（区块依次上浮弹入）
+const RISE = (i: number) => ({ animationDelay: `${i * 90}ms` })
+
 export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleSound }: Props) {
   const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const packInfo = useSyncExternalStore(subscribePack, loadPackCached, () => null)
@@ -137,26 +150,22 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
 
       <div className="relative z-10 w-full flex flex-col items-center">
         {/* 顶部品牌区 */}
-        <header className="text-center mb-6 select-none">
+        <header className="wf-rise text-center mb-6 select-none">
           <div
-            className="wf-glass wf-focus mx-auto w-20 h-20 rounded-full flex items-center justify-center mb-3 animate-[wfFloat_6s_ease-in-out_infinite]"
+            className="wf-jelly wf-glass wf-focus mx-auto w-20 h-20 rounded-full flex items-center justify-center mb-3 animate-[wfFloat_6s_ease-in-out_infinite] ring-2 ring-white/90"
+            style={{ boxShadow: '0 10px 24px rgba(93,64,55,0.14), inset 0 2px 0 rgba(255,255,255,0.95), inset 0 -6px 12px rgba(246,184,198,0.28)' }}
             aria-hidden
           >
             <span className="text-5xl drop-shadow-sm">🌻</span>
           </div>
-          <h1
-            className="text-4xl font-black text-[#5D4037] tracking-wide"
-            style={{ textShadow: '0 2px 0 rgba(255,255,255,0.9), 0 6px 18px rgba(246,184,198,0.55)' }}
-          >
-            单词农场
-          </h1>
+          <h1 className="wf-plaque-title text-4xl font-black tracking-[0.08em]">单词农场</h1>
           <p className="mt-2.5 text-[#8D6E63] text-sm sm:text-base">
             萌系塔防 × 背单词 · 答题积攒阳光，种植物守住农场篱笆门！
           </p>
         </header>
 
         {/* 数据概览 */}
-        <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
+        <div className="wf-rise flex flex-wrap items-center justify-center gap-2 mb-6" style={RISE(1)}>
           <span className="wf-glass-chip wf-focus px-3.5 py-1.5 rounded-full text-[#5D4037] text-sm font-semibold">
             🏆 最高分 {userData.highestScore.toLocaleString()}
           </span>
@@ -176,8 +185,8 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
         </div>
 
         {/* ① 难度选择：点卡片仅选中 */}
-        <h2 className="text-[#5D4037] font-bold mb-3 tracking-wide">① 选择难度</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-2xl">
+        <h2 className="wf-rise text-[#5D4037] font-bold mb-3 tracking-wide" style={RISE(2)}>① 选择难度</h2>
+        <div className="wf-rise grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-2xl" style={RISE(3)}>
           {difficulties.map((key) => {
             const cfg = DIFFICULTY_CONFIG[key]
             const locked = key === 'custom' && !packInfo
@@ -187,18 +196,37 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
                 key={key}
                 onClick={() => handleSelect(key)}
                 aria-pressed={isSelected}
-                className={`wf-focus group rounded-2xl p-4 text-left hover:-translate-y-0.5 transition-all duration-200 ${
+                className={`wf-focus group relative rounded-2xl p-4 text-left hover:-translate-y-1 transition-all duration-200 ${
                   isSelected
-                    ? 'border-2 border-[#3F8F35] bg-gradient-to-br from-[#8FD27A]/95 to-[#57AA4A]/95 -translate-y-0.5 ring-2 ring-[#8FD27A]/60 ring-offset-1 ring-offset-transparent'
+                    ? 'border-2 border-[#3F8F35] bg-gradient-to-br from-[#8FD27A]/95 to-[#57AA4A]/95 -translate-y-1 ring-2 ring-[#8FD27A]/60 ring-offset-1 ring-offset-transparent shadow-[0_14px_30px_rgba(79,155,63,0.3)]'
                     : locked
                       ? 'wf-glass border-dashed border-[#F6B8C6]/80'
-                      : 'wf-glass hover:shadow-[0_12px_32px_rgba(93,64,55,0.14)] hover:border-[#F6B8C6]/70'
+                      : 'wf-glass hover:shadow-[0_14px_32px_rgba(93,64,55,0.16)] hover:border-[#F6B8C6]/70'
                 }`}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-2xl" aria-hidden>{DIFF_ICONS[key]}</span>
+                {/* v89: 选中态右上角糖珠徽章 */}
+                {isSelected && (
+                  <span
+                    aria-hidden
+                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white flex items-center justify-center text-[11px] text-[#3F8F35] font-black shadow-[0_2px_6px_rgba(79,155,63,0.4)] ring-1 ring-[#8FD27A]"
+                  >
+                    ✓
+                  </span>
+                )}
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  <span
+                    aria-hidden
+                    className="wf-icon-jelly w-10 h-10 text-xl shrink-0"
+                    style={{
+                      background: isSelected
+                        ? 'linear-gradient(160deg, rgba(255,255,255,0.42), rgba(255,255,255,0.16))'
+                        : `linear-gradient(160deg, ${DIFF_ICON_BG[key]}F2, ${DIFF_ICON_BG[key]}C9)`,
+                    }}
+                  >
+                    {DIFF_ICONS[key]}
+                  </span>
                   <span className={`font-bold ${isSelected ? 'text-white' : 'text-[#5D4037]'}`}>
-                    {isSelected && <span aria-hidden>🍃 </span>}{cfg.name}
+                    {cfg.name}
                   </span>
                 </div>
                 <p className={`text-xs leading-5 ${isSelected ? 'text-white/95' : 'text-[#8D6E63]'}`}>
@@ -217,7 +245,7 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
         </div>
 
         {/* ② 教材词库：三级筛选 版本→年级→上下册（v88 同步小程序端「更多词库」34 档独立词池） */}
-        <div className="w-full max-w-2xl mt-6">
+        <div className="wf-rise w-full max-w-2xl mt-6" style={RISE(4)}>
           <h2 className="text-[#5D4037] font-bold mb-3 tracking-wide">
             ② 教材词库
             <span className="ml-2 text-xs font-medium text-[#8D6E63]">选教材词库替换题库，按年级难度开局</span>
@@ -229,7 +257,7 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
                   key={ed.key}
                   onClick={() => handleEditionClick(ed.key)}
                   aria-pressed={dictFilter.ed === ed.key}
-                  className={chipCls(dictFilter.ed === ed.key)}
+                  className={`${chipCls(dictFilter.ed === ed.key)} hover:-translate-y-0.5`}
                   style={dictFilter.ed === ed.key ? { background: ed.color } : undefined}
                 >
                   {dictFilter.ed === ed.key ? '🍃 ' : ''}{ed.name}
@@ -242,7 +270,7 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
                   key={g}
                   onClick={() => setDictOverride({ ...dictFilter, grade: g })}
                   aria-pressed={dictFilter.grade === g}
-                  className={chipCls(dictFilter.grade === g)}
+                  className={`${chipCls(dictFilter.grade === g)} hover:-translate-y-0.5`}
                   style={dictFilter.grade === g ? { background: dictEd.color } : undefined}
                 >
                   {g}年级
@@ -255,15 +283,20 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
                   key={v}
                   onClick={() => setDictOverride({ ...dictFilter, vol: v })}
                   aria-pressed={dictFilter.vol === v}
-                  className={chipCls(dictFilter.vol === v)}
+                  className={`${chipCls(dictFilter.vol === v)} hover:-translate-y-0.5`}
                   style={dictFilter.vol === v ? { background: dictEd.color } : undefined}
                 >
                   {v === 'up' ? '上册' : '下册'}
                 </button>
               ))}
             </div>
-            {/* 命中结果行: 版本×年级×册别 → 恰一档，展示词数并一键选中 */}
-            <div className="flex items-center justify-between gap-3 rounded-xl bg-white/65 px-4 py-3">
+            {/* 命中结果行: 版本×年级×册别 → 恰一档，展示词数并一键选中（v89: 版本色左竖条 + 果冻「选它」） */}
+            <div className="relative flex items-center justify-between gap-3 rounded-xl bg-white/65 px-4 py-3 overflow-hidden">
+              <span
+                aria-hidden
+                className="absolute inset-y-0 left-0 w-1.5"
+                style={{ background: `linear-gradient(180deg, ${dictEd.color}, ${dictEd.color}B3)` }}
+              />
               <div className="min-w-0">
                 <p className="text-sm font-bold text-[#5D4037] truncate">
                   {dictEd.name} {dictFilter.grade} 年级{dictFilter.vol === 'up' ? '上册' : '下册'}
@@ -273,7 +306,12 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
                 </p>
               </div>
               {dictSelected ? (
-                <span className="shrink-0 text-sm font-bold text-[#2E7D32]" aria-live="polite">✓ 已选中</span>
+                <span
+                  className="shrink-0 px-3 py-1 rounded-full bg-[#E8F5E9] text-[#2E7D32] text-sm font-bold ring-1 ring-[#A5D6A7]"
+                  aria-live="polite"
+                >
+                  ✓ 已选中
+                </span>
               ) : (
                 <button
                   onClick={() => {
@@ -281,8 +319,11 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
                     saveUserData({ difficulty: dictBankKey }) // 选档即持久化（对齐小程序端 v82 选词库写 storage）
                   }}
                   disabled={!dictBankWords}
-                  className="wf-focus shrink-0 px-4 py-1.5 rounded-full text-white text-sm font-bold transition-transform active:scale-95 disabled:opacity-40"
-                  style={{ background: dictEd.color, boxShadow: '0 2px 8px rgba(93,64,55,0.18)' }}
+                  className="wf-focus shrink-0 px-4 py-1.5 rounded-full text-white text-sm font-bold transition-transform active:translate-y-0.5 active:scale-[0.97] disabled:opacity-40"
+                  style={{
+                    background: `linear-gradient(180deg, ${dictEd.color} 0%, ${dictEd.color}CC 100%)`,
+                    boxShadow: `0 3px 0 ${dictEd.color}66, 0 5px 12px rgba(93,64,55,0.2), inset 0 1px 0 rgba(255,255,255,0.5)`,
+                  }}
                 >
                   选它
                 </button>
@@ -297,7 +338,7 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
         </div>
 
         {/* ③ 开始游戏：显式大按钮（对齐小程序底部绿色渐变 start-main） */}
-        <div className="w-full max-w-2xl mt-5 flex flex-col items-center gap-1.5">
+        <div className="wf-rise w-full max-w-2xl mt-5 flex flex-col items-center gap-1.5" style={RISE(5)}>
           <button
             onClick={handleStartClick}
             className="wf-shine wf-focus w-full py-4 rounded-full text-white text-lg font-black tracking-[0.25em] transition-all duration-200 hover:-translate-y-0.5 hover:brightness-105 active:translate-y-0 active:scale-[0.99]"
@@ -354,18 +395,18 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
         />
 
         {/* 次级入口：如何玩 + 亲子奖励中心 */}
-        <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+        <div className="wf-rise mt-7 flex flex-wrap items-center justify-center gap-3" style={RISE(6)}>
           <button
             onClick={() => setShowHelp(true)}
             aria-haspopup="dialog"
             aria-expanded={showHelp}
-            className="wf-glass-btn wf-focus px-7 py-3 rounded-full text-[#3E7D33] font-bold text-sm"
+            className="wf-jelly wf-glass-btn wf-focus px-7 py-3 rounded-full text-[#3E7D33] font-bold text-sm"
           >
             🕹 如何玩
           </button>
           <button
             onClick={onOpenRewards}
-            className="wf-glass-btn wf-focus px-7 py-3 rounded-full text-[#D4566F] font-bold text-sm"
+            className="wf-jelly wf-glass-btn wf-focus px-7 py-3 rounded-full text-[#D4566F] font-bold text-sm"
           >
             🎁 亲子奖励中心
           </button>

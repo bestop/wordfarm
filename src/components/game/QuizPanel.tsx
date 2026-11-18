@@ -55,7 +55,7 @@ export default function QuizPanel({ snap, onAnswer }: Props) {
             </span>
             {remain !== null && (
               <span
-                className={`text-[11px] font-black tabular-nums ${danger ? 'text-[#E57373] animate-pulse' : 'text-[#8D6E63]'}`}
+                className={`text-[11px] font-black tabular-nums ${danger ? 'text-[#E57373] animate-[wfDanger_0.8s_ease-in-out_infinite]' : 'text-[#8D6E63]'}`}
               >
                 ⏱ {Math.ceil(remain / 1000)}s
               </span>
@@ -64,11 +64,11 @@ export default function QuizPanel({ snap, onAnswer }: Props) {
 
           {/* 题干 */}
           <div className="flex items-baseline gap-2 justify-center mb-2 min-h-[40px]">
-            <span className="text-2xl sm:text-3xl font-black text-[#5D4037] break-all text-center">
+            <span className="text-[26px] sm:text-3xl font-black text-[#5D4037] break-all text-center leading-tight">
               {q.content}
             </span>
             {q.phonetic && (
-              <span className="text-sm text-[#8D6E63]">{q.phonetic}</span>
+              <span className="text-xs sm:text-sm text-[#8D6E63] whitespace-nowrap">{q.phonetic}</span>
             )}
           </div>
 

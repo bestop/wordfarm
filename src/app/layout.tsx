@@ -8,6 +8,7 @@ export const metadata: Metadata = {
     '植物大战僵尸式塔防 × 小学英语背单词：答题积攒阳光，种植物消灭僵尸，守住农场篱笆门。4968 词题库：小学/初中/高中/KET/PET + 沪教/人教PEP/外研教材词库 34 档（版本→年级→上下册）+ 自定义词库。',
   applicationName: '单词农场',
   keywords: ['背单词', '塔防', '英语学习', '单词农场', '儿童教育', '沪教版', '人教版PEP', '外研版'],
+  // favicon 由 src/app/icon.svg 文件约定自动注入
 }
 
 export const viewport: Viewport = {

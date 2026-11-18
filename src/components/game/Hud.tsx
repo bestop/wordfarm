@@ -40,12 +40,15 @@ export default function Hud({ snap, onPause }: Props) {
 
       <div className="flex-1" />
 
-      {/* 关卡进度 */}
-      <div className="hidden sm:flex flex-col items-end mr-1" title={isFinal ? '终局: 清完全场即胜利' : `第 ${snap.level}/${snap.maxLevel} 关`}>
-        <span className="text-[11px] font-bold text-[#5D4037] leading-4">
-          {isFinal ? '🚨 终局大波' : `第 ${snap.level}/${snap.maxLevel} 关`}
+      {/* 关卡进度（v89: 移动端也显示紧凑关卡 chip，不再 hidden） */}
+      <div
+        className="flex flex-col items-end mr-1"
+        title={isFinal ? '终局: 清完全场即胜利' : `第 ${snap.level}/${snap.maxLevel} 关`}
+      >
+        <span className="text-[10px] sm:text-[11px] font-bold text-[#5D4037] leading-4 whitespace-nowrap">
+          {isFinal ? '🚨 终局' : `第 ${snap.level}/${snap.maxLevel} 关`}
         </span>
-        <div className="w-24 h-1.5 rounded-full bg-[#E8D5C4] overflow-hidden">
+        <div className="w-16 sm:w-24 h-1.5 rounded-full bg-[#E8D5C4] overflow-hidden">
           <div
             className={`h-full rounded-full transition-[width] duration-500 ${isFinal ? 'bg-[#E91E63]' : 'bg-[#8BC34A]'}`}
             style={{ width: `${isFinal ? 100 : levelProgress}%` }}
