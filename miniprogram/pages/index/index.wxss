@@ -186,7 +186,7 @@
 }
 
 /* v73/v74：中央糖果牌匾（粉果冻 + 白描边 + 黄糖珠 + 白字粉描边，v74 去🌻题字更纯净）
-   v80：题字 40→46rpx 牌匾同步加宽加高；margin 34→28 补偿，底缘位置不变不压副标题 */
+   v81：题字 46→52rpx 再放大；margin 28→22 补偿，底缘位置不变不压副标题 */
 .nav-title {
   flex: 0 1 auto;
   min-width: 0;
@@ -194,8 +194,8 @@
   align-items: center;
   justify-content: center;
   align-self: center;
-  margin: 28rpx 0 0;         /* v80: 34→28（牌匾变高后回收下移量，底缘不动） */
-  padding: 10rpx 46rpx;      /* v80: 8/40→10/46 随题字放大 */
+  margin: 22rpx 0 0;         /* v81: 28→22（牌匾再变高后继续回收下移量，底缘不动） */
+  padding: 12rpx 52rpx;      /* v81: 10/46→12/52 随题字再放大 */
   position: relative;
   border-radius: 999rpx;
   background: linear-gradient(180deg, #FFB1CB 0%, #FF8FB5 55%, #F76E9C 100%);
@@ -209,29 +209,29 @@
 .candy-bead {
   position: absolute;
   top: 50%;
-  width: 18rpx;              /* v80: 16→18 随牌匾放大 */
-  height: 18rpx;
-  margin-top: -9rpx;
+  width: 20rpx;              /* v81: 18→20 随牌匾再放大 */
+  height: 20rpx;
+  margin-top: -10rpx;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #FFF3B0 0%, #FFD34D 55%, #F5B301 100%);
   box-shadow: 0 2rpx 3rpx rgba(180, 120, 20, 0.35),
               inset 0 1rpx 2rpx rgba(255, 255, 255, 0.8);
 }
-.candy-bead--l { left: 18rpx; }   /* v80: 16→18 随牌匾外移 */
-.candy-bead--r { right: 18rpx; }
+.candy-bead--l { left: 20rpx; }   /* v81: 18→20 随牌匾外移 */
+.candy-bead--r { right: 20rpx; }
 .nav-title-text {
   color: #FFFFFF;
-  font-size: 46rpx;          /* v80: 40→46 题字再大一点（v72 曾 36→40） */
+  font-size: 52rpx;          /* v81: 46→52 题字再大一点（v72 36→40 / v80 40→46） */
   font-weight: 900;
-  letter-spacing: 6rpx;      /* v80: 5→6 随字号 */
+  letter-spacing: 7rpx;      /* v81: 6→7 随字号 */
   white-space: nowrap;
   line-height: 1.15;
   /* v73: 白字粉描边——用 8 向 text-shadow 模拟（text-stroke 会吞字芯，弃用）
-     v80: 描边 3→3.5rpx、投影 6→7rpx 随字号加粗 */
+     v81: 描边 3.5→4rpx、投影 7→8rpx 随字号再加粗 */
   text-shadow:
-    3.5rpx 0 0 #E8548C, -3.5rpx 0 0 #E8548C, 0 3.5rpx 0 #E8548C, 0 -3.5rpx 0 #E8548C,
-    3.5rpx 3.5rpx 0 #E8548C, -3.5rpx -3.5rpx 0 #E8548C, 3.5rpx -3.5rpx 0 #E8548C, -3.5rpx 3.5rpx 0 #E8548C,
-    0 7rpx 0 rgba(199, 54, 110, 0.4);
+    4rpx 0 0 #E8548C, -4rpx 0 0 #E8548C, 0 4rpx 0 #E8548C, 0 -4rpx 0 #E8548C,
+    4rpx 4rpx 0 #E8548C, -4rpx -4rpx 0 #E8548C, 4rpx -4rpx 0 #E8548C, -4rpx 4rpx 0 #E8548C,
+    0 8rpx 0 rgba(199, 54, 110, 0.4);
 }
 
 /* v73 副标题（糖果暖棕，保持参考图深色粗体） */
@@ -329,7 +329,7 @@
    v73 插画横幅（白描边 + 青蓝光晕，保留 PvZ 插画与橙色 VS）
    ================================================================ */
 .hero-banner {
-  flex: 1.55 1 0;            /* v80: 1.25→1.55 吸收大冒险卡回压余量 */
+  flex: 1.7 1 0;             /* v81: 1.55→1.7 继续吸收大冒险卡回压余量（上限 560 不变防过高） */
   min-height: 320rpx;        /* v80: 300→320 */
   max-height: 560rpx;        /* v80: 496→560，主视觉接住卡片让出高度，避免底部留白（v75 经验） */
   position: relative;
@@ -566,13 +566,13 @@
    v73/v74 大冒险卡（粉→蓝糖果果冻渐变 + 白描边 + 糖星装饰；v74 整体高度紧凑）
    ================================================================ */
 .adventure-card {
-  flex: 0.9 1 0;             /* v80: 1.15→0.9 单元高度再小一点 */
-  min-height: 296rpx;        /* v80: 330→296 */
-  max-height: 408rpx;        /* v80: 456→408 整体再矮一档，余量交横幅 */
+  flex: 0.75 1 0;            /* v81: 0.9→0.75 单元高度再变矮 */
+  min-height: 272rpx;        /* v81: 296→272 */
+  max-height: 372rpx;        /* v81: 408→372 整体再矮一档，余量交横幅 */
   display: flex;
   flex-direction: column;
-  gap: 5rpx;                 /* v80: 6→5 */
-  padding: 12rpx 14rpx 10rpx; /* v80: 14/16/12→12/14/10 */
+  gap: 3rpx;                 /* v81: 5→3 开始按钮与上方间距收紧 */
+  padding: 10rpx 13rpx 8rpx; /* v81: 12/14/10→10/13/8 */
   position: relative;        /* v73: 糖星装饰锚 */
   border-radius: 36rpx;
   background: linear-gradient(168deg, #FFDFEB 0%, #FFF6EC 38%, #E9F7E4 66%, #CFE9FA 100%);
@@ -607,11 +607,11 @@
   gap: 14rpx;                /* v72: 图文水平间距收紧 */
 }
 /* 左侧插画合影（白框圆角小图，向日葵+坚果+寒冰射手+金杯）
-   v72 定高居中；v80 随卡再回压同步收紧（200×186→188×172） */
+   v72 定高居中；v81 随卡再回压同步收紧（188×172→178×158） */
 .ac-illu {
   position: relative;
-  width: 188rpx;
-  height: 172rpx;            /* v80: 200×186→188×172 */
+  width: 178rpx;
+  height: 158rpx;            /* v81: 188×172→178×158 */
   align-self: center;        /* v72: 中心线与右侧文案对齐 */
   flex-shrink: 0;
   border-radius: 26rpx;
