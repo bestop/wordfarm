@@ -237,7 +237,7 @@ App({
    *   旧键 easy/medium/middle → primary/junior；hard/college → senior
    * 兼容老用户 storage 数据，未识别的值回退到 'junior'（v50 前默认为 middle）
    * @param {string} raw
-   * @returns {string} primary | junior | senior | ket | pet | custom | sh1~sh5（v82）
+   * @returns {string} primary | junior | senior | ket | pet | custom | sh1~sh5 / sh1b~sh5b（v82~v83）
    */
   _migrateDifficulty(raw) {
     // v50: middle/medium → junior，college/hard → senior（大学档退役，词池并入高中）
@@ -245,8 +245,8 @@ App({
     if (raw && Object.prototype.hasOwnProperty.call(map, raw)) {
       return map[raw];
     }
-    // 已经是新 key 或未知值，做合法性校验（v82: +沪教版五档 sh1~sh5）
-    const valid = ['primary', 'junior', 'senior', 'ket', 'pet', 'custom', 'sh1', 'sh2', 'sh3', 'sh4', 'sh5'];
+    // 已经是新 key 或未知值，做合法性校验（v82: +沪教版上册 sh1~sh5；v83: +下册 sh1b~sh5b）
+    const valid = ['primary', 'junior', 'senior', 'ket', 'pet', 'custom', 'sh1', 'sh2', 'sh3', 'sh4', 'sh5', 'sh1b', 'sh2b', 'sh3b', 'sh4b', 'sh5b'];
     return valid.indexOf(raw) >= 0 ? raw : 'junior';
   }
 });

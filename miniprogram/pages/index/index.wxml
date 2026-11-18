@@ -1,4 +1,8 @@
-<!-- pages/index/index.wxml — v82 「更多词库」词库选择弹窗 + 沪教版 1-5 年级上册词库（结构与经典档零破坏）
+<!-- pages/index/index.wxml — v83 词库选择弹窗移除经典词库组 + 沪教版 1-5 年级上/下册词库
+  v83 更新（DOM 结构零变化，仅 index.js 弹窗数据与 data/shanghaiWords.js 词库）:
+    · 「更多词库」弹窗列表移除「经典词库」组（小学/初中/高中/KET/PET 仍经主界面胶囊直选），
+      仅保留 沪教版·上海教育出版社·五四制（一~五年级上册+下册，sh1~sh5/sh1b~sh5b）与我的词库
+    · 新增 sh1b~sh5b 五档下册词库，胶囊动态改名支持沪教一下~沪教五下
   v82 更新：
     · 第 6 枚胶囊「导入词库」→「更多词库」：点击弹词库选择弹窗（不再直接上传文件）
     · 新增 dict-mask 词库选择弹窗：三组列表——经典词库（小学/初中/高中/KET/PET）、
@@ -291,7 +295,7 @@
 
       <view class="dict-divider"></view>
 
-      <!-- 分组列表（经典词库 / 沪教版 / 我的词库） -->
+      <!-- 分组列表（v83: 沪教版上/下册 / 我的词库） -->
       <scroll-view class="dict-list" scroll-y="true">
         <block wx:for="{{dictOptions}}" wx:key="title" wx:for-item="group">
           <view class="dict-group-title">{{group.title}}</view>

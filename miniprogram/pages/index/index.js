@@ -42,7 +42,8 @@ Page({
     safeBottomRpx: _initSafeBottomRpx,
 
     // 难度列表（v50: 中学拆初中/高中、大学退役、新增 KET/PET 考试档，共 6 项）
-    // v82: 第 6 枚改「更多词库」——点击弹词库选择列表（含沪教版 1-5 年级上册 + 导入词库），不再直接上传文件
+    // v82: 第 6 枚改「更多词库」——点击弹词库选择列表，不再直接上传文件
+    // v83: 弹窗列表移除「经典词库」组，仅保留沪教版（1-5 年级上/下册）+ 我的词库；经典五档仍可经本排胶囊直选
     difficulties: [
       { key: 'primary', name: '小学' },
       { key: 'junior',  name: '初中' },
@@ -52,7 +53,7 @@ Page({
       { key: 'more',    name: '更多词库' }
     ],
 
-    // v82: 词库选择弹窗（果冻风，果冻卡片列表：经典词库/沪教版/我的词库三组）
+    // v82: 词库选择弹窗（果冻风果冻卡片列表）— v83: 移除经典词库组，仅沪教版上/下册 + 我的词库
     dictSheetVisible: false,
     dictOptions: [],
     moreActive: false,        // v82: 第 6 枚胶囊（更多词库）选中态
@@ -228,21 +229,12 @@ Page({
   },
 
   /**
-   * v82: 构建词库选择弹窗数据（三组：经典词库 / 沪教版 / 我的词库）
+   * v82: 构建词库选择弹窗数据 — v83: 移除「经典词库」组（小学/初中/高中/KET/PET 保留主界面胶囊直选），
+   *   列表仅两组：沪教版·上海教育出版社（五四制）上/下册十档（SH_GRADE_INFO）/ 我的词库（已导入包时展示）
    * @param {Object|null} pack - 已导入自定义词包
    */
   _buildDictOptions(pack) {
     const groups = [
-      {
-        title: '经典词库',
-        items: [
-          { key: 'primary', name: '小学', desc: '基础启蒙 · 全量词池', color: '#FFA5BC' },
-          { key: 'junior',  name: '初中', desc: '初中基础 · 全量词池', color: '#7CC8FA' },
-          { key: 'senior',  name: '高中', desc: '高中进阶 · 全量词池', color: '#FFB25C' },
-          { key: 'ket',     name: 'KET', desc: '剑桥 A2 核心词汇', color: '#6FDAB8' },
-          { key: 'pet',     name: 'PET', desc: '剑桥 B1 核心词汇', color: '#A8E86A' }
-        ]
-      },
       {
         title: '沪教版 · 上海教育出版社（五四制）',
         items: SH_GRADE_INFO.map(g => ({
@@ -282,8 +274,8 @@ Page({
   },
 
   /**
-   * v82: 同步第 6 枚胶囊（更多词库）名称与选中态 ——
-   *   选 shX → 「沪教X上」+ active；选 custom → 「我的词库」+ active；其余 → 「更多词库」
+   * v82: 同步第 6 枚胶囊（更多词库）名称与选中态 — v83: 支持下册（沪教一下~沪教五下）——
+   *   选 shX/shXb → 「沪教X上/下」+ active；选 custom → 「我的词库」+ active；其余 → 「更多词库」
    */
   _syncMorePill() {
     const diff = this.data.difficulty;

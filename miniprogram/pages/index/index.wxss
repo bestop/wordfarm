@@ -1158,7 +1158,7 @@
 }
 /* 分组列表：内容多，滚动兜底（同 km-list） */
 .dict-list {
-  max-height: 560rpx;
+  max-height: 680rpx;   /* v83: 560→680 —— 上/下册十档一屏多露 2 行，下册不再完全藏进滚动区 */
 }
 .dict-group-title {
   font-size: 22rpx; font-weight: 900; color: #8C5FBE;
