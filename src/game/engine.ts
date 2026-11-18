@@ -8,7 +8,7 @@ import {
   PERFORMANCE, QUIZ, SCORING, SUNLIGHT, ZOMBIE, ZOMBIE_TYPES, ZOMBIE_TYPE_WEIGHTS,
   type DifficultyKey, type PlantType, type ZombieType,
 } from './constants'
-import { FULL_WORD_BANK, WORD_BANK, type Word } from './words'
+import { FULL_WORD_BANK, WORD_BANK, TEXTBOOK_BANKS, type Word } from './words'
 import { QuizEngine, type QuizQuestion, type WrongWordEntry } from './quizEngine'
 import { audioManager } from './audio'
 
@@ -227,6 +227,8 @@ export class GameEngine {
   }
 
   // ============ 初始化 ============
+  // 词池解析（v88 教材档）: custom → 导入词包；教材档 → 独立词池整库出题（与小程序同机制）；
+  //   ket/pet → 基础+考试全量池；其余核心档 → 基础库
   init(difficulty: DifficultyKey, customWords?: Word[]) {
     const cfg = DIFFICULTY_CONFIG[difficulty] || DIFFICULTY_CONFIG.junior
     this.cfg = cfg
@@ -234,9 +236,8 @@ export class GameEngine {
     this.wordBank =
       difficulty === 'custom' && customWords && customWords.length >= 8
         ? customWords
-        : difficulty === 'ket' || difficulty === 'pet'
-          ? FULL_WORD_BANK
-          : WORD_BANK
+        : (TEXTBOOK_BANKS as Record<string, Word[] | undefined>)[difficulty] ??
+          (difficulty === 'ket' || difficulty === 'pet' ? FULL_WORD_BANK : WORD_BANK)
 
     this.phase = 'ready'
     this.score = 0

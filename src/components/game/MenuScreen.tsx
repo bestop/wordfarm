@@ -1,12 +1,13 @@
-// src/components/game/MenuScreen.tsx - 欢迎页：品牌标题 + 难度选择 + 词库导入 + 奖励中心/玩法弹窗入口
+// src/components/game/MenuScreen.tsx - 欢迎页：品牌标题 + 难度选择 + 教材词库三级筛选 + 词库导入 + 奖励中心/玩法弹窗入口
 // 视觉: 暖调玻璃拟态（wf-glass 体系）— 天光渐变背景 + 漂浮光斑 + 磨砂卡片/按钮
+// v88: 同步小程序 v82~v87 —— 教材词库 34 档（沪教 10 + 人教PEP 12 + 外研 12）三级筛选选择器（版本→年级→上下册）
 'use client'
 
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { DIFFICULTY_CONFIG, type DifficultyKey } from '@/game/constants'
-import { WORD_BANK_STATS } from '@/game/words'
+import { CORE_DIFFICULTY_KEYS, DIFFICULTY_CONFIG, type CoreDifficultyKey, type DifficultyKey } from '@/game/constants'
+import { TEXTBOOK_BANKS, TEXTBOOK_EDITIONS, findTextbookMeta, WORD_BANK_STATS, type TextbookEditionKey, type Word } from '@/game/words'
 import { parsePack, savePack, loadPackCached, subscribePack, removePack, validateFile } from '@/game/customPack'
-import type { UserData } from '@/game/storage'
+import { saveUserData, type UserData } from '@/game/storage'
 
 interface Props {
   userData: UserData
@@ -15,7 +16,7 @@ interface Props {
   onToggleSound: () => void
 }
 
-const DIFF_ICONS: Record<DifficultyKey, string> = {
+const DIFF_ICONS: Record<CoreDifficultyKey, string> = {
   primary: '🌱',
   junior: '🌿',
   senior: '🌳',
@@ -43,13 +44,35 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
     return () => window.removeEventListener('keydown', onKey)
   }, [showHelp])
 
+  // ---- 教材词库三级筛选（v88）: 版本 → 年级 → 上下册，与小程序端「更多词库」弹窗同构 ----
+  // 纯派生模式（React「You Might Not Need an Effect」）: chips 交互存 override，
+  //   未交互时跟随选中档位反推（SSR→hydration userData 更新后自动恢复，无需 effect setState）
+  const [dictOverride, setDictOverride] = useState<{ ed: TextbookEditionKey; grade: number; vol: 'up' | 'down' } | null>(null)
+
   // 当前选中的难度（对齐小程序 diff-pill 选中态 + 底部「开始」大按钮的两步交互）
-  // 默认选上次玩的难度；上次是自定义但词库已被清除则回退小学
-  const [selected, setSelected] = useState<DifficultyKey>(() => {
-    const last = userData.difficulty as DifficultyKey
-    if (last && DIFFICULTY_CONFIG[last] && !(last === 'custom' && !packInfo)) return last
-    return 'junior'
-  })
+  // touchedKey = 用户手动选过的档；未手动选时跟随持久化难度（上次是 custom 但词库已清除则回退初中）
+  const [touchedKey, setTouchedKey] = useState<DifficultyKey | null>(null)
+  const lastKey = userData.difficulty as DifficultyKey
+  const selected: DifficultyKey =
+    touchedKey ??
+    (lastKey && DIFFICULTY_CONFIG[lastKey] && !(lastKey === 'custom' && !packInfo) ? lastKey : 'junior')
+
+  // 三级筛选当前值: 有交互用 override，否则从选中档位反推（教材档）；非教材档默认外研一上
+  const selMeta = findTextbookMeta(selected)
+  const dictFilter = dictOverride ?? (selMeta
+    ? { ed: selMeta.edition, grade: selMeta.grade, vol: selMeta.vol }
+    : { ed: 'wy' as TextbookEditionKey, grade: 1, vol: 'up' as const })
+
+  const handleEditionClick = (edKey: TextbookEditionKey) => {
+    const ed = TEXTBOOK_EDITIONS.find((e) => e.key === edKey)
+    setDictOverride({ ed: edKey, grade: ed ? Math.min(dictFilter.grade, ed.maxGrade) : dictFilter.grade, vol: dictFilter.vol })
+  }
+
+  // 三级筛选派生值（依赖 selected，须在其后计算）
+  const dictEd = TEXTBOOK_EDITIONS.find((e) => e.key === dictFilter.ed) || TEXTBOOK_EDITIONS[0]
+  const dictBankKey = `${dictFilter.ed}${dictFilter.grade}${dictFilter.vol === 'down' ? 'b' : ''}` as DifficultyKey
+  const dictBankWords = (TEXTBOOK_BANKS as Record<string, Word[] | undefined>)[dictBankKey]
+  const dictSelected = selected === dictBankKey
 
   const handleFile = async (file: File) => {
     const v = validateFile(file)
@@ -65,20 +88,22 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
         return
       }
       savePack(parsed)
-      setSelected('custom')
+      setTouchedKey('custom')
+      saveUserData({ difficulty: 'custom' })
       setImportMsg({ ok: true, text: `「${parsed.name}」导入成功（${parsed.words?.length ?? 0} 词）` })
     } catch {
       setImportMsg({ ok: false, text: '读取文件失败' })
     }
   }
 
-  // 点难度卡片 = 仅选中（自定义无词库时引导导入）
+  // 点难度卡片 = 仅选中（自定义无词库时引导导入）；选中即持久化，与小程序端选档写 storage 一致
   const handleSelect = (key: DifficultyKey) => {
     if (key === 'custom' && !packInfo) {
       fileRef.current?.click()
       return
     }
-    setSelected(key)
+    setTouchedKey(key)
+    saveUserData({ difficulty: key })
   }
 
   // 点「开始游戏」= 以当前选中难度开局
@@ -90,7 +115,18 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
     onStart(selected)
   }
 
-  const difficulties = Object.keys(DIFFICULTY_CONFIG) as DifficultyKey[]
+  const difficulties = CORE_DIFFICULTY_KEYS
+
+  // 教材档选中态（核心卡片区下方提示 + 开始区文案共用）
+  const selBankWords = selMeta
+    ? (TEXTBOOK_BANKS as Record<string, Word[] | undefined>)[selMeta.key]
+    : undefined
+
+  // 三级筛选 chips 公共样式: 选中时用版本主题色填充，未选中玻璃胶囊
+  const chipCls = (active: boolean) =>
+    `wf-focus px-4 py-1.5 rounded-full text-sm font-bold transition-all duration-150 ${
+      active ? 'text-white shadow-sm scale-[1.04]' : 'wf-glass text-[#5D4037] hover:bg-white/85'
+    }`
 
   return (
     <div className="wf-menu-bg relative min-h-screen w-full flex flex-col items-center px-4 py-8 overflow-hidden">
@@ -128,7 +164,7 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
             🎮 已玩 {userData.totalGames} 局
           </span>
           <span className="wf-glass-chip wf-focus px-3.5 py-1.5 rounded-full text-[#5D4037] text-sm font-semibold">
-            📖 词库 {WORD_BANK_STATS.total} 词
+            📖 词库 {WORD_BANK_STATS.total} 词 · 教材 {WORD_BANK_STATS.textbookBanks} 档
           </span>
           <button
             onClick={onToggleSound}
@@ -180,7 +216,87 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
           })}
         </div>
 
-        {/* ② 开始游戏：显式大按钮（对齐小程序底部绿色渐变 start-main） */}
+        {/* ② 教材词库：三级筛选 版本→年级→上下册（v88 同步小程序端「更多词库」34 档独立词池） */}
+        <div className="w-full max-w-2xl mt-6">
+          <h2 className="text-[#5D4037] font-bold mb-3 tracking-wide">
+            ② 教材词库
+            <span className="ml-2 text-xs font-medium text-[#8D6E63]">选教材词库替换题库，按年级难度开局</span>
+          </h2>
+          <div className="wf-glass rounded-2xl p-4 space-y-3">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="选择版本">
+              {TEXTBOOK_EDITIONS.map((ed) => (
+                <button
+                  key={ed.key}
+                  onClick={() => handleEditionClick(ed.key)}
+                  aria-pressed={dictFilter.ed === ed.key}
+                  className={chipCls(dictFilter.ed === ed.key)}
+                  style={dictFilter.ed === ed.key ? { background: ed.color } : undefined}
+                >
+                  {dictFilter.ed === ed.key ? '🍃 ' : ''}{ed.name}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="选择年级">
+              {Array.from({ length: dictEd.maxGrade }, (_, i) => i + 1).map((g) => (
+                <button
+                  key={g}
+                  onClick={() => setDictOverride({ ...dictFilter, grade: g })}
+                  aria-pressed={dictFilter.grade === g}
+                  className={chipCls(dictFilter.grade === g)}
+                  style={dictFilter.grade === g ? { background: dictEd.color } : undefined}
+                >
+                  {g}年级
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="选择册别">
+              {(['up', 'down'] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setDictOverride({ ...dictFilter, vol: v })}
+                  aria-pressed={dictFilter.vol === v}
+                  className={chipCls(dictFilter.vol === v)}
+                  style={dictFilter.vol === v ? { background: dictEd.color } : undefined}
+                >
+                  {v === 'up' ? '上册' : '下册'}
+                </button>
+              ))}
+            </div>
+            {/* 命中结果行: 版本×年级×册别 → 恰一档，展示词数并一键选中 */}
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-white/65 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-[#5D4037] truncate">
+                  {dictEd.name} {dictFilter.grade} 年级{dictFilter.vol === 'up' ? '上册' : '下册'}
+                </p>
+                <p className="text-xs text-[#8D6E63] mt-0.5 truncate">
+                  {dictBankWords ? `${dictBankWords.length} 词 · ${dictEd.desc}` : '该版本暂无此册词库'}
+                </p>
+              </div>
+              {dictSelected ? (
+                <span className="shrink-0 text-sm font-bold text-[#2E7D32]" aria-live="polite">✓ 已选中</span>
+              ) : (
+                <button
+                  onClick={() => {
+                    setTouchedKey(dictBankKey)
+                    saveUserData({ difficulty: dictBankKey }) // 选档即持久化（对齐小程序端 v82 选词库写 storage）
+                  }}
+                  disabled={!dictBankWords}
+                  className="wf-focus shrink-0 px-4 py-1.5 rounded-full text-white text-sm font-bold transition-transform active:scale-95 disabled:opacity-40"
+                  style={{ background: dictEd.color, boxShadow: '0 2px 8px rgba(93,64,55,0.18)' }}
+                >
+                  选它
+                </button>
+              )}
+            </div>
+          </div>
+          {selMeta && (
+            <p className="mt-2 text-xs text-[#8D6E63] text-center" aria-live="polite">
+              已选教材词库：{selMeta.name}（{selBankWords?.length ?? 0} 词）— 点「开始游戏」即用该词库
+            </p>
+          )}
+        </div>
+
+        {/* ③ 开始游戏：显式大按钮（对齐小程序底部绿色渐变 start-main） */}
         <div className="w-full max-w-2xl mt-5 flex flex-col items-center gap-1.5">
           <button
             onClick={handleStartClick}
@@ -194,7 +310,9 @@ export default function MenuScreen({ userData, onStart, onOpenRewards, onToggleS
             开始游戏
           </button>
           <p className="text-xs text-[#8D6E63]" aria-live="polite">
-            当前难度：{DIFFICULTY_CONFIG[selected].name} · ⏱ 单题 {DIFFICULTY_CONFIG[selected].questionTimeLimit / 1000}s · 🧟 间隔 {DIFFICULTY_CONFIG[selected].spawnInterval / 1000}s
+            {selMeta
+              ? `当前词库：${selMeta.name} · ⏱ 单题 ${DIFFICULTY_CONFIG[selected].questionTimeLimit / 1000}s · 🧟 间隔 ${DIFFICULTY_CONFIG[selected].spawnInterval / 1000}s`
+              : `当前难度：${DIFFICULTY_CONFIG[selected].name} · ⏱ 单题 ${DIFFICULTY_CONFIG[selected].questionTimeLimit / 1000}s · 🧟 间隔 ${DIFFICULTY_CONFIG[selected].spawnInterval / 1000}s`}
           </p>
         </div>
 

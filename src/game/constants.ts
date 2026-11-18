@@ -1,9 +1,11 @@
 // src/game/constants.ts - 游戏全局常量
-// 完整移植自微信小程序端 utils/constants.js (v53) — 参数值保持一致，便于双端平衡性同步
+// 完整移植自微信小程序端 utils/constants.js — 参数值保持一致，便于双端平衡性同步
 // 跨文件耦合点均有注释标注（与小程序端同款工程自觉）
 
-// ============ 难度配置（v50 六档） ============
-// difficultyWeights 与词库 difficulty 字段（1=小学 2=初中 3=高中 4=KET(A2) 5=PET(B1)）对应
+import { TEXTBOOK_META, type TextbookKey } from './words'
+
+// ============ 难度配置 ============
+// difficultyWeights 与词库 difficulty 字段对应（基础/考试库 1=小学 2=初中 3=高中 4=KET(A2) 5=PET(B1)；教材库 1=基础 2=进阶）
 // levelTime: 每 levelTime ms 推进一关（关卡 ramp 是唯一强度模型, v44）
 export interface DifficultyConfig {
   key: DifficultyKey
@@ -17,9 +19,13 @@ export interface DifficultyConfig {
   levelTime: number
 }
 
-export type DifficultyKey = 'primary' | 'junior' | 'senior' | 'ket' | 'pet' | 'custom'
+// 核心 6 档（菜单卡片区展示）；教材 34 档走「教材词库」三级筛选选择器（v88 同步小程序 v82~v86）
+export type CoreDifficultyKey = 'primary' | 'junior' | 'senior' | 'ket' | 'pet' | 'custom'
+export type DifficultyKey = CoreDifficultyKey | TextbookKey
 
-export const DIFFICULTY_CONFIG: Record<DifficultyKey, DifficultyConfig> = {
+export const CORE_DIFFICULTY_KEYS: CoreDifficultyKey[] = ['primary', 'junior', 'senior', 'ket', 'pet', 'custom']
+
+const CORE_DIFFICULTY_CONFIG: Record<CoreDifficultyKey, DifficultyConfig> = {
   primary: {
     key: 'primary', name: '小学', desc: '词汇简单 · 节奏轻快',
     spawnInterval: 4200, baseSpeed: 28, maxZombies: 6, questionTimeLimit: 20000,
@@ -56,6 +62,41 @@ export const DIFFICULTY_CONFIG: Record<DifficultyKey, DifficultyConfig> = {
     difficultyWeights: { 1: 0.6, 2: 0.3, 3: 0.1 },
     levelTime: 60000, // 实际按词库平均难度插值 48~72s（engine 内计算）
   },
+}
+
+// ============ 教材词库 34 档注册（v88 同步小程序端 constants.js v82~v86） ============
+// 参数随年级渐进（沪教 1-5 / PEP·外研 1-6），上/下册同级同参 —— 与小程序端逐值对齐：
+//   一~三年级温和（承袭 primary 曲线），四~六年级渐进提速，六年级为小学系顶档（仍低于 junior）。
+// difficultyWeights 仅含 {1,2}（教材池词条难度只有基础/进阶两档，quizEngine 按权重过滤）。
+const TEXTBOOK_GRADE_PARAMS: Record<number, Omit<DifficultyConfig, 'key' | 'name' | 'desc'>> = {
+  1: { spawnInterval: 4200, baseSpeed: 28, maxZombies: 6, questionTimeLimit: 20000, difficultyWeights: { 1: 1 }, levelTime: 48000 },
+  2: { spawnInterval: 4100, baseSpeed: 29, maxZombies: 6, questionTimeLimit: 20000, difficultyWeights: { 1: 1 }, levelTime: 50000 },
+  3: { spawnInterval: 4000, baseSpeed: 30, maxZombies: 6, questionTimeLimit: 18000, difficultyWeights: { 1: 1 }, levelTime: 52000 },
+  4: { spawnInterval: 3800, baseSpeed: 32, maxZombies: 7, questionTimeLimit: 17000, difficultyWeights: { 1: 0.75, 2: 0.25 }, levelTime: 54000 },
+  5: { spawnInterval: 3600, baseSpeed: 33, maxZombies: 7, questionTimeLimit: 16000, difficultyWeights: { 1: 0.65, 2: 0.35 }, levelTime: 56000 },
+  6: { spawnInterval: 3400, baseSpeed: 34, maxZombies: 7, questionTimeLimit: 15000, difficultyWeights: { 1: 0.55, 2: 0.45 }, levelTime: 58000 },
+}
+
+// 教材档僵尸类型权重（king 不进常规生成；同级上/下册一致，六年级逼近 junior）
+const TEXTBOOK_GRADE_WEIGHTS: Record<number, { bucket: number; imp: number; football: number; dancer: number }> = {
+  1: { bucket: 0.7, imp: 0.18, football: 0.07, dancer: 0.05 },
+  2: { bucket: 0.68, imp: 0.19, football: 0.07, dancer: 0.06 },
+  3: { bucket: 0.65, imp: 0.2, football: 0.08, dancer: 0.07 },
+  4: { bucket: 0.6, imp: 0.22, football: 0.1, dancer: 0.08 },
+  5: { bucket: 0.55, imp: 0.24, football: 0.12, dancer: 0.09 },
+  6: { bucket: 0.5, imp: 0.26, football: 0.14, dancer: 0.1 },
+}
+
+export const DIFFICULTY_CONFIG: Record<DifficultyKey, DifficultyConfig> = CORE_DIFFICULTY_CONFIG as Record<DifficultyKey, DifficultyConfig>
+
+for (const meta of TEXTBOOK_META) {
+  const params = TEXTBOOK_GRADE_PARAMS[meta.grade] || TEXTBOOK_GRADE_PARAMS[1]
+  DIFFICULTY_CONFIG[meta.key] = {
+    key: meta.key,
+    name: meta.short,
+    desc: meta.desc,
+    ...params,
+  }
 }
 
 // ============ 自定义词库导入 (v35) ============
@@ -111,6 +152,11 @@ export const ZOMBIE_TYPE_WEIGHTS: Record<string, Record<Exclude<ZombieType, 'kin
   ket: { bucket: 0.55, imp: 0.25, football: 0.11, dancer: 0.09 },
   pet: { bucket: 0.42, imp: 0.29, football: 0.15, dancer: 0.14 },
   custom: { bucket: 0.65, imp: 0.2, football: 0.08, dancer: 0.07 },
+}
+
+// 教材档权重注册（v88: 与小程序端 v82~v86 逐值一致 —— 低年级承袭 primary 温和分布，逐级渐进加强）
+for (const meta of TEXTBOOK_META) {
+  ZOMBIE_TYPE_WEIGHTS[meta.key] = TEXTBOOK_GRADE_WEIGHTS[meta.grade] || TEXTBOOK_GRADE_WEIGHTS[1]
 }
 
 // ============ 评分模型 ============
