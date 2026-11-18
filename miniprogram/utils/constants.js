@@ -58,6 +58,54 @@ const DIFFICULTY_CONFIG = {
     difficultyWeights: { 2: 0.30, 3: 0.20, 5: 0.50 },  // B1 全谱: 中坚词 + PET 专属词(examWords.js)
     levelTime: 66000,          // v50: 66s（B1 词汇偏难 → 留思考，一局 ≈ 12 分钟）
   },
+  // v82: 沪教版（上海教育出版社·五四制·牛津上海本地版）小学 1-5 年级上册五个词库档 ——
+  //   独立词池模式（与 custom 同机制：整库出题，不混全量池），词库见 data/shanghaiWords.js。
+  //   参数随年级渐进：低年级完全温和（承袭 primary），高年级小幅提速。
+  sh1: {
+    name: '沪教一上',
+    spawnInterval: 4200,
+    baseSpeed: 28,
+    maxZombies: 6,
+    questionTimeLimit: 20000,
+    difficultyWeights: { 1: 1 },
+    levelTime: 48000
+  },
+  sh2: {
+    name: '沪教二上',
+    spawnInterval: 4100,
+    baseSpeed: 29,
+    maxZombies: 6,
+    questionTimeLimit: 20000,
+    difficultyWeights: { 1: 1 },
+    levelTime: 50000
+  },
+  sh3: {
+    name: '沪教三上',
+    spawnInterval: 4000,
+    baseSpeed: 30,
+    maxZombies: 6,
+    questionTimeLimit: 18000,
+    difficultyWeights: { 1: 1 },
+    levelTime: 52000
+  },
+  sh4: {
+    name: '沪教四上',
+    spawnInterval: 3800,
+    baseSpeed: 32,
+    maxZombies: 7,
+    questionTimeLimit: 17000,
+    difficultyWeights: { 1: 0.75, 2: 0.25 },
+    levelTime: 54000
+  },
+  sh5: {
+    name: '沪教五上',
+    spawnInterval: 3600,
+    baseSpeed: 33,
+    maxZombies: 7,
+    questionTimeLimit: 16000,
+    difficultyWeights: { 1: 0.65, 2: 0.35 },
+    levelTime: 56000
+  },
   // v35: 自定义词库档 — 用户导入词库文件(如「上海五年级英语·新教材」),
   // 游戏仅从导入词库出题。难度参数取 primary 同款温和值(导入场景多为家长
   // 给小学生定制); 权重三档混合 — 若导入词库某档无词, quizManager
@@ -155,6 +203,12 @@ const ZOMBIE_TYPES = {
 // v51: 僵尸王(king)不进常规生成权重 — 仅终局大波事件入场(zombieManager.launchFinalWave)
 const ZOMBIE_TYPE_WEIGHTS = {
   primary: { bucket: 0.65, imp: 0.20, football: 0.08, dancer: 0.07 },
+  // v82: 沪教五档 — 低年级承袭 primary 温和分布，高年级小幅加强
+  sh1:     { bucket: 0.70, imp: 0.18, football: 0.07, dancer: 0.05 },
+  sh2:     { bucket: 0.68, imp: 0.19, football: 0.07, dancer: 0.06 },
+  sh3:     { bucket: 0.65, imp: 0.20, football: 0.08, dancer: 0.07 },
+  sh4:     { bucket: 0.60, imp: 0.22, football: 0.10, dancer: 0.08 },
+  sh5:     { bucket: 0.55, imp: 0.24, football: 0.12, dancer: 0.09 },
   junior:  { bucket: 0.50, imp: 0.28, football: 0.12, dancer: 0.10 },
   senior:  { bucket: 0.35, imp: 0.30, football: 0.20, dancer: 0.15 },
   ket:     { bucket: 0.55, imp: 0.25, football: 0.11, dancer: 0.09 },

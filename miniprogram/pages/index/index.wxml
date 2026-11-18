@@ -1,4 +1,11 @@
-<!-- pages/index/index.wxml — v81 牌匾再放大 + 大冒险卡再变矮 + 按钮间距收紧（纯 WXSS 视觉参数，结构与事件零变化）
+<!-- pages/index/index.wxml — v82 「更多词库」词库选择弹窗 + 沪教版 1-5 年级上册词库（结构与经典档零破坏）
+  v82 更新：
+    · 第 6 枚胶囊「导入词库」→「更多词库」：点击弹词库选择弹窗（不再直接上传文件）
+    · 新增 dict-mask 词库选择弹窗：三组列表——经典词库（小学/初中/高中/KET/PET）、
+      沪教版·上海教育出版社·五四制（一~五年级上册，data/shanghaiWords.js 真实教材词汇）、
+      我的词库（已导入包时展示）；底部保留「从聊天文件导入」入口（v35 能力不删）
+    · pack-bar 通用化为「当前词库条」：shX/custom 均展示（点击：custom→管理、shX→开弹窗）
+    · 选中沪教档后胶囊动态改名（沪教一上…沪教五上）+ 选中态；game 页按档独立喂库
   v81 更新（DOM 不变，全部在 index.wxss）：
     · 牌匾「单词农场」题字再大一点：46→52rpx，粉描边 3.5→4rpx/投影 8rpx、字距 7rpx、糖珠 18→20rpx、
       padding 10/46→12/52 同步放大；margin 28→22rpx 三次补偿，底缘位置不变不压副标题
@@ -140,16 +147,17 @@
       <view class="hero-vs"><text class="hero-vs-text">VS</text></view>
     </view>
 
-    <!-- 4. 词库选择：单排六枚糖果果冻胶囊（六色挂钩 diff-pill--key，选中白圈+小芽） -->
+    <!-- 4. 词库选择：单排六枚糖果果冻胶囊（六色挂钩 diff-pill--key，选中白圈+小芽）
+         v82: 第 6 枚「更多词库」——点击弹词库选择弹窗；选中沪教/自定义档后动态改名并点亮 -->
     <view class="diff-pills">
       <block wx:for="{{difficulties}}" wx:key="key">
         <view
-          class="diff-pill diff-pill--{{item.key}} {{difficulty === item.key ? 'active' : ''}}"
+          class="diff-pill diff-pill--{{item.key}} {{difficulty === item.key || (item.key === 'more' && moreActive) ? 'active' : ''}}"
           data-key="{{item.key}}"
           bindtap="onSelectDifficulty"
           hover-class="diff-pill-hover"
         >
-          <view wx:if="{{difficulty === item.key}}" class="pill-sprout">
+          <view wx:if="{{difficulty === item.key || (item.key === 'more' && moreActive)}}" class="pill-sprout">
             <view class="sprout-stem"></view>
             <view class="sprout-leaf sprout-leaf--l"></view>
             <view class="sprout-leaf sprout-leaf--r"></view>
@@ -159,12 +167,12 @@
       </block>
     </view>
 
-    <!-- v35: 自定义词包信息条（已导入时显示：书名 + 词数 + 管理入口） -->
-    <view wx:if="{{customPackInfo}}" class="pack-bar" bindtap="_manageWordPack" hover-class="pack-bar-hover">
+    <!-- v82: 当前词库信息条（选中沪教版/自定义词库时显示；点击：custom→管理、shX→开弹窗） -->
+    <view wx:if="{{packBar}}" class="pack-bar" bindtap="onPackBarTap" hover-class="pack-bar-hover">
       <text class="pack-bar-icon">📚</text>
-      <text class="pack-bar-name">{{customPackInfo.name}}</text>
-      <text class="pack-bar-count">{{customPackInfo.count}} 词</text>
-      <text class="pack-bar-action">管理 ›</text>
+      <text class="pack-bar-name">{{packBar.name}}</text>
+      <text class="pack-bar-count">{{packBar.count}} 词</text>
+      <text class="pack-bar-action">{{difficulty === 'custom' ? '管理 ›' : '换词库 ›'}}</text>
     </view>
 
     <!-- 5. 大冒险卡（v73：粉→蓝果冻渐变卡 + 左插画 + 右双色标题/2×2徽章 + 底部果冻按钮） -->
@@ -261,6 +269,55 @@
         <text class="km-cta-text">我知道啦</text>
         <text class="km-cta-arrow">›</text>
       </view>
+
+    </view>
+  </view>
+
+  <!-- ============ v82: 词库选择弹窗（「更多词库」入口：三组果冻列表 + 文件导入入口） ============ -->
+  <view wx:if="{{dictSheetVisible}}" class="dict-mask" bindtap="closeDictSheet" catchtouchmove="noop">
+    <view class="dict-card" catchtap="noop">
+
+      <!-- 头部：📚 徽标 + 标题/副标题（左） · 关闭 ✕（右） -->
+      <view class="dict-head">
+        <view class="dict-head-left">
+          <view class="dict-logo"><text class="dict-logo-emoji">📚</text></view>
+          <view class="dict-head-text">
+            <view class="dict-title">选择词库</view>
+            <view class="dict-subtitle">挑一本开始冒险吧</view>
+          </view>
+        </view>
+        <view class="dict-close" bindtap="closeDictSheet" hover-class="dict-close-hover">✕</view>
+      </view>
+
+      <view class="dict-divider"></view>
+
+      <!-- 分组列表（经典词库 / 沪教版 / 我的词库） -->
+      <scroll-view class="dict-list" scroll-y="true">
+        <block wx:for="{{dictOptions}}" wx:key="title" wx:for-item="group">
+          <view class="dict-group-title">{{group.title}}</view>
+          <view
+            wx:for="{{group.items}}"
+            wx:key="key"
+            class="dict-row {{difficulty === item.key ? 'dict-row--active' : ''}}"
+            data-key="{{item.key}}"
+            bindtap="onSelectDict"
+            hover-class="dict-row-hover"
+          >
+            <view class="dict-dot" style="background: {{item.color}};"></view>
+            <view class="dict-info">
+              <view class="dict-name">{{item.name}}</view>
+              <view class="dict-desc">{{item.desc}}</view>
+            </view>
+            <view wx:if="{{difficulty === item.key}}" class="dict-check">✓</view>
+          </view>
+        </block>
+
+        <!-- 底部入口：从聊天文件导入自定义词库（v35 能力保留） -->
+        <view class="dict-import" bindtap="onImportFromFile" hover-class="dict-import-hover">
+          <text class="dict-import-ico">＋</text>
+          <text class="dict-import-txt">从聊天文件导入词库</text>
+        </view>
+      </scroll-view>
 
     </view>
   </view>

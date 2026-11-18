@@ -19,6 +19,7 @@ const storageManager = require('../../utils/storageManager.js');
 const { ASSET_KEYS } = require('../../utils/constants.js');
 const { rewardManager } = require('../../utils/rewardManager.js');
 const customWordPack = require('../../utils/customWordPack.js');
+const { SH_GRADE_INFO, SHANGHAI_WORD_BANKS } = require('../../data/shanghaiWords.js');  // v82: 沪教版词库元信息
 
 Page({
   data: {
@@ -29,7 +30,6 @@ Page({
     totalGames: 0,
     rewardPoints: 0,          // v32: 亲子积分（奖励中心入口）
     knowMoreVisible: false,   // v33: 「立即了解」玩法弹窗显隐
-    customPackInfo: null,     // v35: 已导入词包 {name, count} | null
 
     // 自定义导航栏（v71：仅居中木牌匾，无左右按钮）
     statusBarHeight: 20,
@@ -42,14 +42,22 @@ Page({
     safeBottomRpx: _initSafeBottomRpx,
 
     // 难度列表（v50: 中学拆初中/高中、大学退役、新增 KET/PET 考试档，共 6 项）
+    // v82: 第 6 枚改「更多词库」——点击弹词库选择列表（含沪教版 1-5 年级上册 + 导入词库），不再直接上传文件
     difficulties: [
       { key: 'primary', name: '小学' },
       { key: 'junior',  name: '初中' },
       { key: 'senior',  name: '高中' },
       { key: 'ket',     name: 'KET' },
       { key: 'pet',     name: 'PET' },
-      { key: 'custom',  name: '导入词库' }
+      { key: 'more',    name: '更多词库' }
     ],
+
+    // v82: 词库选择弹窗（果冻风，果冻卡片列表：经典词库/沪教版/我的词库三组）
+    dictSheetVisible: false,
+    dictOptions: [],
+    moreActive: false,        // v82: 第 6 枚胶囊（更多词库）选中态
+    // v82: 当前词库信息条（替换 v35 customPackInfo —— sh1~sh5/custom 均展示；点击：custom→管理、其余→开弹窗）
+    packBar: null,
 
     // 玩法徽章（v68 渲染于 Hero 大卡 banner-chips 2×2，文案/图标对齐参考图）
     // 底色：浅彩纸签调（配合 v68 白描边胶囊）
@@ -100,12 +108,14 @@ Page({
       highestScore: g.highestScore,
       totalGames: g.totalGames,
       rewardPoints: rewardManager.getWallet().points,
-      customPackInfo: g.customPack ? { name: g.customPack.name, count: g.customPack.count } : null,
+      packBar: this._buildPackBar(g.difficulty, g.customPack),
+      dictOptions: this._buildDictOptions(g.customPack),
       safeTop: g.safeAreaInset.top,
       safeBottom: g.safeAreaInset.bottom,
       statusBarHeight: statusBar,
       navBarHeight: navBarInner
     });
+    this._syncMorePill();
     applyLayout(this);
   },
 
@@ -141,22 +151,14 @@ Page({
     const key = e.currentTarget.dataset.key;
     if (!key) return;
 
-    // v35: 导入词库档 — 特殊处理
-    if (key === 'custom') {
-      const pack = customWordPack.loadPack();
-      if (!pack) {
-        // 未导入过 → 直接发起导入
-        this._importWordPack();
-        return;                     // 导入失败/取消不选中
-      }
-      if (this.data.difficulty === 'custom') {
-        // 已选中状态再点 → 管理面板（换词库/清除）
-        this._manageWordPack();
-        return;
-      }
-      // 有词库且未选中 → 选中它（走下方通用选中流程）
-    } else if (this.data.difficulty === 'custom') {
-      // 从 custom 切走：提示词库仍保留、可随时切回
+    // v82: 「更多词库」档 — 打开词库选择弹窗（不直接选中）
+    if (key === 'more') {
+      this.openDictSheet();
+      return;
+    }
+
+    // v35: 从 custom/shX 切走：提示词库仍保留、可随时切回
+    if (this.data.difficulty === 'custom' && key !== 'custom') {
       wx.showToast({ title: '词库已保留，随时切回', icon: 'none', duration: 1200 });
     }
 
@@ -168,7 +170,129 @@ Page({
       difficulty: key,
       soundEnabled: app.globalData.soundEnabled
     });
+    this._syncMorePill();
     if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
+  },
+
+  /* ============ v82: 词库选择弹窗（更多词库） ============ */
+
+  /** 打开弹窗：重建列表（含最新导入词包状态） */
+  openDictSheet() {
+    if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
+    this.setData({
+      dictSheetVisible: true,
+      dictOptions: this._buildDictOptions(app.globalData.customPack)
+    });
+  },
+
+  closeDictSheet() {
+    this.setData({ dictSheetVisible: false });
+  },
+
+  noop() { /* 阻止冒泡占位 */ },
+
+  /**
+   * 弹窗内选中词库：内置档/沪教档直接生效；我的词库→选中 custom；
+   * 底部「从聊天文件导入」走原文件导入流程（能力保留）
+   */
+  onSelectDict(e) {
+    const key = e.currentTarget.dataset.key;
+    if (!key) return;
+    this.setData({ dictSheetVisible: false });
+    if (key === this.data.difficulty) return;   // 重复选中直接收起
+    this.setData({ difficulty: key });
+    app.globalData.difficulty = key;
+    storageManager.saveUserData({
+      highestScore: app.globalData.highestScore,
+      totalGames: app.globalData.totalGames,
+      difficulty: key,
+      soundEnabled: app.globalData.soundEnabled
+    });
+    this._syncMorePill();
+    if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
+  },
+
+  /** 弹窗底部入口：从聊天文件导入自定义词库（v35 能力保留） */
+  onImportFromFile() {
+    this.setData({ dictSheetVisible: false });
+    this._importWordPack();
+  },
+
+  /** pack-bar 点击：custom 档→管理面板；shX→打开选择弹窗 */
+  onPackBarTap() {
+    if (this.data.difficulty === 'custom') {
+      this._manageWordPack();
+    } else {
+      this.openDictSheet();
+    }
+  },
+
+  /**
+   * v82: 构建词库选择弹窗数据（三组：经典词库 / 沪教版 / 我的词库）
+   * @param {Object|null} pack - 已导入自定义词包
+   */
+  _buildDictOptions(pack) {
+    const groups = [
+      {
+        title: '经典词库',
+        items: [
+          { key: 'primary', name: '小学', desc: '基础启蒙 · 全量词池', color: '#FFA5BC' },
+          { key: 'junior',  name: '初中', desc: '初中基础 · 全量词池', color: '#7CC8FA' },
+          { key: 'senior',  name: '高中', desc: '高中进阶 · 全量词池', color: '#FFB25C' },
+          { key: 'ket',     name: 'KET', desc: '剑桥 A2 核心词汇', color: '#6FDAB8' },
+          { key: 'pet',     name: 'PET', desc: '剑桥 B1 核心词汇', color: '#A8E86A' }
+        ]
+      },
+      {
+        title: '沪教版 · 上海教育出版社（五四制）',
+        items: SH_GRADE_INFO.map(g => ({
+          key: g.key,
+          name: g.name,
+          desc: g.desc + ' · ' + SHANGHAI_WORD_BANKS[g.key].length + ' 词',
+          color: '#C79BF2'
+        }))
+      }
+    ];
+    if (pack && pack.words && pack.words.length) {
+      groups.push({
+        title: '我的词库',
+        items: [{ key: 'custom', name: pack.name || '导入词库', desc: '自定义导入 · ' + pack.count + ' 词', color: '#FFD34D' }]
+      });
+    }
+    return groups;
+  },
+
+  /**
+   * v82: 构建 pack-bar 当前词库信息（shX/custom 显示；内置经典档不显示）
+   * @param {string} difficulty
+   * @param {Object|null} pack
+   */
+  _buildPackBar(difficulty, pack) {
+    if (difficulty === 'custom') {
+      if (pack && pack.words && pack.words.length) {
+        return { name: pack.name || '导入词库', count: pack.count, isCustom: true };
+      }
+      return null;
+    }
+    const g = SH_GRADE_INFO.find(x => x.key === difficulty);
+    if (g) {
+      return { name: g.name, count: SHANGHAI_WORD_BANKS[g.key].length, isCustom: false };
+    }
+    return null;
+  },
+
+  /**
+   * v82: 同步第 6 枚胶囊（更多词库）名称与选中态 ——
+   *   选 shX → 「沪教X上」+ active；选 custom → 「我的词库」+ active；其余 → 「更多词库」
+   */
+  _syncMorePill() {
+    const diff = this.data.difficulty;
+    const g = SH_GRADE_INFO.find(x => x.key === diff);
+    const name = g ? g.short : (diff === 'custom' ? '我的词库' : '更多词库');
+    this.setData({
+      'difficulties[5].name': name,
+      moreActive: !!g || diff === 'custom'
+    });
   },
 
   /* ============ v35: 自定义词库 ============ */
@@ -182,12 +306,13 @@ Page({
     customWordPack.importFromFile().then((res) => {
       wx.hideLoading();
       if (res.ok) {
-        // 同步全局与页面
+        // 同步全局与页面（v82: pack-bar + 胶囊名同步）
         app.globalData.customPack = customWordPack.loadPack();
         this.setData({
           difficulty: 'custom',
-          customPackInfo: { name: res.name, count: res.count }
+          packBar: this._buildPackBar('custom', app.globalData.customPack)
         });
+        this._syncMorePill();
         app.globalData.difficulty = 'custom';
         storageManager.saveUserData({
           highestScore: app.globalData.highestScore,
@@ -214,9 +339,9 @@ Page({
    * 已选中 custom 档再点击：管理面板（换词库 / 清除）
    */
   _manageWordPack() {
-    const info = this.data.customPackInfo || {};
+    const pack = app.globalData.customPack || {};
     wx.showActionSheet({
-      alertText: '当前词库：' + (info.name || '自定义词库') + '（' + (info.count || 0) + ' 词）',
+      alertText: '当前词库：' + (pack.name || '自定义词库') + '（' + (pack.count || 0) + ' 词）',
       itemList: ['换一个词库文件', '清除词库'],
       success: (res) => {
         if (res.tapIndex === 0) {
@@ -224,7 +349,8 @@ Page({
         } else if (res.tapIndex === 1) {
           customWordPack.clearPack();
           app.globalData.customPack = null;
-          this.setData({ customPackInfo: null });
+          this.setData({ packBar: null });
+          this._syncMorePill();
           wx.showToast({ title: '词库已清除', icon: 'none', duration: 1200 });
         }
       },

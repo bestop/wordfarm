@@ -430,6 +430,11 @@
   background: linear-gradient(180deg, #FFD34D 0%, #FFC02E 100%);
   box-shadow: 0 5rpx 0 rgba(232, 168, 0, 0.45), 0 10rpx 16rpx rgba(232, 168, 0, 0.22), inset 0 4rpx 8rpx rgba(255, 255, 255, 0.75);
 }
+/* v82: 更多词库葡萄紫果冻（与沪教档色点/弹窗主色呼应） */
+.diff-pill--more {
+  background: linear-gradient(180deg, #D8BCF7 0%, #C79BF2 100%);
+  box-shadow: 0 5rpx 0 rgba(140, 95, 190, 0.45), 0 10rpx 16rpx rgba(140, 95, 190, 0.22), inset 0 4rpx 8rpx rgba(255, 255, 255, 0.75);
+}
 .diff-pill-hover {
   transform: scale(0.94) translateY(3rpx);
   box-shadow: 0 2rpx 0 rgba(120, 60, 20, 0.3), inset 0 4rpx 8rpx rgba(255, 255, 255, 0.7);
@@ -1070,6 +1075,179 @@
     0 2rpx 0 rgba(43, 164, 126, 0.8),
     0 6rpx 12rpx rgba(43, 164, 126, 0.22),
     inset 0 4rpx 10rpx rgba(255,255,255,0.5);
+}
+
+/* ================================================================
+   v82 词库选择弹窗（「更多词库」入口）— 淡紫糖果遮罩 + 白果冻卡 + 粉白双层描边
+   设计基调与 km-mask 一致；分组标题紫色果冻字，行内色点对应各档主色
+   ================================================================ */
+.dict-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(120, 84, 160, 0.42);   /* 淡紫糖果遮罩（同 km-mask） */
+  backdrop-filter: blur(6rpx);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30rpx 36rpx;
+  box-sizing: border-box;
+  z-index: 200;
+  animation: kmFadeIn 0.28s ease-out;
+}
+.dict-card {
+  width: 100%;
+  max-width: 640rpx;
+  display: flex;
+  flex-direction: column;
+  padding: 30rpx 28rpx 24rpx;
+  box-sizing: border-box;
+  /* 白果冻卡 + 粉白双层描边（同 km-card） */
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF6E9 100%);
+  border-radius: 40rpx;
+  border: 6rpx solid #FFFFFF;
+  box-shadow:
+    0 12rpx 0 rgba(199, 155, 242, 0.18),
+    0 26rpx 48rpx rgba(120, 84, 160, 0.32),
+    inset 0 0 0 3rpx rgba(255, 205, 225, 0.55),
+    inset 0 4rpx 0 rgba(255, 255, 255, 0.9);
+  animation: kmPop 0.42s cubic-bezier(.2,.9,.2,1.15);
+}
+/* 头部：书本徽标 + 标题/副标题（左）· 关闭 ✕（右） */
+.dict-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.dict-head-left { display: flex; align-items: center; gap: 14rpx; }
+.dict-logo {
+  width: 72rpx; height: 72rpx;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, #E9D8FA 0%, #C79BF2 100%);
+  border: 3rpx solid #FFFFFF;
+  box-shadow: 0 4rpx 0 rgba(140, 95, 190, 0.35), inset 0 3rpx 6rpx rgba(255, 255, 255, 0.8);
+  flex-shrink: 0;
+}
+.dict-logo-emoji { font-size: 34rpx; line-height: 1; }
+.dict-head-text { min-width: 0; }
+.dict-title {
+  font-size: 34rpx; font-weight: 900; color: #8C5FBE;
+  letter-spacing: 1rpx; line-height: 1.2;
+  text-shadow: 0 2rpx 0 rgba(199, 155, 242, 0.35);
+}
+.dict-subtitle {
+  font-size: 20rpx; font-weight: 700; color: #9B7BB8;
+  margin-top: 2rpx; line-height: 1.3;
+}
+.dict-close {
+  width: 52rpx; height: 52rpx;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26rpx; font-weight: 900; color: #9B7BB8;
+  background: linear-gradient(180deg, #FFF 0%, #F3EAFB 100%);
+  border: 3rpx solid #FFFFFF;
+  box-shadow: 0 3rpx 0 rgba(140, 95, 190, 0.22);
+  flex-shrink: 0;
+}
+.dict-close-hover { transform: scale(0.9); }
+.dict-divider {
+  height: 3rpx;
+  margin: 20rpx 0 14rpx;
+  border-radius: 3rpx;
+  background: linear-gradient(90deg, rgba(199, 155, 242, 0) 0%, rgba(199, 155, 242, 0.55) 50%, rgba(199, 155, 242, 0) 100%);
+}
+/* 分组列表：内容多，滚动兜底（同 km-list） */
+.dict-list {
+  max-height: 560rpx;
+}
+.dict-group-title {
+  font-size: 22rpx; font-weight: 900; color: #8C5FBE;
+  letter-spacing: 1rpx;
+  margin: 14rpx 4rpx 10rpx;
+  display: flex; align-items: center; gap: 8rpx;
+}
+.dict-group-title::before {
+  content: "";
+  width: 10rpx; height: 10rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #E9D8FA 0%, #C79BF2 60%, #A877E3 100%);
+  box-shadow: inset 0 1rpx 2rpx rgba(255, 255, 255, 0.8);
+}
+/* 词库行：白果冻圆角条 + 色点 + 名称/副注 + 选中勾 */
+.dict-row {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  padding: 16rpx 18rpx;
+  margin-bottom: 10rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF8F0 100%);
+  border: 3rpx solid #FFFFFF;
+  box-shadow: 0 4rpx 0 rgba(199, 155, 242, 0.2),
+              0 8rpx 14rpx rgba(150, 110, 60, 0.1),
+              inset 0 3rpx 6rpx rgba(255, 255, 255, 0.92);
+  box-sizing: border-box;
+  min-width: 0;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.dict-row-hover { transform: scale(0.97); }
+/* 选中态：紫色果冻描边 + 淡紫底 */
+.dict-row--active {
+  background: linear-gradient(180deg, #F7F0FE 0%, #FDF7FF 100%);
+  border-color: #D8BCF7;
+  box-shadow: 0 4rpx 0 rgba(140, 95, 190, 0.3),
+              0 8rpx 14rpx rgba(140, 95, 190, 0.16),
+              inset 0 3rpx 6rpx rgba(255, 255, 255, 0.92);
+}
+.dict-dot {
+  width: 30rpx; height: 30rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 3rpx solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 3rpx 0 rgba(120, 84, 160, 0.18),
+              inset 0 2rpx 4rpx rgba(255, 255, 255, 0.65);
+}
+.dict-info { flex: 1 1 auto; min-width: 0; }
+.dict-name {
+  font-size: 26rpx; font-weight: 800; color: #5A4432;
+  line-height: 1.25;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dict-row--active .dict-name { color: #8C5FBE; }
+.dict-desc {
+  font-size: 20rpx; font-weight: 600; color: #A08B78;
+  line-height: 1.3; margin-top: 2rpx;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dict-check {
+  width: 40rpx; height: 40rpx;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24rpx; font-weight: 900; color: #FFFFFF;
+  background: linear-gradient(180deg, #D8BCF7 0%, #A877E3 100%);
+  border: 3rpx solid #FFFFFF;
+  box-shadow: 0 3rpx 0 rgba(140, 95, 190, 0.4);
+  flex-shrink: 0;
+}
+/* 底部导入入口：虚线框 + 加号，弱化呈现（能力保留不抢主列表） */
+.dict-import {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  margin-top: 4rpx;
+  padding: 16rpx 18rpx;
+  border-radius: 999rpx;
+  border: 3rpx dashed rgba(140, 95, 190, 0.45);
+  background: rgba(233, 216, 250, 0.25);
+  box-sizing: border-box;
+}
+.dict-import-hover { transform: scale(0.97); }
+.dict-import-ico {
+  font-size: 26rpx; font-weight: 900; color: #8C5FBE; line-height: 1;
+}
+.dict-import-txt {
+  font-size: 22rpx; font-weight: 800; color: #8C5FBE; letter-spacing: 0.5rpx;
 }
 
 /* ================================================================

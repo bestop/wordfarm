@@ -14,9 +14,27 @@ const storageManager = require('../../utils/storageManager.js');
 const { rewardManager } = require('../../utils/rewardManager.js');
 const { WORD_BANK } = require('../../data/words.js');
 const { EXAM_WORD_BANK } = require('../../data/examWords.js');   // v50: KET/PET 剑桥考试词库
+const { SHANGHAI_WORD_BANKS } = require('../../data/shanghaiWords.js');  // v82: 沪教版 1-5 年级上册词库
 // v50: 内置六档喂全量词库（基础 1274 + 考试 679）；custom 档在 onLoad/onRestart 单独喂导入词库
+// v82: sh1~sh5 沪教五档同样独立喂库（整库出题，不混全量池）
 const FULL_WORD_BANK = WORD_BANK.concat(EXAM_WORD_BANK);
 const customWordPack = require('../../utils/customWordPack.js');
+
+/**
+ * v82: 按难度档取本局词库 ——
+ *   custom → 导入词包；sh1~sh5 → 沪教对应年级整库；其余 → 全量内置池（quizManager 按 difficultyWeights 抽取）
+ * @param {string} difficulty
+ * @returns {Array} 词库
+ */
+function pickWordBank(difficulty) {
+  if (difficulty === 'custom') {
+    const pack = customWordPack.loadPack();
+    if (pack && pack.words.length) return pack.words;
+  } else if (Object.prototype.hasOwnProperty.call(SHANGHAI_WORD_BANKS, difficulty)) {
+    return SHANGHAI_WORD_BANKS[difficulty];
+  }
+  return FULL_WORD_BANK;
+}
 const { applyLayout } = require('../../utils/layoutUtil.js');
 
 // 植物选择提示浮层的自动隐藏计时器（跨回调共享）
@@ -88,13 +106,16 @@ Page({
     // 应用自适应布局
     applyLayout(this);
 
-    // 初始化游戏（题库 + 难度）— v35: custom 档优先用导入词库
-    const pack = customWordPack.loadPack();
-    if (difficulty === 'custom' && pack && pack.words.length) {
-      gameManager.initGame(difficulty, pack.words);
-      wx.showToast({ title: '词库：' + pack.name, icon: 'none', duration: 1400 });
-    } else {
-      gameManager.initGame(difficulty, FULL_WORD_BANK);
+    // 初始化游戏（题库 + 难度）— v35: custom 档优先用导入词库；v82: sh1~sh5 喂沪教对应年级整库
+    const bank = pickWordBank(difficulty);
+    gameManager.initGame(difficulty, bank);
+    if (difficulty === 'custom') {
+      const pack = customWordPack.loadPack();
+      if (pack && pack.words.length) {
+        wx.showToast({ title: '词库：' + pack.name, icon: 'none', duration: 1400 });
+      }
+    } else if (Object.prototype.hasOwnProperty.call(SHANGHAI_WORD_BANKS, difficulty)) {
+      wx.showToast({ title: '词库：沪教版' + difficulty.slice(2) + '年级上册', icon: 'none', duration: 1400 });
     }
     // v39: 本局题目限时（难度档配置）+ 倒计时心跳（tick 内守卫齐全，
     //   暂停/未开始/已结束自动静默，interval 生命周期 = 页面生命周期）
@@ -783,12 +804,8 @@ Page({
     });
     // 重新初始化游戏管理器
     // v39 附带修复：custom 档重开沿用导入词库（原硬编码 WORD_BANK，重开后自定义词库被静默丢弃）
-    const pack = customWordPack.loadPack();
-    if (difficulty === 'custom' && pack && pack.words.length) {
-      gameManager.initGame(difficulty, pack.words);
-    } else {
-      gameManager.initGame(difficulty, FULL_WORD_BANK);
-    }
+    // v82: 词库选取统一收口到 pickWordBank（custom/sh1~sh5 独立词池，重开不丢库）
+    gameManager.initGame(difficulty, pickWordBank(difficulty));
     this.setData({ quizTimeLimit: gameManager.getQuizTimeLimit() });   // v39: 重读限时（同页重开局）
     gameManager.start();   // v6 修复：start() 内部会 transition 到 PLAYING 并启动 _loop
   },
