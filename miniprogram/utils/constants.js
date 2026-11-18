@@ -152,6 +152,118 @@ const DIFFICULTY_CONFIG = {
     difficultyWeights: { 1: 0.65, 2: 0.35 },
     levelTime: 56000
   },
+  // v84: 人教版 PEP 一~六年级上册六档 —— 独立词池模式（与 sh/custom 同机制：整库出题），
+  //   词库见 data/pepWords.js。一/二年级为启蒙衔接档（PEP 三年级起点无 1-2 年级教材），
+  //   参数承袭沪教同级；三年级起对应教材档渐进提速，六年级为小学系顶档（仍低于 junior 初中档）。
+  pep1: {
+    name: 'PEP一上',
+    spawnInterval: 4200,
+    baseSpeed: 28,
+    maxZombies: 6,
+    questionTimeLimit: 20000,
+    difficultyWeights: { 1: 1 },
+    levelTime: 48000
+  },
+  pep2: {
+    name: 'PEP二上',
+    spawnInterval: 4100,
+    baseSpeed: 29,
+    maxZombies: 6,
+    questionTimeLimit: 20000,
+    difficultyWeights: { 1: 1 },
+    levelTime: 50000
+  },
+  pep3: {
+    name: 'PEP三上',
+    spawnInterval: 4000,
+    baseSpeed: 30,
+    maxZombies: 6,
+    questionTimeLimit: 18000,
+    difficultyWeights: { 1: 1 },
+    levelTime: 52000
+  },
+  pep4: {
+    name: 'PEP四上',
+    spawnInterval: 3800,
+    baseSpeed: 32,
+    maxZombies: 7,
+    questionTimeLimit: 17000,
+    difficultyWeights: { 1: 0.75, 2: 0.25 },
+    levelTime: 54000
+  },
+  pep5: {
+    name: 'PEP五上',
+    spawnInterval: 3600,
+    baseSpeed: 33,
+    maxZombies: 7,
+    questionTimeLimit: 16000,
+    difficultyWeights: { 1: 0.65, 2: 0.35 },
+    levelTime: 56000
+  },
+  pep6: {
+    name: 'PEP六上',
+    spawnInterval: 3400,
+    baseSpeed: 34,
+    maxZombies: 7,
+    questionTimeLimit: 15000,
+    difficultyWeights: { 1: 0.55, 2: 0.45 },
+    levelTime: 58000
+  },
+  // v84: 人教版 PEP 一~六年级下册六档 —— 参数与同年级上册一致，词库见 data/pepWords.js#PEPxB
+  pep1b: {
+    name: 'PEP一下',
+    spawnInterval: 4200,
+    baseSpeed: 28,
+    maxZombies: 6,
+    questionTimeLimit: 20000,
+    difficultyWeights: { 1: 1 },
+    levelTime: 48000
+  },
+  pep2b: {
+    name: 'PEP二下',
+    spawnInterval: 4100,
+    baseSpeed: 29,
+    maxZombies: 6,
+    questionTimeLimit: 20000,
+    difficultyWeights: { 1: 1 },
+    levelTime: 50000
+  },
+  pep3b: {
+    name: 'PEP三下',
+    spawnInterval: 4000,
+    baseSpeed: 30,
+    maxZombies: 6,
+    questionTimeLimit: 18000,
+    difficultyWeights: { 1: 1 },
+    levelTime: 52000
+  },
+  pep4b: {
+    name: 'PEP四下',
+    spawnInterval: 3800,
+    baseSpeed: 32,
+    maxZombies: 7,
+    questionTimeLimit: 17000,
+    difficultyWeights: { 1: 0.75, 2: 0.25 },
+    levelTime: 54000
+  },
+  pep5b: {
+    name: 'PEP五下',
+    spawnInterval: 3600,
+    baseSpeed: 33,
+    maxZombies: 7,
+    questionTimeLimit: 16000,
+    difficultyWeights: { 1: 0.65, 2: 0.35 },
+    levelTime: 56000
+  },
+  pep6b: {
+    name: 'PEP六下',
+    spawnInterval: 3400,
+    baseSpeed: 34,
+    maxZombies: 7,
+    questionTimeLimit: 15000,
+    difficultyWeights: { 1: 0.55, 2: 0.45 },
+    levelTime: 58000
+  },
   // v35: 自定义词库档 — 用户导入词库文件(如「上海五年级英语·新教材」),
   // 游戏仅从导入词库出题。难度参数取 primary 同款温和值(导入场景多为家长
   // 给小学生定制); 权重三档混合 — 若导入词库某档无词, quizManager
@@ -260,6 +372,19 @@ const ZOMBIE_TYPE_WEIGHTS = {
   sh4b:    { bucket: 0.60, imp: 0.22, football: 0.10, dancer: 0.08 },
   sh5:     { bucket: 0.55, imp: 0.24, football: 0.12, dancer: 0.09 },
   sh5b:    { bucket: 0.55, imp: 0.24, football: 0.12, dancer: 0.09 },
+  // v84: PEP 上/下册十二档 — 随年级渐进加强，六年级逼近 junior（一~二年级承袭沪教同级温和分布）
+  pep1:    { bucket: 0.70, imp: 0.18, football: 0.07, dancer: 0.05 },
+  pep1b:   { bucket: 0.70, imp: 0.18, football: 0.07, dancer: 0.05 },
+  pep2:    { bucket: 0.68, imp: 0.19, football: 0.07, dancer: 0.06 },
+  pep2b:   { bucket: 0.68, imp: 0.19, football: 0.07, dancer: 0.06 },
+  pep3:    { bucket: 0.65, imp: 0.20, football: 0.08, dancer: 0.07 },
+  pep3b:   { bucket: 0.65, imp: 0.20, football: 0.08, dancer: 0.07 },
+  pep4:    { bucket: 0.60, imp: 0.22, football: 0.10, dancer: 0.08 },
+  pep4b:   { bucket: 0.60, imp: 0.22, football: 0.10, dancer: 0.08 },
+  pep5:    { bucket: 0.55, imp: 0.24, football: 0.12, dancer: 0.09 },
+  pep5b:   { bucket: 0.55, imp: 0.24, football: 0.12, dancer: 0.09 },
+  pep6:    { bucket: 0.50, imp: 0.26, football: 0.14, dancer: 0.10 },
+  pep6b:   { bucket: 0.50, imp: 0.26, football: 0.14, dancer: 0.10 },
   junior:  { bucket: 0.50, imp: 0.28, football: 0.12, dancer: 0.10 },
   senior:  { bucket: 0.35, imp: 0.30, football: 0.20, dancer: 0.15 },
   ket:     { bucket: 0.55, imp: 0.25, football: 0.11, dancer: 0.09 },

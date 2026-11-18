@@ -1,4 +1,8 @@
-<!-- pages/index/index.wxml — v83 词库选择弹窗移除经典词库组 + 沪教版 1-5 年级上/下册词库
+<!-- pages/index/index.wxml — v84 弹窗新增人教版 PEP 词库组（DOM 结构零变化，仅 index.js 弹窗数据 + 新增 data/pepWords.js）
+  v84 更新：
+    · 分组列表由两组变三组：沪教版（十档）→ 人教版 PEP · 人民教育出版社
+      （一~六年级上/下册十二档，pep1~pep6/pep1b~pep6b，data/pepWords.js）→ 我的词库
+    · 胶囊动态改名支持 PEP 档（PEP 一上~PEP 六下）；选中行右侧 ✓ 与高亮样式复用 dict-row--active
   v83 更新（DOM 结构零变化，仅 index.js 弹窗数据与 data/shanghaiWords.js 词库）:
     · 「更多词库」弹窗列表移除「经典词库」组（小学/初中/高中/KET/PET 仍经主界面胶囊直选），
       仅保留 沪教版·上海教育出版社·五四制（一~五年级上册+下册，sh1~sh5/sh1b~sh5b）与我的词库
@@ -295,7 +299,7 @@
 
       <view class="dict-divider"></view>
 
-      <!-- 分组列表（v83: 沪教版上/下册 / 我的词库） -->
+      <!-- 分组列表（v84: 沪教版上/下册 + 人教版PEP上/下册 / 我的词库，scroll 滚动） -->
       <scroll-view class="dict-list" scroll-y="true">
         <block wx:for="{{dictOptions}}" wx:key="title" wx:for-item="group">
           <view class="dict-group-title">{{group.title}}</view>

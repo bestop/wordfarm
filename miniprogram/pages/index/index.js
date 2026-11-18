@@ -1,6 +1,8 @@
 // pages/index/index.js - 欢迎页（v76 糖果果冻打磨版）：糖果牌匾导航 + 数据胶囊条
 //   + PvZ 插画横幅（/images/banner-hero.jpg + CSS「VS」大字）+ 六色果冻词库牌
 //   + 大冒险卡（左插画 + 右双色标题/2×2 玩法徽章 + 卡内居中「开始冒险」果冻按钮 + 右下角龙珠奖励球）
+// v84 变化（逻辑零新增，纯数据扩展）：「更多词库」弹窗新增「人教版 PEP · 人民教育出版社」组
+//   （一~六年级上/下册十二档，data/pepWords.js）；pack-bar/胶囊动态改名同步支持 pep 档
 // v76 变化（仅视觉微调，逻辑零改动）：背景果冻气泡与星心花加大加立体、
 //   大冒险卡整体高度回压（插画/按钮同步收紧，横幅吸收余量）
 // v75 变化：龙珠一星移到奖励球上、整体下移填满一屏、词库牌间距护芽、背景星心花气泡扩充
@@ -20,6 +22,9 @@ const { ASSET_KEYS } = require('../../utils/constants.js');
 const { rewardManager } = require('../../utils/rewardManager.js');
 const customWordPack = require('../../utils/customWordPack.js');
 const { SH_GRADE_INFO, SHANGHAI_WORD_BANKS } = require('../../data/shanghaiWords.js');  // v82: 沪教版词库元信息
+const { PEP_GRADE_INFO, PEP_WORD_BANKS } = require('../../data/pepWords.js');          // v84: 人教版PEP词库元信息
+// v84: 全部教材/启蒙词库元信息合表 —— pack-bar 与胶囊动态改名共用（pep 在前，新表优先）
+const ALL_GRADE_INFO = PEP_GRADE_INFO.concat(SH_GRADE_INFO);
 
 Page({
   data: {
@@ -44,6 +49,7 @@ Page({
     // 难度列表（v50: 中学拆初中/高中、大学退役、新增 KET/PET 考试档，共 6 项）
     // v82: 第 6 枚改「更多词库」——点击弹词库选择列表，不再直接上传文件
     // v83: 弹窗列表移除「经典词库」组，仅保留沪教版（1-5 年级上/下册）+ 我的词库；经典五档仍可经本排胶囊直选
+    // v84: 弹窗新增人教版 PEP 组（一~六年级上/下册十二档）
     difficulties: [
       { key: 'primary', name: '小学' },
       { key: 'junior',  name: '初中' },
@@ -54,10 +60,11 @@ Page({
     ],
 
     // v82: 词库选择弹窗（果冻风果冻卡片列表）— v83: 移除经典词库组，仅沪教版上/下册 + 我的词库
+    //   v84: 新增人教版 PEP 组（pep1~pep6 / pep1b~pep6b 十二档）
     dictSheetVisible: false,
     dictOptions: [],
     moreActive: false,        // v82: 第 6 枚胶囊（更多词库）选中态
-    // v82: 当前词库信息条（替换 v35 customPackInfo —— sh1~sh5/custom 均展示；点击：custom→管理、其余→开弹窗）
+    // v82: 当前词库信息条（替换 v35 customPackInfo —— shX/pepX/custom 均展示；点击：custom→管理、其余→开弹窗）
     packBar: null,
 
     // 玩法徽章（v68 渲染于 Hero 大卡 banner-chips 2×2，文案/图标对齐参考图）
@@ -193,7 +200,7 @@ Page({
   noop() { /* 阻止冒泡占位 */ },
 
   /**
-   * 弹窗内选中词库：内置档/沪教档直接生效；我的词库→选中 custom；
+   * 弹窗内选中词库：内置档/沪教档/PEP 档直接生效；我的词库→选中 custom；
    * 底部「从聊天文件导入」走原文件导入流程（能力保留）
    */
   onSelectDict(e) {
@@ -219,7 +226,7 @@ Page({
     this._importWordPack();
   },
 
-  /** pack-bar 点击：custom 档→管理面板；shX→打开选择弹窗 */
+  /** pack-bar 点击：custom 档→管理面板；shX/pepX→打开选择弹窗 */
   onPackBarTap() {
     if (this.data.difficulty === 'custom') {
       this._manageWordPack();
@@ -230,7 +237,8 @@ Page({
 
   /**
    * v82: 构建词库选择弹窗数据 — v83: 移除「经典词库」组（小学/初中/高中/KET/PET 保留主界面胶囊直选），
-   *   列表仅两组：沪教版·上海教育出版社（五四制）上/下册十档（SH_GRADE_INFO）/ 我的词库（已导入包时展示）
+   *   列表仅沪教版（一~五年级上/下册十档）与我的词库
+   * v84: 新增人教版 PEP 组（一~六年级上/下册十二档，置沪教组之后、我的词库之前）
    * @param {Object|null} pack - 已导入自定义词包
    */
   _buildDictOptions(pack) {
@@ -242,6 +250,15 @@ Page({
           name: g.name,
           desc: g.desc + ' · ' + SHANGHAI_WORD_BANKS[g.key].length + ' 词',
           color: '#C79BF2'
+        }))
+      },
+      {
+        title: '人教版 PEP · 人民教育出版社',
+        items: PEP_GRADE_INFO.map(g => ({
+          key: g.key,
+          name: g.name,
+          desc: g.desc + ' · ' + PEP_WORD_BANKS[g.key].length + ' 词',
+          color: '#7CC8FA'
         }))
       }
     ];
@@ -255,7 +272,8 @@ Page({
   },
 
   /**
-   * v82: 构建 pack-bar 当前词库信息（shX/custom 显示；内置经典档不显示）
+   * v82: 构建 pack-bar 当前词库信息（shX/pepX/custom 显示；内置经典档不显示）
+   * v84: 查表改为 ALL_GRADE_INFO（PEP + 沪教）
    * @param {string} difficulty
    * @param {Object|null} pack
    */
@@ -266,20 +284,22 @@ Page({
       }
       return null;
     }
-    const g = SH_GRADE_INFO.find(x => x.key === difficulty);
+    const g = ALL_GRADE_INFO.find(x => x.key === difficulty);
     if (g) {
-      return { name: g.name, count: SHANGHAI_WORD_BANKS[g.key].length, isCustom: false };
+      const count = PEP_WORD_BANKS[g.key] ? PEP_WORD_BANKS[g.key].length : SHANGHAI_WORD_BANKS[g.key].length;
+      return { name: g.name, count: count, isCustom: false };
     }
     return null;
   },
 
   /**
    * v82: 同步第 6 枚胶囊（更多词库）名称与选中态 — v83: 支持下册（沪教一下~沪教五下）——
-   *   选 shX/shXb → 「沪教X上/下」+ active；选 custom → 「我的词库」+ active；其余 → 「更多词库」
+   *   选 shX/shXb → 「沪教X上/下」+ active；v84: 选 pepX/pepXb → 「PEP X上/下」+ active；
+   *   选 custom → 「我的词库」+ active；其余 → 「更多词库」
    */
   _syncMorePill() {
     const diff = this.data.difficulty;
-    const g = SH_GRADE_INFO.find(x => x.key === diff);
+    const g = ALL_GRADE_INFO.find(x => x.key === diff);
     const name = g ? g.short : (diff === 'custom' ? '我的词库' : '更多词库');
     this.setData({
       'difficulties[5].name': name,
