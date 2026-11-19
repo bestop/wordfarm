@@ -203,6 +203,9 @@ export default function PvZGame() {
     [engine]
   )
 
+  // v90 同步小程序 v66: 铲子工具切换
+  const handleSelectShovel = useCallback(() => engine.selectShovel(), [engine])
+
   const handlePause = useCallback(() => engine.pauseAt(Date.now()), [engine])
   const handleResume = useCallback(() => engine.resumeAt(Date.now()), [engine])
 
@@ -261,7 +264,7 @@ export default function PvZGame() {
         )}
       </div>
 
-      {snap && <PlantShop snap={snap} onSelect={handleSelectPlant} />}
+      {snap && <PlantShop snap={snap} onSelect={handleSelectPlant} onShovel={handleSelectShovel} />}
       {snap && <QuizPanel snap={snap} onAnswer={handleAnswer} />}
 
       {snap.phase === 'paused' && (

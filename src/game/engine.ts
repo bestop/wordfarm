@@ -151,10 +151,11 @@ export interface ViewSnapshot {
   killedZombies: number
   gameTime: number
   selectedPlant: PlantType | null
+  shovelSelected: boolean
   question: QuizQuestion | null
   quizRemainMs: number | null
   quizTimeLimit: number
-  feedback: { kind: 'correct' | 'wrong' | 'timeout'; until: number } | null
+  feedback: { kind: 'correct' | 'wrong' | 'timeout'; until: number; note?: string } | null
   banner: { text: string; sub: string; until: number } | null
   wrongStreak: number
   version: number
@@ -191,7 +192,8 @@ export class GameEngine {
   layout: Layout = emptyLayout()
 
   selectedPlant: PlantType | null = null
-  feedback: { kind: 'correct' | 'wrong' | 'timeout'; until: number } | null = null
+  shovelSelected = false // v90 同步小程序 v66: 铲子工具（与植物选中互斥）
+  feedback: { kind: 'correct' | 'wrong' | 'timeout'; until: number; note?: string } | null = null
   banner: { text: string; sub: string; until: number } | null = null
   shakeUntil = 0
   shakeIntensity = 0
@@ -208,8 +210,14 @@ export class GameEngine {
   private waveTimer = 0
   private finalWaveLaunched = false
   private finalWaveAt = -1
+  // v90 同步小程序 v60: 中场僵尸波队列 — 第 3/6 关开局压场（独立于终局大波, 不参与胜利判定）
+  private midWaveQueue: WaveQueueItem[] = []
+  private midWaveTimer = 0
   private questionDeadline = 0
   private questionTimeLimit = QUIZ.TIMEOUT_FALLBACK_MS
+  // v90 同步小程序 v61: 护学限时加成 — 错分支预置 pending, 每题在 _nextQuestion 消费一次
+  private pendingRecoveryBonusMs = 0
+  private questionTimeBonusMs = 0
   private sunVersion = 0
   private idSeq = 1
   private version = 0
@@ -260,6 +268,7 @@ export class GameEngine {
     this.particles = []
     this.floats = []
     this.selectedPlant = null
+    this.shovelSelected = false
     this.feedback = null
     this.banner = null
     this.gateHitAt = 0
@@ -274,8 +283,12 @@ export class GameEngine {
     this.waveTimer = 0
     this.finalWaveLaunched = false
     this.finalWaveAt = -1
+    this.midWaveQueue = []
+    this.midWaveTimer = 0
     this.questionTimeLimit = cfg.questionTimeLimit || QUIZ.TIMEOUT_FALLBACK_MS
     this.questionDeadline = 0
+    this.pendingRecoveryBonusMs = 0
+    this.questionTimeBonusMs = 0
     this.levelTimeMs = this._computeLevelTimeMs()
 
     this.quiz.setWordBank(this.wordBank)
@@ -335,9 +348,11 @@ export class GameEngine {
       killedZombies: this.killedZombies,
       gameTime: this.gameTime,
       selectedPlant: this.selectedPlant,
+      shovelSelected: this.shovelSelected,
       question: this.quiz.getCurrent(),
       quizRemainMs: this.questionDeadline ? Math.max(0, this.questionDeadline - Date.now()) : null,
-      quizTimeLimit: this.questionTimeLimit,
+      // v90: 有效限时 = 基础限时 + 护学加成（页面倒计时条满格基准随之放大，对齐小程序 getQuizTimeLimit）
+      quizTimeLimit: this.questionTimeLimit + this.questionTimeBonusMs,
       feedback: this.feedback && this.feedback.until > Date.now() ? this.feedback : null,
       banner: this.banner && this.banner.until > Date.now() ? this.banner : null,
       wrongStreak: this.wrongStreak,
@@ -365,9 +380,7 @@ export class GameEngine {
 
   resume() {
     if (this.phase !== 'paused') return
-    // 暂停时长平移题目时钟（v39: 防长暂停后瞬间误判超时 / 速度奖励虚增）
-    const pauseDuration = this.questionDeadline ? 0 : 0 // 实际平移在组件层记录的暂停起点完成
-    void pauseDuration
+    // 暂停时长平移由 resumeAt 完成（题目时钟/反馈时钟/受击晃动时钟统一平移）
     this.phase = 'playing'
     audioManager.resume()
     this.emitView(true)
@@ -381,8 +394,13 @@ export class GameEngine {
   }
   resumeAt(time: number) {
     const pauseDuration = time - this._pauseStartedAt
-    if (pauseDuration > 0 && this.questionDeadline > 0) {
-      this.questionDeadline += pauseDuration
+    if (pauseDuration > 0) {
+      // v90: 平移所有 Date.now() 基准的实时时钟，防长暂停后残留态错乱
+      if (this.questionDeadline > 0) this.questionDeadline += pauseDuration
+      if (this.feedback) this.feedback.until += pauseDuration
+      if (this.banner) this.banner.until += pauseDuration
+      if (this.shakeUntil > 0) this.shakeUntil += pauseDuration
+      if (this.gateHitAt > 0) this.gateHitAt += pauseDuration
     }
     this.quiz.shiftQuestionClock(pauseDuration)
     this.resume()
@@ -394,14 +412,22 @@ export class GameEngine {
 
   // ============ 答题 ============
   private _nextQuestion() {
+    // v90 对齐小程序 v61: 每题消费一次护学加成（pending 保持到下次错分支重算，
+    //   护学中连续多题均放宽；答对不清 pending —— 答对后 pending 仍是旧值，
+    //   但 wrongStreak 已清零，下次答错会重算为 0，自然回归基础限时）
+    this.questionTimeBonusMs = this.pendingRecoveryBonusMs || 0
     const q = this.quiz.generateQuestion(this.cfg.difficultyWeights)
-    this.questionDeadline = q ? Date.now() + this.questionTimeLimit : 0
+    this.questionDeadline = q
+      ? Date.now() + this.questionTimeLimit + this.questionTimeBonusMs
+      : 0
   }
 
   answerQuiz(optionIndex: number) {
     if (this.phase !== 'playing' || !this.quiz.getCurrent()) {
-      return { correct: false, score: 0, combo: 0, sunlightReward: 0, comboMult: 1 }
+      return { correct: false, score: 0, combo: 0, sunlightReward: 0, comboMult: 1, wrongStreak: 0 }
     }
+    // v90 对齐小程序 v61: 答题前留底连错计数（护学回归认可需要「之前」的值）
+    const prevWrongStreak = this.quiz.wrongStreak
     const result = this.quiz.answer(optionIndex)
     if (result.correct) {
       this._addSunlight(result.sunlightReward)
@@ -411,13 +437,34 @@ export class GameEngine {
       this.maxCombo = Math.max(this.maxCombo, result.combo)
       audioManager.play('correct')
       this.feedback = { kind: 'correct', until: Date.now() + 700 }
-    } else {
-      // v45 温和化: 连续首错免罚（仅清连击），二错起全场僵尸加速
-      audioManager.play('wrong')
-      if ((result.wrongStreak || 0) > SUNLIGHT.PENALTY_WRONG_FREE_STREAK) {
-        this._applyGlobalSpeedBoost(SUNLIGHT.PENALTY_WRONG_SPEED_MULT, SUNLIGHT.PENALTY_WRONG_SPEED_TIME)
+      // v90 同步小程序 v61: 护学回归认可 — 连错≥3 后首次答对（此刻 combo=1, 不与里程碑 banner 撞车）
+      if (prevWrongStreak >= QUIZ.RECOVERY.MIN_STREAK) {
+        this.feedback.note = '👏 状态回来了，继续保持！'
       }
+      // v90 同步小程序 v60: 连击里程碑奖励 + 单词魔法弹（答对 = 直接参战, 学习与战斗强绑定）
+      this._resolveComboMilestone(result.combo)
+      if (result.combo >= QUIZ.MAGIC.MIN_COMBO) this._quizMagic()
+    } else {
+      // v45 温和化 + v90 对齐小程序 v61「警示一次 + 护学接管」:
+      //   连续第 1 错仅清连击；恰第 2 错全场临时加速一次（学习的后果感）；
+      //   第 3 错起不再加压，转入喘息减速 + 后续题限时放宽（反死亡螺旋）
+      audioManager.play('wrong')
+      const streak = result.wrongStreak || 0
+      if (streak === SUNLIGHT.PENALTY_WRONG_FREE_STREAK + 1) {
+        this._applyGlobalSpeedBoost(SUNLIGHT.PENALTY_WRONG_SPEED_MULT, SUNLIGHT.PENALTY_WRONG_SPEED_TIME)
+      } else if (streak === QUIZ.RECOVERY.MIN_STREAK) {
+        // v90 护学: 恰第 3 错全场喘息减速（复用寒冰脉冲因子, 让孩子定定神）
+        this._applyGlobalSlow(QUIZ.FREEZE_FACTOR, QUIZ.RECOVERY.BREATHE_MS)
+      }
+      // v90 护学: 三错起下一题限时放宽（经 pendingRecoveryBonusMs 在 _nextQuestion 内落位）
+      this.pendingRecoveryBonusMs = streak >= QUIZ.RECOVERY.MIN_STREAK
+        ? Math.min(
+            Math.round(this.questionTimeLimit * QUIZ.RECOVERY.TIME_BONUS_PCT),
+            QUIZ.RECOVERY.TIME_BONUS_MAX_MS,
+          )
+        : 0
       this.combo = 0
+      this.comboMult = 1 // v90: 答错连击倍率一并归位（与 combo 清零语义一致）
       this.wrongStreak = result.wrongStreak
       this.feedback = { kind: 'wrong', until: Date.now() + 900 }
     }
@@ -450,6 +497,74 @@ export class GameEngine {
     }
   }
 
+  /**
+   * v90 同步小程序 v60: 全场缓速（寒冰脉冲/护学喘息共用）— 仅更强因子覆盖在生效的缓速
+   * （对齐 zombieManager.applyGlobalSlow: slowTimer<=0 或 factor 更小才改写, 时长取 max）
+   */
+  private _applyGlobalSlow(factor: number, durationMs: number) {
+    for (const z of this.zombies) {
+      if (z.state === 'dying') continue
+      if (z.slowTimer <= 0 || factor < z.slowFactor) {
+        z.slowFactor = factor
+      }
+      z.slowTimer = Math.max(z.slowTimer, durationMs)
+    }
+  }
+
+  /**
+   * v90 同步小程序 v60: 连击里程碑结算 — combo 恰达 QUIZ.MILESTONES 阈值时触发一次性奖励
+   * （sun=阳光直接入账 / sunrain=天降阳光雨 / freeze=全场寒冰脉冲）; 断连后重爬到阈值会再次触发
+   * （鼓励保持连击, 每次都需真实连续答对 5/10/15 题达成）; web 端用 banner 反馈（对齐小程序 toast 文案）
+   */
+  private _resolveComboMilestone(combo: number) {
+    const m = QUIZ.MILESTONES.find((ms) => ms.combo === combo)
+    if (!m) return
+    if (m.type === 'sun') {
+      this._addSunlight(m.value)
+      this.banner = { text: `🎉 连击 x${combo}！阳光 +${m.value}`, sub: '', until: Date.now() + 1500 }
+    } else if (m.type === 'sunrain') {
+      this._spawnBonusSuns(m.value)
+      this.banner = { text: `🌞 连击 x${combo}！天降阳光雨`, sub: '', until: Date.now() + 1500 }
+    } else if (m.type === 'freeze') {
+      this._applyGlobalSlow(QUIZ.FREEZE_FACTOR, m.value)
+      this.banner = { text: `❄️ 连击 x${combo}！寒冰脉冲冻结全场`, sub: '', until: Date.now() + 1500 }
+    }
+    audioManager.play('level_up') // 里程碑升档复用清亮双音（对齐小程序 _onComboChange 音色选择）
+  }
+
+  /** v90 同步小程序 plantManager.spawnBonusSuns: 场内随机位置撒 n 颗可收集阳光（面值 25） */
+  private _spawnBonusSuns(n: number) {
+    const { left, top, width, height } = this.layout
+    for (let i = 0; i < n; i++) {
+      if (this.suns.length >= SUNLIGHT.FIELD_MAX) break
+      const x = left + Math.random() * width
+      const y = top + height * (0.15 + Math.random() * 0.6)
+      this._spawnSun(x, y, 25)
+    }
+  }
+
+  /**
+   * v90 同步小程序 combatResolver.onQuizMagic: 单词魔法弹 — 答对且 combo ≥ MIN_COMBO 时自动打击
+   * 场上最靠前(威胁最大, progress 最大)的可攻击僵尸: 伤害 + 缓速; 目标缺失时静默
+   */
+  private _quizMagic() {
+    let target: EngineZombie | null = null
+    for (const z of this.zombies) {
+      if (z.state !== 'walking' && z.state !== 'eating') continue
+      if (!target || z.progress > target.progress) target = z
+    }
+    if (!target) return
+    target.health -= QUIZ.MAGIC.DAMAGE
+    target.hitFlash = 200
+    if (target.slowTimer <= 0 || QUIZ.MAGIC.SLOW_FACTOR < target.slowFactor) {
+      target.slowFactor = QUIZ.MAGIC.SLOW_FACTOR
+    }
+    target.slowTimer = Math.max(target.slowTimer, QUIZ.MAGIC.SLOW_MS)
+    const pos = this._zombiePixel(target)
+    this._addBurst(pos.x, pos.y, '#4FC3F7', PARTICLE.BURST_CHOMPER_HIT) // 寒冰青魔法粒子
+    if (target.health <= 0) this._killZombie(target, 'shot')
+  }
+
   private _addSunlight(v: number) {
     this.sunlight = Math.min(SUNLIGHT.MAX, this.sunlight + v)
   }
@@ -463,7 +578,49 @@ export class GameEngine {
       return
     }
     this.selectedPlant = type
+    // v90 同步小程序 v66: 与铲子互斥 — 选中植物时自动收起铲子
+    if (type && this.shovelSelected) {
+      this.shovelSelected = false
+    }
     this.emitView(true)
+  }
+
+  /** v90 同步小程序 v66: 铲子选中切换（再点一次取消; 选中时收起植物选择） */
+  selectShovel() {
+    this.shovelSelected = !this.shovelSelected
+    if (this.shovelSelected) this.selectedPlant = null
+    this.emitView(true)
+  }
+
+  /**
+   * v90 同步小程序 v66: 铲除植物并半价回收（PLANT.REMOVE_REFUND_RATIO, 向下取整）
+   * 返回 { ok, refund, name } —— UI 层用 float text 反馈回收阳光
+   */
+  tryRemovePlantAtPixel(x: number, y: number): { ok: boolean; refund: number; name: string } {
+    const empty = { ok: false, refund: 0, name: '' }
+    if (!this.shovelSelected || this.phase !== 'playing') return empty
+    const { left, top, width, height } = this.layout
+    const col = Math.floor(((x - left) / width) * GRID.COLS)
+    const lane = Math.floor(((y - top) / height) * GRID.ROWS)
+    if (col < 0 || col >= GRID.COLS || lane < 0 || lane >= GRID.ROWS) return empty
+    const idx = this.plants.findIndex((p) => p.lane === lane && p.col === col)
+    if (idx < 0) return empty
+    const p = this.plants[idx]
+    const def = PLANT_TYPES[p.type]
+    const refund = Math.floor((def.cost || 0) * PLANT.REMOVE_REFUND_RATIO)
+    this.plants.splice(idx, 1)
+    if (refund > 0) this._addSunlight(refund)
+    const pos = this._plantPixel(p)
+    this._addBurst(pos.x, pos.y, '#A1887F', 8)
+    if (refund > 0) {
+      this.floats.push({
+        x: pos.x, y: pos.y - 10, text: `+${refund}`,
+        color: '#F9A825', life: 800, maxLife: 800, size: 15,
+      })
+    }
+    audioManager.play('place')
+    this.emitView(true)
+    return { ok: true, refund, name: def.name }
   }
 
   tryPlaceAtPixel(x: number, y: number): boolean {
@@ -527,8 +684,8 @@ export class GameEngine {
     this.sunVersion++
   }
 
-  /** 点击处理：先判阳光收集，再判植物放置 */
-  tapAtPixel(x: number, y: number): 'sun' | 'place' | 'none' {
+  /** 点击处理：先判阳光收集，再判铲子铲除，最后判植物放置 */
+  tapAtPixel(x: number, y: number): 'sun' | 'place' | 'shovel' | 'none' {
     // 阳光命中（兜底半径 SUNLIGHT.TAP_HIT_RADIUS）
     for (let i = this.suns.length - 1; i >= 0; i--) {
       const s = this.suns[i]
@@ -538,6 +695,11 @@ export class GameEngine {
         this._collectSun(s)
         return 'sun'
       }
+    }
+    // v90: 铲子模式 — 点击网格铲除植物并半价回收（不与放置流程交叉, 对齐小程序 v66）
+    if (this.shovelSelected) {
+      this.tryRemovePlantAtPixel(x, y)
+      return 'shovel'
     }
     if (this.selectedPlant && this.tryPlaceAtPixel(x, y)) return 'place'
     return 'none'
@@ -578,6 +740,9 @@ export class GameEngine {
         until: Date.now() + 2200,
       }
       if (this.level === LEVEL.MAX_LEVEL) this._launchFinalWave()
+      // v90 同步小程序 v60: 中场僵尸波 — 第 3/6 关开局额外一波压场（长局节奏起伏;
+      //   与末关互斥, 常规生成照常, 独立于终局大波与胜利判定）
+      else if (LEVEL.MID_WAVES.includes(this.level)) this._launchMidWave()
       this.emitView(true)
     }
 
@@ -591,6 +756,9 @@ export class GameEngine {
 
     // 4. 终局大波入场（400ms 节奏, 不受 maxZombies 限制）
     this._updateWaveQueue(dt)
+
+    // 4.5 v90 中场僵尸波按节奏入场（与终局大波同模式但独立队列, 首只经预警窗口）
+    this._updateMidWaveQueue(dt)
 
     // 5. 植物更新
     this._updatePlants(dt, dtSec)
@@ -629,14 +797,38 @@ export class GameEngine {
   }
 
   // ============ 生成器 ============
+  /** 抽取僵尸类型（v90 对齐小程序 _rollType: 权重归一化容错, 避免权重和≠1 时漏抽） */
   private _rollZombieType(): ZombieType {
+    const entries = Object.entries(this.weights)
+    const totalW = entries.reduce((s, [, w]) => s + (w || 0), 0)
+    if (!totalW) return 'bucket'
     const r = Math.random()
     let acc = 0
-    for (const [t, w] of Object.entries(this.weights)) {
-      acc += w
+    for (const [t, w] of entries) {
+      acc += (w || 0) / totalW
       if (r <= acc) return t as ZombieType
     }
     return 'bucket'
+  }
+
+  /**
+   * v90 同步小程序 v66: 车道软负载均衡选路 — 按各车道可攻击僵尸数加权随机
+   * 权重 = 1/(1+laneCount)：空车道权重 1, 已有 1 只 → 0.5, 2 只 → 0.33…
+   * 保留随机性（非硬轮转）, 但显著降低同车道连续扎堆概率
+   */
+  private _pickLane(): number {
+    const counts = [0, 0, 0]
+    for (const z of this.zombies) {
+      if (z.state !== 'dying' && z.lane >= 0 && z.lane < GRID.ROWS) counts[z.lane]++
+    }
+    let total = 0
+    for (let i = 0; i < GRID.ROWS; i++) total += 1 / (1 + counts[i])
+    let r = Math.random() * total
+    for (let i = 0; i < GRID.ROWS; i++) {
+      r -= 1 / (1 + counts[i])
+      if (r <= 0) return i
+    }
+    return GRID.ROWS - 1
   }
 
   private _spawnZombie(type: ZombieType, lane: number, progress = 0, hpMult = this.hpMult) {
@@ -680,7 +872,7 @@ export class GameEngine {
       return
     }
     this.spawnTimer = 0
-    const lane = Math.floor(Math.random() * GRID.ROWS)
+    const lane = this._pickLane() // v90: 车道软负载均衡（对齐小程序 v66 防同路扎堆）
     this._spawnZombie(this._rollZombieType(), lane)
   }
 
@@ -725,6 +917,32 @@ export class GameEngine {
       this.waveTimer -= LEVEL.KING_WAVE_STAGGER_MS
       const item = this.waveQueue.shift()
       if (item) this._spawnZombie(item.type, item.lane, 0, 1) // 僵尸王血量恒定不随坡道
+    }
+  }
+
+  /**
+   * v90 同步小程序 v60: 中场僵尸波 — LEVEL.MID_WAVES 关开局的一波快速压场
+   * - 类型按当前权重抽取（关卡 ramp 自动生效）; 车道轮转 + 随机偏移 → 波内均衡压场
+   * - 首只延迟 MID_WAVE_WARN_MS（预警窗口, banner 先行）, 之后按 MID_WAVE_STAGGER_MS 节奏入场
+   * - 不受 maxZombies 配额限制（压力事件定位, 同终局大波/舞王召唤惯例）, POOL_MAX 兑底
+   */
+  private _launchMidWave() {
+    const offset = Math.floor(Math.random() * GRID.ROWS)
+    for (let i = 0; i < LEVEL.MID_WAVE_SIZE; i++) {
+      this.midWaveQueue.push({ type: this._rollZombieType(), lane: (i + offset) % GRID.ROWS })
+    }
+    this.midWaveTimer = LEVEL.MID_WAVE_WARN_MS
+    audioManager.play('final_wave')
+    this.banner = { text: '🌊 一大波僵尸正在接近！', sub: '', until: Date.now() + 1800 }
+  }
+
+  private _updateMidWaveQueue(dt: number) {
+    if (!this.midWaveQueue.length) return
+    this.midWaveTimer -= dt
+    while (this.midWaveQueue.length && this.midWaveTimer <= 0) {
+      const item = this.midWaveQueue.shift()
+      if (item) this._spawnZombie(item.type, item.lane, 0)
+      this.midWaveTimer += LEVEL.MID_WAVE_STAGGER_MS
     }
   }
 
@@ -994,6 +1212,11 @@ export class GameEngine {
       x: pos.x, y: pos.y - 18, text: `+${ZOMBIE_TYPES[z.type].scoreReward}`,
       color: '#66BB6A', life: 800, maxLife: 800, size: 14,
     })
+    // v90 同步小程序 v60: 击杀掉宝 — 概率掉落一颗可收集阳光（掉宝是惊喜不是权益,
+    //   同屏超限时放弃掉落不做入账补偿 —— 引导玩家勤收集, 对齐小程序 spawnLootSun 语义）
+    if (this.suns.length < SUNLIGHT.FIELD_MAX && Math.random() < SUNLIGHT.LOOT_CHANCE) {
+      this._spawnSun(pos.x, pos.y, SUNLIGHT.LOOT_VALUE)
+    }
     audioManager.play('kill')
     this.emitView(true)
   }

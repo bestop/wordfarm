@@ -96,12 +96,18 @@ export default function QuizPanel({ snap, onAnswer }: Props) {
           {/* 反馈条 */}
           {/* v57 修复: 不再展示「正确答案: xxx」文字 —— 同理会在新题上剧透答案，
               与小程序一致只提示对/错 + 惩罚预告 */}
+          {/* v90 对齐小程序 v61 分层反馈: note 优先（护学回归认可），错词按连错阶梯鼓励 */}
           <div className="h-5 mt-1 text-center text-xs font-bold" aria-live="polite">
-            {fb?.kind === 'correct' && <span className="text-[#66BB6A]">✅ 答对啦！阳光 +30</span>}
+            {fb?.kind === 'correct' && (
+              <span className="text-[#66BB6A]">{fb.note || '✅ 答对啦！阳光 +30'}</span>
+            )}
             {fb?.kind === 'wrong' && (
               <span className="text-[#E57373]">
                 ❌ 答错啦！
-                {snap.wrongStreak >= 2 ? ' · 僵尸加速了！' : ' · 再错一次会加速哦'}
+                {(snap.wrongStreak || 0) === 2 && ' · 💪 别灰心，慢慢想，你可以的！'}
+                {(snap.wrongStreak || 0) === 3 && ' · 🌿 僵尸们也歇了口气，深呼吸～'}
+                {(snap.wrongStreak || 0) > 3 && ' · 🌱 稳住！多读两遍题目，你能行！'}
+                {(snap.wrongStreak || 0) <= 1 && ' · 再错一次会加速哦'}
               </span>
             )}
             {fb?.kind === 'timeout' && <span className="text-[#FFB300]">⏰ 超时啦，换一道题（不计错）</span>}

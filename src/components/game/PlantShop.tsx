@@ -9,9 +9,10 @@ import type { ViewSnapshot } from '@/game/engine'
 interface Props {
   snap: ViewSnapshot
   onSelect: (type: PlantType | null) => void
+  onShovel: () => void
 }
 
-export default function PlantShop({ snap, onSelect }: Props) {
+export default function PlantShop({ snap, onSelect, onShovel }: Props) {
   return (
     <div className="relative w-full select-none">
       {/* 右缘渐隐: 提示移动端可横向滚动看全部植物 */}
@@ -48,6 +49,21 @@ export default function PlantShop({ snap, onSelect }: Props) {
             </button>
           )
         })}
+        {/* v90 同步小程序 v66: 铲子工具 — 点击选中后点草地格子铲除植物并半价回收 */}
+        <button
+          onClick={onShovel}
+          aria-pressed={snap.shovelSelected}
+          aria-label="铲子工具, 铲除植物半价回收"
+          className={`wf-focus flex flex-col items-center justify-center min-w-[60px] sm:min-w-[64px] flex-1 rounded-xl px-1 py-1.5 snap-start transition-all ${
+            snap.shovelSelected
+              ? 'wf-glass-tile border-2 border-[#E91E63] bg-[#FDE0E6]/85 scale-[1.05] shadow-[0_6px_16px_rgba(233,30,99,0.25)]'
+              : 'wf-glass-tile'
+          }`}
+        >
+          <span className="text-xl leading-6" aria-hidden>⛏️</span>
+          <span className="text-[10px] font-bold text-[#5D4037] leading-3 mt-0.5 whitespace-nowrap">铲子</span>
+          <span className="text-[11px] font-black leading-4 text-[#66BB6A]">回收</span>
+        </button>
         <div className="hidden md:flex flex-col justify-center pl-2 pr-1 text-[11px] text-[#8D6E63] leading-4 min-w-[110px]">
           <span>选中后点击草地格子</span>
           <span>种植 · 点击阳光收集</span>

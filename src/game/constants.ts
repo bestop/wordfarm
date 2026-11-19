@@ -178,7 +178,7 @@ export const LIVES = {
   MAX: 3,
 }
 
-// ============ 关卡推进（混合模式, v51） ============
+// ============ 关卡推进（混合模式, v51；v90 同步小程序 v60 中场波） ============
 export const LEVEL = {
   TIME_PER_LEVEL: 60000,
   LEVEL_TIME_EASY: 48000,
@@ -187,6 +187,12 @@ export const LEVEL = {
   FINAL_CLEAR_GRACE_MS: 1500,
   KING_WAVE_ESCORTS: 9,
   KING_WAVE_STAGGER_MS: 400,
+  // v90 同步小程序 v60: 中场僵尸波 — 第 3/6 关开局各来一波迷你波（4 只快速入场），给长局制造节奏起伏;
+  //   独立于终局大波, 不参与胜利判定（与小程序 LEVEL.MID_WAVES 逐值一致）
+  MID_WAVES: [3, 6],           // 触发关卡
+  MID_WAVE_SIZE: 4,            // 每波僵尸数
+  MID_WAVE_WARN_MS: 1500,      // 预警时长(ms)：banner 后 ~1.5s 僵尸才入场
+  MID_WAVE_STAGGER_MS: 550,    // 波内入场间隔(ms)
   RAMP: {
     SPAWN_INTERVAL_MULT: 0.92,
     SPEED_MULT: 1.05,
@@ -314,19 +320,23 @@ export const PLANT_TYPES: Record<PlantType, PlantTypeDef> = {
 
 export const PLANT_ORDER: PlantType[] = ['sunflower', 'shooter', 'wall', 'freezer', 'cherry', 'chomper', 'fire']
 
-// ============ 阳光经济 ============
+// ============ 阳光经济（v90 同步小程序 v60 击杀掉宝） ============
 export const SUNLIGHT = {
   INITIAL: 150,
   MAX: 999,
   REWARD_CORRECT: 30,
   PENALTY_WRONG_SPEED_MULT: 1.3,
   PENALTY_WRONG_SPEED_TIME: 3000,
-  PENALTY_WRONG_FREE_STREAK: 1, // v45: 连续第 1 错免罚（仅清连击），第 2 错起加速
+  PENALTY_WRONG_FREE_STREAK: 1, // v45: 连续第 1 错免罚（仅清连击），第 2 错起加速（v90 对齐 v61: 仅恰 2 错加速一次）
   SUN_COLLECT_WINDOW_MS: 320,
   SUN_APPEAR_MS: 260,
   FIELD_MAX: 10,        // 同屏阳光上限（超出自动入账）
   LIFETIME_MS: 10000,   // 阳光寿命（超时自动入账，防挫败）
   TAP_HIT_RADIUS: 34,   // 点击命中半径(px)
+  // v90 同步小程序 v60: 击杀掉宝 — 僵尸被击杀时概率掉落一颗可收集阳光
+  //   期望: 一局 80 杀 ≈ 10 次 × 15 = 150 阳光 ≈ 1 株向日葵的产出, 温和不破坏经济
+  LOOT_CHANCE: 0.12,    // 掉落概率(12%)
+  LOOT_VALUE: 15,       // 掉落阳光面值
 }
 
 // ============ 僵尸通用参数 ============
@@ -350,10 +360,13 @@ export const ZOMBIE = {
   SPEED_PATH_REF: 800,
 }
 
-// ============ 植物通用参数 ============
+// ============ 植物通用参数（v90 同步小程序 v66 铲子回收比例） ============
 export const PLANT = {
   INITIAL_CD_RATIO: 0.5,
   NO_TARGET_RETRY_MS: 200,
+  // v90 同步小程序 v66: 铲子回收比例 — 移除植物返还 cost×此值 的阳光（向下取整, 儿童向
+  //   半价回收: 放错位置可止损重摆, 又不至于无成本反复横跳）
+  REMOVE_REFUND_RATIO: 0.5,
   CHOMPER: {
     SNAP_DURATION_MS: 300,
     BITE_DAMAGE_POINT: 0.55,
@@ -381,12 +394,38 @@ export const PARTICLE = {
   BURST_DANCER_SUMMON: 10,
 }
 
-// ============ 答题 ============
+// ============ 答题（v90 同步小程序 v60 连击里程碑/魔法弹 + v61 护学） ============
 export const QUIZ = {
   OPTION_COUNT: 4,
   TIMEOUT_FALLBACK_MS: 20000,
   TIMER_TICK_MS: 500,
   TIMER_DANGER_MS: 5000,
+  // v90 同步小程序 v60: 连击里程碑 — combo 恰达阈值时触发一次性奖励（断连重爬可再触发,
+  //   鼓励保持连击）; sun=阳光直接入账 / sunrain=天降阳光雨 / freeze=全场寒冰脉冲
+  MILESTONES: [
+    { combo: 5, type: 'sun', value: 50 },      // 连击礼包：阳光直接 +50
+    { combo: 10, type: 'sunrain', value: 3 },  // 天降阳光雨：3 颗可收集太阳
+    { combo: 15, type: 'freeze', value: 2500 } // 寒冰脉冲：全场重减速 2.5s
+  ] as { combo: number; type: 'sun' | 'sunrain' | 'freeze'; value: number }[],
+  // v90 同步小程序 v60: 单词魔法弹 — 答对且 combo ≥ MIN_COMBO 时, 一枚魔法弹自动打击场上
+  //   最靠前(威胁最大)的僵尸：伤害 + 缓速（答对 = 直接参战, 学习与战斗强绑定）
+  //   平衡: 伤害对齐一发豌豆(DAMAGE=2), 一题 ≥5s 间隔 → 边际 ≈ 0.4 个射手 DPS
+  MAGIC: {
+    MIN_COMBO: 5,          // 连击 5 起（新手保护期: 前 4 连击无魔弹）
+    DAMAGE: 2,             // 伤害（对齐豌豆单发）
+    SLOW_FACTOR: 0.6,      // 命中缓速因子
+    SLOW_MS: 1500,         // 缓速时长(ms)
+  },
+  // v90 同步小程序 v60: 寒冰脉冲减速因子（比寒冰射手 0.5 更强, 仪式感）
+  FREEZE_FACTOR: 0.25,
+  // v90 同步小程序 v61: 连续答错护学 — 惩罚只警示一次, 三错起转入护学（反死亡螺旋, 儿童向）
+  // 与 v45 免罚档衔接: 1错免罚 / 2错警示加速一次 / 3错喘息减速+后续题限时放宽
+  RECOVERY: {
+    MIN_STREAK: 3,                   // 连续答错达该值进入护学
+    BREATHE_MS: 2000,                // 恰第 3 错: 全场僵尸喘息减速时长(ms)（复用 FREEZE_FACTOR）
+    TIME_BONUS_PCT: 0.5,             // 三错起: 下一题限时延长比例
+    TIME_BONUS_MAX_MS: 8000,         // 单题限时延长上限(ms)
+  },
 }
 
 // ============ 题目类型（按权重抽题） ============
