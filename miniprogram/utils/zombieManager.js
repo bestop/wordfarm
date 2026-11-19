@@ -407,6 +407,18 @@ class ZombieManager {
   }
 
   /**
+   * v91: 暂停恢复时平移 spawner 心跳墙钟 —— 心跳检测（HEARTBEAT_STALL_MS
+   *   无生成则强制回收名额）用 Date.now() 墙钟累计, 长暂停期间主循环停摆,
+   *   noSpawnDuration 虚增 → 恢复瞬间若场上满员会误触发「强制回收最早
+   *   僵尸」（玩家僵尸凭空消失）。与 gameManager 平移 _questionDeadline
+   *   同款生命周期契约: resume 时由调用方传入暂停时长
+   * @param {number} ms - 暂停时长(ms)
+   */
+  shiftHeartbeatClock(ms) {
+    if (ms > 0 && this.spawner._lastSpawnTime > 0) this.spawner._lastSpawnTime += ms;
+  }
+
+  /**
    * v51: 僵尸王终局大波 — 王率先入场 + LEVEL.KING_WAVE_ESCORTS 只护卫按节奏跟上
    * 由 gameManager 进入末关时调用（常规生成已 stopSpawn, 大波是收官唯一新内容）
    * - 王: 随机车道, hpMult 恒 1（血量恒 32, 不随难度/关卡漂移 → 全档一致的压轴挑战）

@@ -403,6 +403,11 @@ class GameManager {
   answer(optionIndex) {
     if (!this.state.isPlaying) return { correct: false };
     const result = quizManager.answer(optionIndex);
+    // v91: 同题重复点击透传 —— 引擎层守卫拦截的重复作答不结算/不惩罚/不换题
+    //   （否则会走下方错分支: 连错恰 2 时误触发僵尸加速 + 无谓跳题）
+    if (result.duplicate) {
+      return { correct: false, score: 0, combo: result.combo, sunlightReward: 0, duplicate: true };
+    }
 
     if (result.correct) {
       // 答对：加阳光
@@ -701,6 +706,9 @@ class GameManager {
       this._questionDeadline += pauseDuration;
       quizManager.shiftQuestionClock(pauseDuration);
     }
+    // v91: spawner 心跳墙钟同步平移 — 心跳检测用 Date.now() 累计, 长暂停后
+    //   noSpawnDuration 虚增, 满员时恢复瞬间会误触发「强制回收最早僵尸」
+    zombieManager.shiftHeartbeatClock(pauseDuration);
     console.info('[GameManager] resume: 暂停时长=' + pauseDuration + 'ms');
     // 清理残留 rafId
     if (this.rafId) {

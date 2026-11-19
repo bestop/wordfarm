@@ -205,6 +205,7 @@ export class GameEngine {
   private speedMult = 1
   private weights: Record<string, number> = { ...ZOMBIE_TYPE_WEIGHTS.junior }
   private spawnStopped = false
+  private spawnStallMs = 0 // v91: 心跳堵转累计（满员无生成时钟, 达 HEARTBEAT_STALL_MS 回收最早僵尸）
   private levelTimeMs = LEVEL.TIME_PER_LEVEL
   private waveQueue: WaveQueueItem[] = []
   private waveTimer = 0
@@ -275,6 +276,7 @@ export class GameEngine {
 
     this.spawnInterval = cfg.spawnInterval
     this.spawnTimer = 0
+    this.spawnStallMs = 0 // v91: 心跳堵转钟复位
     this.hpMult = 1
     this.speedMult = 1
     this.weights = { ...(ZOMBIE_TYPE_WEIGHTS[difficulty] || ZOMBIE_TYPE_WEIGHTS.junior) }
@@ -412,29 +414,43 @@ export class GameEngine {
 
   // ============ 答题 ============
   private _nextQuestion() {
-    // v90 对齐小程序 v61: 每题消费一次护学加成（pending 保持到下次错分支重算，
-    //   护学中连续多题均放宽；答对不清 pending —— 答对后 pending 仍是旧值，
-    //   但 wrongStreak 已清零，下次答错会重算为 0，自然回归基础限时）
+    // v91 对齐小程序 v61 原语义: 护学加成每题消费一次, 消费后 pending 清零 ——
+    //   仅「答错≥3 后的下一题」放宽一次, 下一题自然回基础限时；答对/超时路径
+    //   不再透传旧加成（v90 曾保留 pending 导致连对多题仍全部放宽, 过于宽松且与小程序不一致）
     this.questionTimeBonusMs = this.pendingRecoveryBonusMs || 0
+    this.pendingRecoveryBonusMs = 0
     const q = this.quiz.generateQuestion(this.cfg.difficultyWeights)
     this.questionDeadline = q
       ? Date.now() + this.questionTimeLimit + this.questionTimeBonusMs
       : 0
   }
 
-  answerQuiz(optionIndex: number) {
+  answerQuiz(optionIndex: number, expectedQuestionId?: number) {
     if (this.phase !== 'playing' || !this.quiz.getCurrent()) {
+      return { correct: false, score: 0, combo: 0, sunlightReward: 0, comboMult: 1, wrongStreak: 0 }
+    }
+    // v91: 快照错位防护 —— UI 层快照有 ≤80ms 节流延迟, 超时/连答瞬间玩家
+    //   看到的可能是旧题, 点击索引却会被判到新题上；携带快照题 id 校验,
+    //   不匹配则忽略本次点击（小程序侧 quizDisabled 同步锁无此窗口）
+    if (typeof expectedQuestionId === 'number' && this.quiz.getCurrent()!.id !== expectedQuestionId) {
       return { correct: false, score: 0, combo: 0, sunlightReward: 0, comboMult: 1, wrongStreak: 0 }
     }
     // v90 对齐小程序 v61: 答题前留底连错计数（护学回归认可需要「之前」的值）
     const prevWrongStreak = this.quiz.wrongStreak
     const result = this.quiz.answer(optionIndex)
+    // v91: 同题重复点击透传 —— 引擎层守卫拦截的重复作答不结算/不惩罚/不换题
+    //   （否则会走下方错分支: 连错恰 2 时误触发僵尸加速 + 无谓跳题）
+    if (result.duplicate) {
+      return { correct: false, score: 0, combo: this.combo, sunlightReward: 0, comboMult: 1,
+        wrongStreak: this.wrongStreak, duplicate: true }
+    }
     if (result.correct) {
       this._addSunlight(result.sunlightReward)
       this.score += result.score
       this.combo = result.combo
       this.comboMult = result.comboMult
       this.maxCombo = Math.max(this.maxCombo, result.combo)
+      this.wrongStreak = 0 // v91: 答对同步清零快照连错计数（quizEngine 内已清, 此处保快照卫生）
       audioManager.play('correct')
       this.feedback = { kind: 'correct', until: Date.now() + 700 }
       // v90 同步小程序 v61: 护学回归认可 — 连错≥3 后首次答对（此刻 combo=1, 不与里程碑 banner 撞车）
@@ -863,15 +879,26 @@ export class GameEngine {
   private _updateSpawner(dt: number) {
     if (this.spawnStopped) return
     this.spawnTimer += dt
-    if (this.spawnTimer < this.spawnInterval) return
-    // OVERSHOOT: 超时 2.5 倍强制生成（忽略同屏上限, 保底压力）
-    const force = this.spawnTimer >= this.spawnInterval * ZOMBIE.OVERSHOOT_MULT
-    const atCap = this.zombies.length >= this.cfg.maxZombies
-    if (atCap && !force) {
-      this.spawnTimer = this.spawnInterval // 名额满, 保持就绪态（下次循环仍会检查 force）
+    // v91: 心跳堵转检测（对齐小程序 v4 HEARTBEAT_STALL_MS）—— 名额满且
+    //   长时间无僵尸离场时, 强制回收最早僵尸释放名额, 防生成永久停摆
+    //   （全部卡 eating/高血量墙时可达 15s+ 无离场）。用 gameTime 基准,
+    //   暂停天然冻结, 无小程序墙钟需平移的问题
+    if (this.zombies.length >= this.cfg.maxZombies) {
+      if (this.spawnTimer < this.spawnInterval) return
+      this.spawnStallMs += dt
+      if (this.spawnStallMs >= ZOMBIE.HEARTBEAT_STALL_MS && this.zombies.length > 0) {
+        this.spawnStallMs = 0
+        this.zombies.shift() // 现存最早生成（push/splice 保序）
+        return
+      }
       return
     }
-    this.spawnTimer = 0
+    this.spawnStallMs = 0
+    if (this.spawnTimer < this.spawnInterval) return
+    // v91: 对齐小程序 spawner.update —— overshoot 只是把等待计时强制进入
+    //   本轮尝试, 同样受同屏上限约束；旧版 force 分支会突破 maxZombies 强塞
+    //   （场上僵尸越积越多, 偏离小程序强度模型）
+    this.spawnTimer = this.spawnTimer >= this.spawnInterval * ZOMBIE.OVERSHOOT_MULT ? 0 : this.spawnTimer - this.spawnInterval
     const lane = this._pickLane() // v90: 车道软负载均衡（对齐小程序 v66 防同路扎堆）
     this._spawnZombie(this._rollZombieType(), lane)
   }
@@ -901,11 +928,14 @@ export class GameEngine {
     audioManager.play('final_wave')
     const kingLane = Math.floor(Math.random() * GRID.ROWS)
     this.waveQueue = [{ type: 'king', lane: kingLane }]
-    // 9 护卫: 车道轮转 3×3 均衡, 类型按当前权重抽取
+    // 9 护卫: 车道轮转 3×3 均衡 + 随机起始偏移（对齐小程序 launchFinalWave）, 类型按当前权重抽取
+    const offset = Math.floor(Math.random() * GRID.ROWS)
     for (let i = 0; i < LEVEL.KING_WAVE_ESCORTS; i++) {
-      this.waveQueue.push({ type: this._rollZombieType(), lane: i % GRID.ROWS })
+      this.waveQueue.push({ type: this._rollZombieType(), lane: (i + offset) % GRID.ROWS })
     }
-    this.waveTimer = 0
+    // v91: 预置一个入场节奏周期 —— 旧版 waveTimer=0 会让王晚 400ms 才入场,
+    //   小程序是首帧立即放王（_waveTimer=0 + <=0 判定）, 对齐压轴仪式感
+    this.waveTimer = LEVEL.KING_WAVE_STAGGER_MS
     this.finalWaveLaunched = true
     this.finalWaveAt = this.gameTime
   }
@@ -1190,8 +1220,11 @@ export class GameEngine {
     z.hitFlash = 200
     if (!pr.hitTargets.includes(z.id)) pr.hitTargets.push(z.id)
     if (pr.kind === 'ice') {
-      z.slowFactor = 0.5
-      z.slowTimer = 2000
+      // v91: 对齐小程序 takeDamage 叠加规则 —— 仅当无生效缓速或冰弹因子更强
+      //   才改写, 时长取 max。旧版无条件 slowFactor=0.5 会把已被寒冰脉冲
+      //   减速到 0.25 的僵尸「越打越快」
+      if (z.slowTimer <= 0 || 0.5 < z.slowFactor) z.slowFactor = 0.5
+      z.slowTimer = Math.max(z.slowTimer, 2000)
     }
     const zp = this._zombiePixel(z)
     if (z.health <= 0) {

@@ -7,7 +7,8 @@ import type { ViewSnapshot } from '@/game/engine'
 
 interface Props {
   snap: ViewSnapshot
-  onAnswer: (index: number) => void
+  /** v91: 第二参数为快照题 id —— 引擎侧校验防 ≤80ms 快照延迟期间错题错答 */
+  onAnswer: (index: number, questionId: number) => void
 }
 
 const TYPE_BADGE: Record<string, string> = {
@@ -81,7 +82,7 @@ export default function QuizPanel({ snap, onAnswer }: Props) {
               return (
                 <button
                   key={`${q.id}-${i}`}
-                  onClick={() => onAnswer(i)}
+                  onClick={() => onAnswer(i, q.id)}
                   disabled={locked}
                   className={`wf-glass-tile wf-focus rounded-xl px-2 py-2.5 text-sm sm:text-base font-bold text-[#5D4037] ${
                     locked ? 'cursor-default opacity-80' : ''

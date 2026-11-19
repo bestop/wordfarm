@@ -347,6 +347,9 @@ export const ZOMBIE = {
   BASE_SPEED_DEFAULT: 38,
   MAX_ZOMBIES_DEFAULT: 8,
   OVERSHOOT_MULT: 2.5,
+  // v91 同步小程序 v4: 心跳堵转检测 —— 名额满且该时长内无僵尸离场时强制
+  //   回收最早僵尸释放名额（防全卡 eating/高血量墙导致生成永久停摆）
+  HEARTBEAT_STALL_MS: 15000,
   TOUGH_BONUS_CAP: 0.3,
   HEALTH_RAMP_CAP: 2.0,
   BUCKET_WEIGHT_FLOOR: 0.1,

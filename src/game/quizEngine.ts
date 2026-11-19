@@ -28,6 +28,7 @@ export interface AnswerResult {
   comboMult: number
   sunlightReward: number
   wrongStreak: number
+  duplicate?: boolean // v91: 同题重复作答被守卫拦截（不结算）
 }
 
 export interface WrongWordEntry {
@@ -37,6 +38,26 @@ export interface WrongWordEntry {
 }
 
 let __questionIdSeed = 1
+
+/**
+ * v91: 按权重抽取键值（通用采样器）—— 权重和≠1（配置误差/浮点尾差
+ *   0.6+0.3+0.1=0.999…9）时按总和归一化，消除「落空概率全部滑落到
+ *   首个键（难度1/最易）」的系统性偏易；全零权重兑底返回最后一个键。
+ *   与小程序 quizManager._pickWeighted（v91）同源，对齐 _rollType 工程自觉
+ */
+function _pickWeighted(weights: Record<string, number>): string | null {
+  const entries = Object.entries(weights)
+  if (!entries.length) return null
+  const totalW = entries.reduce((s, [, w]) => s + (w || 0), 0)
+  if (!totalW) return entries[entries.length - 1][0]
+  const r = Math.random()
+  let acc = 0
+  for (const [k, w] of entries) {
+    acc += (w || 0) / totalW
+    if (r <= acc) return k
+  }
+  return entries[entries.length - 1][0]
+}
 
 export class QuizEngine {
   wordBank: Word[] = []
@@ -50,6 +71,7 @@ export class QuizEngine {
   totalAnswered = 0
   timeoutCount = 0      // v39: 超时未答次数
   wrongStreak = 0       // v45: 连续答错计数（答对清零；超时不计入）
+  answeredQuestionId = 0 // v91: 已结算题目 id（同题防重复作答守卫）
   wrongWords: WrongWordEntry[] = [] // 错词本（结算页回顾）
   optionCount = QUIZ.OPTION_COUNT
 
@@ -67,19 +89,16 @@ export class QuizEngine {
     this.totalAnswered = 0
     this.timeoutCount = 0
     this.wrongStreak = 0
+    this.answeredQuestionId = 0 // v91: 新局清零已答标记
     this.wrongWords = []
   }
 
-  /** 根据难度权重筛选候选词；空池回退全词库（保证任意分布的自定义词包可用） */
+  /** 根据难度权重筛选候选词；空池回退全词库（保证任意分布的自定义词包可用）
+   *  v91: 采样改走 _pickWeighted 归一化（修复权重和<1 或浮点尾差时
+   *  落空概率全部滑落到难度1 的偏易问题，与小程序 v91 同源） */
   private _filterByDifficulty(difficultyWeights: Record<number, number>): Word[] {
     if (!this.wordBank.length) return []
-    const r = Math.random()
-    let acc = 0
-    let targetDiff = 1
-    for (const [d, w] of Object.entries(difficultyWeights)) {
-      acc += w
-      if (r <= acc) { targetDiff = parseInt(d); break }
-    }
+    const targetDiff = parseInt(_pickWeighted(difficultyWeights as unknown as Record<string, number>) || '1')
     const candidates = this.wordBank.filter((w) => w.difficulty === targetDiff)
     return candidates.length ? candidates : this.wordBank
   }
@@ -119,15 +138,11 @@ export class QuizEngine {
     return picked
   }
 
-  /** 按权重随机选题型 */
+  /** 按权重随机选题型（v91: 改走 _pickWeighted 归一化，浮点尾差时不再固定兑底 en2zh） */
   private _rollQuestionType(): QuestionTypeKey {
-    const r = Math.random()
-    let acc = 0
-    for (const v of Object.values(QUESTION_TYPES)) {
-      acc += v.weight
-      if (r <= acc) return v.key
-    }
-    return 'en2zh'
+    const weights: Record<string, number> = {}
+    for (const v of Object.values(QUESTION_TYPES)) weights[v.key] = v.weight
+    return (_pickWeighted(weights) || 'en2zh') as QuestionTypeKey
   }
 
   /** 生成一道题目 */
@@ -222,11 +237,19 @@ export class QuizEngine {
     return question
   }
 
-  /** 判定答题（返回形状与成功分支一致 — v6 F12 修复惯例） */
+  /** 判定答题（返回形状与成功分支一致 — v6 F12 修复惯例）
+   *  v91: 同题防重复作答守卫 —— 同一道题只结算一次。UI 层锁是第一道防线,
+   *  此处是引擎层双保险: 防同题连点/快照错位导致重复计分/重复入账阳光。
+   *  换题后 id 变化自然放行新题（与小程序 quizManager.answeredQuestionId 同源） */
   answer(optionIndex: number): AnswerResult {
     if (!this.currentQuestion) {
       return { correct: false, score: 0, combo: 0, comboMult: 1, sunlightReward: 0, wrongStreak: 0 }
     }
+    if (this.answeredQuestionId === this.currentQuestion.id) {
+      return { correct: false, score: 0, combo: this.combo, comboMult: 1, sunlightReward: 0,
+        wrongStreak: this.wrongStreak, duplicate: true }
+    }
+    this.answeredQuestionId = this.currentQuestion.id
     const correct = optionIndex === this.currentQuestion.correctAnswer
     this.totalAnswered++
     let score = 0
@@ -273,6 +296,8 @@ export class QuizEngine {
     this.timeoutCount++
     this.totalAnswered++
     this.combo = 0
+    // v91: 超时题登记已答 —— 防换题失败(空词库)时旧题可无限重答刷分
+    this.answeredQuestionId = this.currentQuestion.id
     return true
   }
 

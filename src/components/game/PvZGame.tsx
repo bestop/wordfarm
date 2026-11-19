@@ -153,17 +153,18 @@ export default function PvZGame() {
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [engine])
 
-  // ---- Esc 暂停/继续 ----
+  // ---- Esc 暂停/继续（v91: 奖励中心打开时让位, 避免同一按键同时暂停游戏+关弹窗） ----
   useEffect(() => {
     if (screen !== 'game') return
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
+      if (showRewards) return
       if (engine.phase === 'playing') engine.pauseAt(Date.now())
       else if (engine.phase === 'paused') engine.resumeAt(Date.now())
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [screen, engine])
+  }, [screen, engine, showRewards])
 
   // ---- 交互 handlers ----
   const handleStart = useCallback(
@@ -194,7 +195,11 @@ export default function PvZGame() {
     setScreen('menu')
   }, [])
 
-  const handleAnswer = useCallback((index: number) => engine.answerQuiz(index), [engine])
+  // v91: 透传快照题 id（引擎侧校验, 防快照延迟期错题错答 + 同题重复作答）
+  const handleAnswer = useCallback(
+    (index: number, questionId: number) => engine.answerQuiz(index, questionId),
+    [engine],
+  )
 
   const handleSelectPlant = useCallback(
     (type: PlantType | null) => {
@@ -211,6 +216,9 @@ export default function PvZGame() {
 
   const handleCanvasTap = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
+      // v91: 非进行中不响应画布点击（对齐小程序 onCanvasTap 暂停拦截;
+      //   遮罩层是第一道防线, 此处引擎层兜底防遮罩外边缘情况）
+      if (engine.phase !== 'playing') return
       const canvas = canvasRef.current
       if (!canvas) return
       const rect = canvas.getBoundingClientRect()

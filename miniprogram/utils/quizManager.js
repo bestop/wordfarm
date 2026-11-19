@@ -7,6 +7,28 @@ const { SCORING, QUESTION_TYPES, SUNLIGHT } = require('./constants.js');
 let __questionIdSeed = 1;
 
 /**
+ * v91: 按权重抽取键值（通用采样器）—— 权重和≠1（配置误差/浮点尾差
+ *   0.6+0.3+0.1=0.999…9）时按总和归一化, 消除「落空概率全部滑落到
+ *   首个键（难度1/最易）」的系统性偏易; 全零权重兜底返回最后一个键。
+ *   与 zombieSpawner._rollType 的归一化容错同款工程自觉
+ * @param {Object} weights - { key: weight }
+ * @returns {string|null} 命中的键（空表返回 null）
+ */
+function _pickWeighted(weights) {
+  const entries = Object.entries(weights);
+  if (!entries.length) return null;
+  const totalW = entries.reduce((s, [, w]) => s + (w || 0), 0);
+  if (!totalW) return entries[entries.length - 1][0];
+  const r = Math.random();
+  let acc = 0;
+  for (const [k, w] of entries) {
+    acc += (w || 0) / totalW;
+    if (r <= acc) return k;
+  }
+  return entries[entries.length - 1][0];
+}
+
+/**
  * 答题管理器
  */
 class QuizManager {
@@ -23,6 +45,7 @@ class QuizManager {
     this.timeoutCount = 0;     // v39: 超时未答次数
     this.wrongStreak = 0;     // v45: 连续答错计数 — 答对清零; 超时不计入(v39温和口径), 二错起才触发僵尸加速
     this.optionCount = 4;      // 默认4选项
+    this.answeredQuestionId = 0;   // v91: 已结算题目 id（同题防重复作答守卫）
   }
 
   /**
@@ -53,6 +76,7 @@ class QuizManager {
     this.totalAnswered = 0;
     this.timeoutCount = 0;     // v39: 超时未答次数（新游戏重置）
     this.wrongStreak = 0;     // v45: 新局清零 — 免罚档位重新生效
+    this.answeredQuestionId = 0;   // v91: 新局清零已答标记
     if (optionCount) this.setOptionCount(optionCount);
   }
 
@@ -63,14 +87,9 @@ class QuizManager {
    */
   _filterByDifficulty(difficultyWeights) {
     if (!this.wordBank.length) return [];
-    // 按权重抽取难度
-    const r = Math.random();
-    let acc = 0;
-    let targetDiff = 1;
-    for (const [d, w] of Object.entries(difficultyWeights)) {
-      acc += w;
-      if (r <= acc) { targetDiff = parseInt(d); break; }
-    }
+    // v91: 采样改走 _pickWeighted 归一化（修复权重和<1 或浮点尾差时
+    //   落空概率全部滑落到难度1 的偏易问题）
+    const targetDiff = parseInt(_pickWeighted(difficultyWeights) || '1');
     const candidates = this.wordBank.filter(w => w.difficulty === targetDiff);
     return candidates.length ? candidates : this.wordBank;
   }
@@ -123,13 +142,10 @@ class QuizManager {
    * @returns {string} 'en2zh' | 'zh2en' | 'word2pho'
    */
   _rollQuestionType() {
-    const r = Math.random();
-    let acc = 0;
-    for (const v of Object.values(QUESTION_TYPES)) {
-      acc += v.weight;
-      if (r <= acc) return v.key;
-    }
-    return 'en2zh';
+    // v91: 改走 _pickWeighted 归一化（浮点尾差时不再固定兜底 en2zh）
+    const weights = {};
+    for (const v of Object.values(QUESTION_TYPES)) weights[v.key] = v.weight;
+    return _pickWeighted(weights) || 'en2zh';
   }
 
   /**
@@ -240,6 +256,14 @@ class QuizManager {
   answer(optionIndex) {
     // v6 修复 (Task 7-A F12)：返回形状必须与成功分支一致，否则 gameManager.answer 读 undefined → maxCombo 变 NaN
     if (!this.currentQuestion) return { correct: false, score: 0, combo: 0, comboMult: 1, sunlightReward: 0, wrongStreak: 0 };
+    // v91: 同题防重复作答守卫 —— 同一道题只结算一次。UI 层 quizDisabled 是
+    //   第一道防线, 此处是引擎层双保险: 防未来新调用方/边界竞态漏挡导致
+    //   同题重复计分/重复计连击/重复入账阳光。换题后 id 变化自然放行新题
+    if (this.answeredQuestionId === this.currentQuestion.id) {
+      return { correct: false, score: 0, combo: this.combo, comboMult: 1, sunlightReward: 0,
+        wrongStreak: this.wrongStreak, duplicate: true };
+    }
+    this.answeredQuestionId = this.currentQuestion.id;
     const correct = optionIndex === this.currentQuestion.correctAnswer;
     this.totalAnswered++;
     let score = 0;
@@ -279,6 +303,8 @@ class QuizManager {
     this.timeoutCount++;
     this.totalAnswered++;
     this.combo = 0;
+    // v91: 超时题登记已答 —— 防换题失败(空词库)时旧题可无限重答刷分
+    this.answeredQuestionId = this.currentQuestion.id;
     return true;
   }
 

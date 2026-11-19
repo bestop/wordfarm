@@ -352,11 +352,16 @@ class PlantManager {
         p.chomperBiteProgress = Math.min(1, elapsed / SNAP_DURATION);
 
         // v6 修复 (Task 12): 咬合伤害点 → PLANT.CHOMPER.BITE_DAMAGE_POINT
+        // v91: _biteDealt 改为「确实咬到目标」才置位 —— 旧版在查找目标前
+        //   无条件置 true, snap 中途目标被铲/被炸/被其他射手击杀时被误判
+        //   「已咬中」→ 走 3000ms 长吞咽（正确语义: 扑空 = 500ms 短吞咽）
         if (!p._biteDealt && elapsed >= SNAP_DURATION * PLANT.CHOMPER.BITE_DAMAGE_POINT) {
-          p._biteDealt = true;
           const target = this._findMeleeTarget(p, ctx.getZombiesInLane);
-          if (target && ctx.onChomperBite) {
-            ctx.onChomperBite(p, target, def.damage);
+          if (target) {
+            p._biteDealt = true;
+            if (ctx.onChomperBite) {
+              ctx.onChomperBite(p, target, def.damage);
+            }
           }
         }
 
@@ -364,6 +369,12 @@ class PlantManager {
           p.chomperState = 'swallow';
           // v6 修复 (Task 12): 未咬中短吞咽期 → PLANT.CHOMPER.NO_BITE_SWALLOW_MS
           p.chomperTimer = p._biteDealt ? swallowTime : PLANT.CHOMPER.NO_BITE_SWALLOW_MS;
+          // v91: 同步实际吞咽总时长到 _swallowTotal —— 旧版未咬中分支
+          //   chomperTimer 从 NO_BITE_SWALLOW_MS(500) 起算, 但 _swallowTotal
+          //   仍是 idle→snap 时预写的 swallowTime(3000), swallow 分支
+          //   elapsed = total - chomperTimer = 2500 起 → 吞咽鼓起动画进度
+          //   从 sin(0.83π)≈0.51 突跳, 视觉闪跳。以实际吞咽时长为准修复
+          p._swallowTotal = p.chomperTimer;
           p.chomperBiteProgress = 0;
           p._biteDealt = false;
           p.chomperSwallowProgress = 0;
