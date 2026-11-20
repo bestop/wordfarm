@@ -10,13 +10,15 @@
 const { ZOMBIE_TYPES } = require('./constants.js');
 const { safeRoundRect } = require('./canvasHelpers.js');
 
-/* v93 经典 PvZ 共通色板（对照附图取色） */
+/* v94 可爱 3D 目标风色板（对照附图取色）：
+   铁桶=紫桶铆钉+蓝夹克+圆框眼镜 / 小鬼=黑乱发+深背心浅衬衫 / 橄榄球=红盔红球衣
+   舞王=黑礼帽紫西装+眼镜+手杖 / 僵尸王=金冠金袍紫披风 */
 const PZ = {
   OUTLINE:   '#39412C',   // 皮肤/全身深橄榄勾边
-  OUT_JK:    '#33220F',   // 西装深棕勾边
-  JK:        '#6D4A28',   // 西装外套棕
-  JK_LIGHT:  '#7E5A36',
-  JK_DARK:   '#54371C',
+  OUT_JK:    '#22304A',   // 西装深蓝勾边
+  JK:        '#4E6FA8',   // 西装外套蓝（附图铁桶蓝夹克）
+  JK_LIGHT:  '#6284B8',
+  JK_DARK:   '#38517A',
   SHIRT:     '#EFEAD9',   // 白衬衫
   TIE:       '#C62828',   // 红领带
   TIE_DARK:  '#9E1F1F',
@@ -207,12 +209,12 @@ function _zpArms(Z, R) {
   const armY = U * 0.06;
   // 袖色：铁桶/小鬼=破衫灰蓝，橄榄球=球衣绿短袖，舞王=紫西装，王=暗紫袍
   const sleeve = Z.type === 'bucket' ? PZ.JK :
-                 Z.type === 'imp' ? '#8A8074' :
+                 Z.type === 'imp' ? '#4E463E' :
                  Z.type === 'football' ? Z.T.COLORS.Z_FH_JERSEY :
                  Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT :
                  Z.type === 'king' ? Z.T.COLORS.Z_KING_ROBE : PZ.JK;
   const sleeveDark = Z.type === 'bucket' ? PZ.JK_DARK :
-                     Z.type === 'imp' ? '#6E665C' :
+                     Z.type === 'imp' ? '#362F29' :
                      Z.type === 'football' ? Z.T.COLORS.Z_FH_JERSEY_DARK :
                      Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT_DARK :
                      Z.type === 'king' ? Z.T.COLORS.Z_KING_ROBE_DARK : PZ.JK_DARK;
@@ -261,12 +263,12 @@ function _zpTorso(Z, R) {
   const bodyW = Z.B.bodyW;
   // 衣体（小鬼=破衫，橄榄球=球衣，舞王=紫西装，王=暗紫王袍，其余=棕西装）
   const robeFill = Z.type === 'bucket' ? PZ.JK :
-                   Z.type === 'imp' ? '#8A8074' :
+                   Z.type === 'imp' ? '#4E463E' :
                    Z.type === 'football' ? Z.T.COLORS.Z_FH_JERSEY :
                    Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT :
                    Z.type === 'king' ? Z.T.COLORS.Z_KING_ROBE : PZ.JK;
   const robeDark = Z.type === 'bucket' ? PZ.JK_DARK :
-                   Z.type === 'imp' ? '#6E665C' :
+                   Z.type === 'imp' ? '#362F29' :
                    Z.type === 'football' ? Z.T.COLORS.Z_FH_JERSEY_DARK :
                    Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT_DARK :
                    Z.type === 'king' ? Z.T.COLORS.Z_KING_ROBE_DARK : PZ.JK_DARK;
@@ -275,7 +277,7 @@ function _zpTorso(Z, R) {
   const topY = U * -0.12;
   const botY = Z.type === 'king' ? U * 0.70 : U * 0.66;
   const tg = Z.ctx.createLinearGradient(-U * bodyW, 0, U * bodyW, 0);
-  tg.addColorStop(0, Z.type === 'bucket' || Z.type === 'imp' ? (Z.type === 'bucket' ? PZ.JK_LIGHT : '#998F82') : (Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT_LIGHT : robeFill));
+  tg.addColorStop(0, Z.type === 'bucket' || Z.type === 'imp' ? (Z.type === 'bucket' ? PZ.JK_LIGHT : '#5C544C') : (Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT_LIGHT : robeFill));
   tg.addColorStop(0.55, robeFill);
   tg.addColorStop(1, robeDark);
   Z.ctx.fillStyle = tg;
@@ -296,7 +298,7 @@ function _zpTorso(Z, R) {
 
   // 西装三件套（铁桶/舞王：衬衫V + 驳领 + 领带）
   if (Z.type === 'bucket' || Z.type === 'dancer') {
-    const shirt = Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SHIRT : PZ.SHIRT;
+    const shirt = Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SHIRT : '#DCE4EE';
     const tie = Z.type === 'dancer' ? Z.T.COLORS.Z_DN_TIE : PZ.TIE;
     const lapel = Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT_DARK : PZ.JK_DARK;
     // 白衬衫 V 区
@@ -338,6 +340,19 @@ function _zpTorso(Z, R) {
     Z.ctx.closePath();
     Z.ctx.fill(); Z.ctx.stroke();
   }
+  // 小鬼浅衬衫 V 领（深背心露浅衫，附图特征）
+  if (Z.type === 'imp') {
+    Z.ctx.fillStyle = '#D8D2C4';
+    Z.ctx.beginPath();
+    Z.ctx.moveTo(-U * 0.15, topY + U * 0.02);
+    Z.ctx.lineTo(U * 0.15, topY + U * 0.02);
+    Z.ctx.lineTo(U * 0.045, topY + U * 0.36);
+    Z.ctx.lineTo(-U * 0.045, topY + U * 0.36);
+    Z.ctx.closePath();
+    Z.ctx.fill();
+    R._setStroke(Z.ctx, PZ.OUTLINE, R._strokeW(Z.T.STROKE.THIN));
+    Z.ctx.stroke();
+  }
   // 橄榄球球衣胸前白条纹
   if (Z.type === 'football') {
     R._setStroke(Z.ctx, Z.T.COLORS.Z_FH_STRIPE, R._strokeW(Z.T.STROKE.THIN) * 1.4);
@@ -359,9 +374,9 @@ function _zpTorso(Z, R) {
     R._setStroke(Z.ctx, PZ.OUTLINE, R._strokeW(Z.T.STROKE.THIN));
     Z.ctx.stroke();
   }
-  // 王袍金腰带 + 红宝石扣
+  // 王袍紫腰带（金袍对比色）+ 红宝石扣
   if (Z.type === 'king') {
-    Z.ctx.fillStyle = Z.T.COLORS.Z_KING_GOLD;
+    Z.ctx.fillStyle = Z.T.COLORS.Z_KING_CAPE;
     Z.ctx.beginPath();
     safeRoundRect(Z.ctx, -U * 0.38, U * 0.50, U * 0.76, U * 0.10, U * 0.03);
     Z.ctx.fill(); Z.ctx.stroke();
@@ -372,7 +387,7 @@ function _zpTorso(Z, R) {
   }
   // 下摆撕裂 ×3（破损下摆）
   const hemCol = Z.type === 'bucket' ? PZ.JK_DARK :
-                 Z.type === 'imp' ? '#6E665C' :
+                 Z.type === 'imp' ? '#362F29' :
                  Z.type === 'football' ? Z.T.COLORS.Z_FH_JERSEY_DARK :
                  Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT_DARK :
                  Z.type === 'king' ? Z.T.COLORS.Z_KING_ROBE_DARK : PZ.JK_DARK;
@@ -425,8 +440,8 @@ function _zpLegs(Z, R) {
   const legW = Z.B.legW;
   // 裤色
   const pants = Z.type === 'bucket' ? PZ.PANTS :
-                Z.type === 'imp' ? '#5C544C' :
-                Z.type === 'football' ? '#3E5233' :
+                Z.type === 'imp' ? '#3A342E' :
+                Z.type === 'football' ? '#39414D' :
                 Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT_DARK :
                 Z.type === 'king' ? Z.T.COLORS.Z_KING_ROBE_DARK : PZ.PANTS;
   const pantsOut = Z.type === 'bucket' ? PZ.PANTS_OUT : PZ.OUTLINE;
@@ -450,6 +465,22 @@ function _zpLegs(Z, R) {
   for (const s of [-1, 1]) {
     Z.ctx.beginPath();
     Z.ctx.ellipse(s * U * 0.21, U * 0.94, U * 0.13, U * 0.085, s * 0.14, 0, Math.PI * 2);
+    Z.ctx.fill(); Z.ctx.stroke();
+  }
+  // 舞王手杖（金色杖头 + 深色杖杆，附图特征）
+  if (Z.type === 'dancer') {
+    const cx0 = U * 0.74;
+    R._setStroke(Z.ctx, '#2B1D10', R._strokeW(Z.T.STROKE.THIN) * 1.5);
+    Z.ctx.strokeStyle = '#4A3423';
+    Z.ctx.lineWidth = Math.max(2, U * 0.055);
+    Z.ctx.beginPath();
+    Z.ctx.moveTo(cx0, U * 0.26);
+    Z.ctx.lineTo(cx0 + U * 0.03, U * 1.02);
+    Z.ctx.stroke();
+    _zpMain(Z, R);
+    Z.ctx.fillStyle = Z.T.COLORS.Z_KING_GOLD;
+    Z.ctx.beginPath();
+    Z.ctx.arc(cx0, U * 0.22, U * 0.078, 0, Math.PI * 2);
     Z.ctx.fill(); Z.ctx.stroke();
   }
   _zpMain(Z, R);
@@ -572,70 +603,59 @@ function _zpHeadgear(Z, R) {
       ctx.ellipse(s * (hwHy + hRX * 0.01), hy, hRX * 0.048, hRX * 0.09, s * 0.22, 0, Math.PI * 2);
       ctx.fill();
     }
-    // 顶部 V 形锈缺口 + 锈斑 ×3
-    ctx.fillStyle = Z.T.COLORS.Z_RUST;
-    ctx.beginPath();
-    ctx.moveTo(-hRX * 0.16, topY - hRY * 0.015);
-    ctx.lineTo(hRX * 0.16, topY - hRY * 0.015);
-    ctx.lineTo(0, topY + hRY * 0.14);
-    ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    for (const [rxp, ryp, rw, rh, rr] of [
-      [halfTop * 0.50, topY + hRY * 0.10, 0.17, 0.10, 0.45],
-      [halfBot * 0.55, rimY - hRY * 0.30, 0.14, 0.09, -0.30],
-      [-halfBot * 0.60, rimY - hRY * 0.16, 0.11, 0.075, 0.20],
-    ]) {
+    // 桶身铆钉 ×5（附图紫色铆钉桶特征）
+    const stud = (fy, fx) => {
+      const sy = topY + (rimY - topY) * fy;
+      const halfW = halfTop + (halfBot - halfTop) * fy;
+      const sx = fx * halfW;
+      ctx.fillStyle = Z.T.COLORS.Z_BUCKET_DARK;
       ctx.beginPath();
-      ctx.ellipse(rxp, ryp, hRX * rw, hRX * rh, rr, 0, Math.PI * 2);
+      ctx.arc(sx, sy, hRX * 0.085, 0, Math.PI * 2);
       ctx.fill();
-    }
+      ctx.fillStyle = 'rgba(255,255,255,0.32)';
+      ctx.beginPath();
+      ctx.arc(sx - hRX * 0.022, sy - hRX * 0.028, hRX * 0.034, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    stud(0.32, -0.52); stud(0.58, -0.62); stud(0.32, 0.52); stud(0.58, 0.62); stud(0.80, 0);
     _zpMain(Z, R);
   } else if (Z.type === 'imp') {
-    // 破兜帽（罩头顶 + 波浪内缘在眉上方 + 竖褶 + 撕裂口 + 乱发）
-    const hcY2 = hcY + hRY * 0.02;
-    const hR1 = hRX * 1.14;
-    const wy = hcY - hRY * 0.46;
-    const hGrad = ctx.createLinearGradient(-hRX * 0.9, wy - hRY * 0.55, hRX * 0.95, hcY + hRY * 0.1);
-    hGrad.addColorStop(0, Z.T.COLORS.Z_HOOD_LIGHT);
-    hGrad.addColorStop(0.55, Z.T.COLORS.Z_HOOD);
-    hGrad.addColorStop(1, Z.T.COLORS.Z_HOOD_DARK);
-    ctx.fillStyle = hGrad;
+    // 深棕乱发帽（盖住头顶 + 波浪发际线 + 顶部戳发，附图小鬼黑发特征）
+    const hairGrad = ctx.createLinearGradient(-hRX * 0.8, hcY - hRY * 1.2, hRX * 0.9, hcY);
+    hairGrad.addColorStop(0, '#4A3F33');
+    hairGrad.addColorStop(0.55, '#3A3128');
+    hairGrad.addColorStop(1, '#2A231C');
+    ctx.fillStyle = hairGrad;
     ctx.beginPath();
-    ctx.arc(0, hcY2, hR1, Math.PI * 1.07, Math.PI * 1.93);
-    ctx.lineTo(hRX * 0.84, wy - hRY * 0.03);
-    ctx.quadraticCurveTo(hRX * 0.45, wy + hRY * 0.09, hRX * 0.12, wy - hRY * 0.01);
-    ctx.quadraticCurveTo(-hRX * 0.20, wy + hRY * 0.10, -hRX * 0.55, wy);
-    ctx.quadraticCurveTo(-hRX * 0.80, wy - hRY * 0.06, -hRX * 0.84, wy - hRY * 0.03);
+    ctx.ellipse(0, hcY - hRY * 0.50, hRX * 1.06, hRY * 0.64, 0, Math.PI * 1.03, Math.PI * 1.97);
+    ctx.quadraticCurveTo(hRX * 0.60, hcY - hRY * 0.28, hRX * 0.16, hcY - hRY * 0.40);
+    ctx.quadraticCurveTo(-hRX * 0.34, hcY - hRY * 0.54, -hRX * 0.80, hcY - hRY * 0.30);
     ctx.closePath();
     ctx.fill(); ctx.stroke();
-    // 竖褶线 ×2
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_HOOD_DARK, R._strokeW(Z.T.STROKE.THIN));
-    ctx.beginPath();
-    ctx.moveTo(-hRX * 0.28, hcY - hRY * 0.86);
-    ctx.quadraticCurveTo(-hRX * 0.55, hcY - hRY * 0.70, -hRX * 0.66, hcY - hRY * 0.44);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(hRX * 0.30, hcY - hRY * 0.84);
-    ctx.quadraticCurveTo(hRX * 0.58, hcY - hRY * 0.64, hRX * 0.64, hcY - hRY * 0.42);
-    ctx.stroke();
+    // 顶部戳发 ×3
+    const spikes = [[-0.36, -0.30], [-0.05, -0.40], [0.28, -0.28]];
+    for (const [hxp, hgt] of spikes) {
+      const bx = hxp * hRX;
+      const arg = Math.max(0, 1 - (hxp * hxp) * 1.55);
+      const by = hcY - hRY * (0.50 + 0.64 * Math.sqrt(arg)) + hRY * 0.03;
+      ctx.fillStyle = '#3A3128';
+      ctx.beginPath();
+      ctx.moveTo(bx - hRX * 0.07, by);
+      ctx.quadraticCurveTo(bx + hxp * hRX * 0.20, by - hRY * hgt * 0.8, bx + hxp * hRX * 0.44, by - hRY * hgt);
+      ctx.quadraticCurveTo(bx + hRX * 0.06, by - hRY * hgt * 0.4, bx + hRX * 0.07, by);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    }
     _zpMain(Z, R);
-    // 左缘 V 形撕裂口
-    ctx.fillStyle = Z.T.COLORS.Z_HOOD_DARK;
+    // 额前碎发 ×2 + 右侧一撇
+    R._setStroke(Z.ctx, '#2A231C', R._strokeW(Z.T.STROKE.THIN));
     ctx.beginPath();
-    ctx.moveTo(-hR1 * 0.965, hcY - hRY * 0.40);
-    ctx.lineTo(-hR1 * 0.82, hcY - hRY * 0.26);
-    ctx.lineTo(-hR1 * 0.965, hcY - hRY * 0.14);
-    ctx.closePath();
-    ctx.fill();
-    // 黑色乱发（额前 2 缕 + 右侧 1 撇）
-    R._setStroke(Z.ctx, PZ.HAIR, R._strokeW(Z.T.STROKE.THIN));
-    ctx.beginPath();
-    ctx.moveTo(-hRX * 0.30, wy + hRY * 0.02);
-    ctx.quadraticCurveTo(-hRX * 0.36, wy + hRY * 0.08, -hRX * 0.24, wy + hRY * 0.13);
+    ctx.moveTo(-hRX * 0.30, hcY - hRY * 0.30);
+    ctx.quadraticCurveTo(-hRX * 0.36, hcY - hRY * 0.22, -hRX * 0.24, hcY - hRY * 0.16);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(hRX * 0.22, wy + hRY * 0.02);
-    ctx.quadraticCurveTo(hRX * 0.28, wy + hRY * 0.08, hRX * 0.19, wy + hRY * 0.12);
+    ctx.moveTo(hRX * 0.22, hcY - hRY * 0.32);
+    ctx.quadraticCurveTo(hRX * 0.28, hcY - hRY * 0.24, hRX * 0.19, hcY - hRY * 0.17);
     ctx.stroke();
     ctx.beginPath();
     ctx.moveTo(hRX * 0.78, hcY - hRY * 0.36);
@@ -843,6 +863,20 @@ function _zpFaceVariants(Z, R) {
       ctx.quadraticCurveTo(s * Z.eyeDX, browY - eyeR * 0.45, s * Z.eyeDX + s * browW * 0.4, browY - eyeR * 0.40);
       ctx.stroke();
     }
+  }
+
+  // ---- 圆框眼镜（bucket/imp/dancer，附图特征）----
+  if (Z.type === 'bucket' || Z.type === 'imp' || Z.type === 'dancer') {
+    R._setStroke(Z.ctx, '#26262E', R._strokeW(Z.T.STROKE.EYE));
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.arc(s * Z.eyeDX, Z.eyeY, Z.eyeR * 1.24, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.moveTo(-Z.eyeDX + Z.eyeR * 1.24, Z.eyeY - Z.eyeR * 0.12);
+    ctx.quadraticCurveTo(0, Z.eyeY - Z.eyeR * 0.52, Z.eyeDX - Z.eyeR * 1.24, Z.eyeY - Z.eyeR * 0.12);
+    ctx.stroke();
   }
 
   // ---- 嘴部（按类型）----

@@ -66,10 +66,10 @@ export const COLORS = {
   CH_MOUTH: '#460C66',
   CH_FLASH: '#D32F2F',
   CH_BROW: '#3B1252',
-  // 铁桶 Bucket v26
-  Z_BUCKET_LIGHT: '#E8EDF0',
-  Z_BUCKET: '#A9B4BC',
-  Z_BUCKET_DARK: '#667077',
+  // 铁桶 Bucket v26（v94 附图可爱 3D 风：紫色铆钉桶）
+  Z_BUCKET_LIGHT: '#CFC0E8',
+  Z_BUCKET: '#9C7BC4',
+  Z_BUCKET_DARK: '#5E4690',
   Z_RUST: '#A8672F',
   Z_SHIRT: '#9EC6E0',
   Z_SHIRT_DARK: '#74A0BC',
@@ -83,15 +83,15 @@ export const COLORS = {
   Z_SACK: '#D2AF6B',
   Z_SACK_DARK: '#9A7A44',
   Z_EYE_YELLOW: '#FBF3BC',
-  // 橄榄球 Football v28
+  // 橄榄球 Football v28（v94 红球衣对齐附图）
   Z_FH_RED: '#E8452F',
   Z_FH_RED_LIGHT: '#F06A4F',
   Z_FH_RED_DARK: '#A3231B',
   Z_FH_STRIPE: '#F7EDD6',
   Z_FH_CAGE: '#D5CEBB',
-  Z_FH_JERSEY: '#3F7038',
-  Z_FH_JERSEY_DARK: '#2E5729',
-  Z_FH_WRIST: '#2E4A32',
+  Z_FH_JERSEY: '#C13A2A',
+  Z_FH_JERSEY_DARK: '#8F2618',
+  Z_FH_WRIST: '#7A1F14',
   Z_FH_CLEAT: '#6B4C3A',
   // 舞王 Dancer v29
   Z_DN_HAT: '#23232B',
@@ -104,14 +104,14 @@ export const COLORS = {
   Z_DN_TIE: '#4A2460',
   Z_DN_SHOE: '#5C4033',
   Z_DN_TONGUE: '#FF5A5F',
-  // 僵尸王 King v51
+  // 僵尸王 King v51（v94 金袍紫披风对齐附图）
   Z_KING_GOLD: '#FFCB47',
   Z_KING_GOLD_DARK: '#C08A0D',
   Z_KING_GEM: '#E53935',
-  Z_KING_CAPE: '#9E2438',
-  Z_KING_CAPE_DARK: '#701626',
-  Z_KING_ROBE: '#4A3272',
-  Z_KING_ROBE_DARK: '#362554',
+  Z_KING_CAPE: '#6A3FA0',
+  Z_KING_CAPE_DARK: '#4C2B78',
+  Z_KING_ROBE: '#D9A43B',
+  Z_KING_ROBE_DARK: '#A87718',
   // 僵尸阵营专属（暗描边 + 哑光高光）
   Z_STROKE: '#3E2723',
   Z_HIGHLIGHT: 'rgba(255,255,255,0.10)',

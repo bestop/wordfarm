@@ -19,13 +19,13 @@ export interface ZombieSprite {
 
 const UNIT = 50 // 基准单位（全部比例基于此）
 
-/* v93 经典 PvZ 共通色板（与小程序 PZ 同源） */
+/* v94 可爱 3D 目标风色板（与小程序 PZ 同源，对照附图取色） */
 const PZ = {
   OUTLINE: '#39412C',
-  OUT_JK: '#33220F',
-  JK: '#6D4A28',
-  JK_LIGHT: '#7E5A36',
-  JK_DARK: '#54371C',
+  OUT_JK: '#22304A',
+  JK: '#4E6FA8',
+  JK_LIGHT: '#6284B8',
+  JK_DARK: '#38517A',
   SHIRT: '#EFEAD9',
   TIE: '#C62828',
   TIE_DARK: '#9E1F1F',
@@ -226,12 +226,12 @@ function arms(Z: ZState, pen: Pen) {
   const armY = U * 0.06
   const armRot = Z.B.armRot
   const sleeve = Z.type === 'bucket' ? PZ.JK :
-    Z.type === 'imp' ? '#8A8074' :
+    Z.type === 'imp' ? '#4E463E' :
     Z.type === 'football' ? COLORS.Z_FH_JERSEY :
     Z.type === 'dancer' ? COLORS.Z_DN_SUIT :
     Z.type === 'king' ? COLORS.Z_KING_ROBE : PZ.JK
   const sleeveDark = Z.type === 'bucket' ? PZ.JK_DARK :
-    Z.type === 'imp' ? '#6E665C' :
+    Z.type === 'imp' ? '#362F29' :
     Z.type === 'football' ? COLORS.Z_FH_JERSEY_DARK :
     Z.type === 'dancer' ? COLORS.Z_DN_SUIT_DARK :
     Z.type === 'king' ? COLORS.Z_KING_ROBE_DARK : PZ.JK_DARK
@@ -274,12 +274,12 @@ function torso(Z: ZState, pen: Pen) {
   const { ctx, U } = Z
   const bodyW = Z.B.bodyW
   const robeFill = Z.type === 'bucket' ? PZ.JK :
-    Z.type === 'imp' ? '#8A8074' :
+    Z.type === 'imp' ? '#4E463E' :
     Z.type === 'football' ? COLORS.Z_FH_JERSEY :
     Z.type === 'dancer' ? COLORS.Z_DN_SUIT :
     Z.type === 'king' ? COLORS.Z_KING_ROBE : PZ.JK
   const robeDark = Z.type === 'bucket' ? PZ.JK_DARK :
-    Z.type === 'imp' ? '#6E665C' :
+    Z.type === 'imp' ? '#362F29' :
     Z.type === 'football' ? COLORS.Z_FH_JERSEY_DARK :
     Z.type === 'dancer' ? COLORS.Z_DN_SUIT_DARK :
     Z.type === 'king' ? COLORS.Z_KING_ROBE_DARK : PZ.JK_DARK
@@ -289,7 +289,7 @@ function torso(Z: ZState, pen: Pen) {
   const botY = Z.type === 'king' ? U * 0.70 : U * 0.66
   const tg = ctx.createLinearGradient(-U * bodyW, 0, U * bodyW, 0)
   tg.addColorStop(0, Z.type === 'bucket' ? PZ.JK_LIGHT :
-    Z.type === 'imp' ? '#998F82' :
+    Z.type === 'imp' ? '#5C544C' :
     Z.type === 'dancer' ? COLORS.Z_DN_SUIT_LIGHT : robeFill)
   tg.addColorStop(0.55, robeFill)
   tg.addColorStop(1, robeDark)
@@ -309,7 +309,7 @@ function torso(Z: ZState, pen: Pen) {
   ctx.restore()
 
   if (Z.type === 'bucket' || Z.type === 'dancer') {
-    const shirt = Z.type === 'dancer' ? COLORS.Z_DN_SHIRT : PZ.SHIRT
+    const shirt = Z.type === 'dancer' ? COLORS.Z_DN_SHIRT : '#DCE4EE'
     const tie = Z.type === 'dancer' ? COLORS.Z_DN_TIE : PZ.TIE
     const lapel = Z.type === 'dancer' ? COLORS.Z_DN_SUIT_DARK : PZ.JK_DARK
     ctx.fillStyle = shirt
@@ -348,6 +348,19 @@ function torso(Z: ZState, pen: Pen) {
     ctx.closePath()
     ctx.fill(); ctx.stroke()
   }
+  // 小鬼浅衬衫 V 领（深背心露浅衫，附图特征）
+  if (Z.type === 'imp') {
+    ctx.fillStyle = '#D8D2C4'
+    ctx.beginPath()
+    ctx.moveTo(-U * 0.15, topY + U * 0.02)
+    ctx.lineTo(U * 0.15, topY + U * 0.02)
+    ctx.lineTo(U * 0.045, topY + U * 0.36)
+    ctx.lineTo(-U * 0.045, topY + U * 0.36)
+    ctx.closePath()
+    ctx.fill()
+    pen.set(ctx, PZ.OUTLINE, pen.w(STROKE.THIN))
+    ctx.stroke()
+  }
   if (Z.type === 'football') {
     pen.set(ctx, COLORS.Z_FH_STRIPE, pen.w(STROKE.THIN) * 1.4)
     for (const sx of [-U * 0.10, U * 0.02, U * 0.14]) {
@@ -368,7 +381,7 @@ function torso(Z: ZState, pen: Pen) {
     ctx.stroke()
   }
   if (Z.type === 'king') {
-    ctx.fillStyle = COLORS.Z_KING_GOLD
+    ctx.fillStyle = COLORS.Z_KING_CAPE
     ctx.beginPath()
     safeRoundRect(ctx, -U * 0.38, U * 0.50, U * 0.76, U * 0.10, U * 0.03)
     ctx.fill(); ctx.stroke()
@@ -378,7 +391,7 @@ function torso(Z: ZState, pen: Pen) {
     ctx.fill(); ctx.stroke()
   }
   const hemCol = Z.type === 'bucket' ? PZ.JK_DARK :
-    Z.type === 'imp' ? '#6E665C' :
+    Z.type === 'imp' ? '#362F29' :
     Z.type === 'football' ? COLORS.Z_FH_JERSEY_DARK :
     Z.type === 'dancer' ? COLORS.Z_DN_SUIT_DARK :
     Z.type === 'king' ? COLORS.Z_KING_ROBE_DARK : PZ.JK_DARK
@@ -428,8 +441,8 @@ function shoulders(Z: ZState, pen: Pen) {
 function legs(Z: ZState, pen: Pen) {
   const { ctx, U } = Z
   const pants = Z.type === 'bucket' ? PZ.PANTS :
-    Z.type === 'imp' ? '#5C544C' :
-    Z.type === 'football' ? '#3E5233' :
+    Z.type === 'imp' ? '#3A342E' :
+    Z.type === 'football' ? '#39414D' :
     Z.type === 'dancer' ? COLORS.Z_DN_SUIT_DARK :
     Z.type === 'king' ? COLORS.Z_KING_ROBE_DARK : PZ.PANTS
   const pantsOut = Z.type === 'bucket' ? PZ.PANTS_OUT : PZ.OUTLINE
@@ -448,6 +461,22 @@ function legs(Z: ZState, pen: Pen) {
   for (const s of [-1, 1]) {
     ctx.beginPath()
     ctx.ellipse(s * U * 0.21, U * 0.94, U * 0.13, U * 0.085, s * 0.14, 0, Math.PI * 2)
+    ctx.fill(); ctx.stroke()
+  }
+  // 舞王手杖（金色杖头 + 深色杖杆，附图特征）
+  if (Z.type === 'dancer') {
+    const cx0 = U * 0.74
+    pen.set(ctx, '#2B1D10', pen.w(STROKE.THIN) * 1.5)
+    ctx.strokeStyle = '#4A3423'
+    ctx.lineWidth = Math.max(2, U * 0.055)
+    ctx.beginPath()
+    ctx.moveTo(cx0, U * 0.26)
+    ctx.lineTo(cx0 + U * 0.03, U * 1.02)
+    ctx.stroke()
+    mainStroke(ctx, pen)
+    ctx.fillStyle = COLORS.Z_KING_GOLD
+    ctx.beginPath()
+    ctx.arc(cx0, U * 0.22, U * 0.078, 0, Math.PI * 2)
     ctx.fill(); ctx.stroke()
   }
   mainStroke(ctx, pen)
@@ -558,65 +587,59 @@ function headgear(Z: ZState, pen: Pen) {
       ctx.ellipse(s * (hwHy + hRX * 0.01), hy, hRX * 0.048, hRX * 0.09, s * 0.22, 0, Math.PI * 2)
       ctx.fill()
     }
-    ctx.fillStyle = COLORS.Z_RUST
-    ctx.beginPath()
-    ctx.moveTo(-hRX * 0.16, topY - hRY * 0.015)
-    ctx.lineTo(hRX * 0.16, topY - hRY * 0.015)
-    ctx.lineTo(0, topY + hRY * 0.14)
-    ctx.closePath()
-    ctx.fill(); ctx.stroke()
-    for (const [rxp, ryp, rw, rh, rr] of [
-      [halfTop * 0.50, topY + hRY * 0.10, 0.17, 0.10, 0.45],
-      [halfBot * 0.55, rimY - hRY * 0.30, 0.14, 0.09, -0.30],
-      [-halfBot * 0.60, rimY - hRY * 0.16, 0.11, 0.075, 0.20],
-    ] as Array<[number, number, number, number, number]>) {
+    // 桶身铆钉 ×5（v94 附图紫色铆钉桶特征，替代旧锈斑）
+    const stud = (fy: number, fx: number) => {
+      const sy = topY + (rimY - topY) * fy
+      const halfW = halfTop + (halfBot - halfTop) * fy
+      const sx = fx * halfW
+      ctx.fillStyle = COLORS.Z_BUCKET_DARK
       ctx.beginPath()
-      ctx.ellipse(rxp, ryp, hRX * rw, hRX * rh, rr, 0, Math.PI * 2)
+      ctx.arc(sx, sy, hRX * 0.085, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.fillStyle = 'rgba(255,255,255,0.32)'
+      ctx.beginPath()
+      ctx.arc(sx - hRX * 0.022, sy - hRX * 0.028, hRX * 0.034, 0, Math.PI * 2)
       ctx.fill()
     }
+    stud(0.32, -0.52); stud(0.58, -0.62); stud(0.32, 0.52); stud(0.58, 0.62); stud(0.80, 0)
     mainStroke(ctx, pen)
   } else if (Z.type === 'imp') {
-    const hcY2 = hcY + hRY * 0.02
-    const hR1 = hRX * 1.14
-    const wy = hcY - hRY * 0.46
-    const hGrad = ctx.createLinearGradient(-hRX * 0.9, wy - hRY * 0.55, hRX * 0.95, hcY + hRY * 0.1)
-    hGrad.addColorStop(0, COLORS.Z_HOOD_LIGHT)
-    hGrad.addColorStop(0.55, COLORS.Z_HOOD)
-    hGrad.addColorStop(1, COLORS.Z_HOOD_DARK)
-    ctx.fillStyle = hGrad
+    // 深棕乱发帽（v94 附图小鬼黑发特征，替代旧破兜帽）
+    const hairGrad = ctx.createLinearGradient(-hRX * 0.8, hcY - hRY * 1.2, hRX * 0.9, hcY)
+    hairGrad.addColorStop(0, '#4A3F33')
+    hairGrad.addColorStop(0.55, '#3A3128')
+    hairGrad.addColorStop(1, '#2A231C')
+    ctx.fillStyle = hairGrad
     ctx.beginPath()
-    ctx.arc(0, hcY2, hR1, Math.PI * 1.07, Math.PI * 1.93)
-    ctx.lineTo(hRX * 0.84, wy - hRY * 0.03)
-    ctx.quadraticCurveTo(hRX * 0.45, wy + hRY * 0.09, hRX * 0.12, wy - hRY * 0.01)
-    ctx.quadraticCurveTo(-hRX * 0.20, wy + hRY * 0.10, -hRX * 0.55, wy)
-    ctx.quadraticCurveTo(-hRX * 0.80, wy - hRY * 0.06, -hRX * 0.84, wy - hRY * 0.03)
+    ctx.ellipse(0, hcY - hRY * 0.50, hRX * 1.06, hRY * 0.64, 0, Math.PI * 1.03, Math.PI * 1.97)
+    ctx.quadraticCurveTo(hRX * 0.60, hcY - hRY * 0.28, hRX * 0.16, hcY - hRY * 0.40)
+    ctx.quadraticCurveTo(-hRX * 0.34, hcY - hRY * 0.54, -hRX * 0.80, hcY - hRY * 0.30)
     ctx.closePath()
     ctx.fill(); ctx.stroke()
-    pen.set(ctx, COLORS.Z_HOOD_DARK, pen.w(STROKE.THIN))
-    ctx.beginPath()
-    ctx.moveTo(-hRX * 0.28, hcY - hRY * 0.86)
-    ctx.quadraticCurveTo(-hRX * 0.55, hcY - hRY * 0.70, -hRX * 0.66, hcY - hRY * 0.44)
-    ctx.stroke()
-    ctx.beginPath()
-    ctx.moveTo(hRX * 0.30, hcY - hRY * 0.84)
-    ctx.quadraticCurveTo(hRX * 0.58, hcY - hRY * 0.64, hRX * 0.64, hcY - hRY * 0.42)
-    ctx.stroke()
+    // 顶部戳发 ×3
+    const spikes: Array<[number, number]> = [[-0.36, -0.30], [-0.05, -0.40], [0.28, -0.28]]
+    for (const [hxp, hgt] of spikes) {
+      const bx = hxp * hRX
+      const arg = Math.max(0, 1 - (hxp * hxp) * 1.55)
+      const by = hcY - hRY * (0.50 + 0.64 * Math.sqrt(arg)) + hRY * 0.03
+      ctx.fillStyle = '#3A3128'
+      ctx.beginPath()
+      ctx.moveTo(bx - hRX * 0.07, by)
+      ctx.quadraticCurveTo(bx + hxp * hRX * 0.20, by - hRY * hgt * 0.8, bx + hxp * hRX * 0.44, by - hRY * hgt)
+      ctx.quadraticCurveTo(bx + hRX * 0.06, by - hRY * hgt * 0.4, bx + hRX * 0.07, by)
+      ctx.closePath()
+      ctx.fill(); ctx.stroke()
+    }
     mainStroke(ctx, pen)
-    ctx.fillStyle = COLORS.Z_HOOD_DARK
+    // 额前碎发 ×2 + 右侧一撇
+    pen.set(ctx, '#2A231C', pen.w(STROKE.THIN))
     ctx.beginPath()
-    ctx.moveTo(-hR1 * 0.965, hcY - hRY * 0.40)
-    ctx.lineTo(-hR1 * 0.82, hcY - hRY * 0.26)
-    ctx.lineTo(-hR1 * 0.965, hcY - hRY * 0.14)
-    ctx.closePath()
-    ctx.fill()
-    pen.set(ctx, PZ.HAIR, pen.w(STROKE.THIN))
-    ctx.beginPath()
-    ctx.moveTo(-hRX * 0.30, wy + hRY * 0.02)
-    ctx.quadraticCurveTo(-hRX * 0.36, wy + hRY * 0.08, -hRX * 0.24, wy + hRY * 0.13)
+    ctx.moveTo(-hRX * 0.30, hcY - hRY * 0.30)
+    ctx.quadraticCurveTo(-hRX * 0.36, hcY - hRY * 0.22, -hRX * 0.24, hcY - hRY * 0.16)
     ctx.stroke()
     ctx.beginPath()
-    ctx.moveTo(hRX * 0.22, wy + hRY * 0.02)
-    ctx.quadraticCurveTo(hRX * 0.28, wy + hRY * 0.08, hRX * 0.19, wy + hRY * 0.12)
+    ctx.moveTo(hRX * 0.22, hcY - hRY * 0.32)
+    ctx.quadraticCurveTo(hRX * 0.28, hcY - hRY * 0.24, hRX * 0.19, hcY - hRY * 0.17)
     ctx.stroke()
     ctx.beginPath()
     ctx.moveTo(hRX * 0.78, hcY - hRY * 0.36)
@@ -803,6 +826,20 @@ function faceVariants(Z: ZState, pen: Pen) {
       ctx.quadraticCurveTo(s * Z.eyeDX, browY - eyeR * 0.45, s * Z.eyeDX + s * browW * 0.4, browY - eyeR * 0.40)
       ctx.stroke()
     }
+  }
+
+  // 圆框眼镜（bucket/imp/dancer，v94 附图特征）
+  if (Z.type === 'bucket' || Z.type === 'imp' || Z.type === 'dancer') {
+    pen.set(ctx, '#26262E', pen.w(STROKE.EYE))
+    for (const s of [-1, 1]) {
+      ctx.beginPath()
+      ctx.arc(s * Z.eyeDX, Z.eyeY, Z.eyeR * 1.24, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+    ctx.beginPath()
+    ctx.moveTo(-Z.eyeDX + Z.eyeR * 1.24, Z.eyeY - Z.eyeR * 0.12)
+    ctx.quadraticCurveTo(0, Z.eyeY - Z.eyeR * 0.52, Z.eyeDX - Z.eyeR * 1.24, Z.eyeY - Z.eyeR * 0.12)
+    ctx.stroke()
   }
 
   Z.mouthY = Z.headCY + Z.headRY * 0.36
