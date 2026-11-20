@@ -105,9 +105,9 @@ const RENDER_TOKENS = {
     FR_CANNON_IN:  '#3E0F0A',   // 炮口内腔 近黑红
     FR_BROW:       '#8D2819',   // 倒八字眉 深红棕
     // v26 铁桶僵尸 Bucket 新增（v94 附图可爱 3D 风：紫色铆钉桶）
-    Z_BUCKET_LIGHT: '#DDE1E6',  // 铁桶亮部 银灰高光带（v95 回归经典银铁桶，对齐附图）
-    Z_BUCKET:       '#AAB2BC',  // 铁桶基色 亮银灰
-    Z_BUCKET_DARK:  '#6A7480',  // 铁桶暗部 底缘/侧影/铆钉 深钢灰
+    Z_BUCKET_LIGHT: '#CFC0E8',  // 铁桶亮部 紫罗兰高光带（v96 回归附图紫桶）
+    Z_BUCKET:       '#9C7BC4',  // 铁桶基色 中紫
+    Z_BUCKET_DARK:  '#5E4690',  // 铁桶暗部 底缘/侧影/铆钉 深紫
     Z_RUST:         '#A8672F',  // （预留）锈斑棕褐
     Z_SHIRT:        '#9EC6E0',  // 破衬衫 亮天蓝（v65 提鲜）
     Z_SHIRT_DARK:   '#74A0BC',  // 衣影/口袋/撕裂内衬
@@ -772,7 +772,7 @@ class Renderer {
     const cacheKey = 'zombie_' + zombie.type;
     const cached = this.offscreenCache[cacheKey];
     if (cached) {
-      const drawSize = r * 2.4;
+      const drawSize = r * 3.09;   // v96: 画布 2.8→3.6 等比放大（2.4×3.6/2.8），僵尸视觉尺寸不变
       ctx.drawImage(cached, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
     } else {
       // 兜底：实心圆
@@ -1250,6 +1250,17 @@ class Renderer {
       ctx.beginPath();
       ctx.ellipse(0, mY + mRy * 1.02, mRx * 0.58, mRy * 0.40, 0, 0, Math.PI * 2);
       ctx.fill();
+    } else if (mouth === 'smile') {
+      // 闭口微笑弧（v96 附图豌豆/樱桃：一道上弯浅弧 + 极淡下唇影）
+      this._pvzLine(ctx, ink, 1.7);
+      ctx.beginPath();
+      ctx.moveTo(-mRx, mY);
+      ctx.quadraticCurveTo(0, mY + mRy * 1.30, mRx, mY);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(94,42,12,0.16)';
+      ctx.beginPath();
+      ctx.ellipse(0, mY + mRy * 0.38, mRx * 0.52, mRy * 0.42, 0, 0, Math.PI * 2);
+      ctx.fill();
     } else if (mouth === 'grit') {
       // 咬牙（樱桃/火焰怒态）：暗腔 + 上排方牙
       this._pvzLine(ctx, ink, 1.5);
@@ -1482,13 +1493,13 @@ class Renderer {
     this._pvzLeaf(ctx, headR * 0.14, sproutY - headR * 0.16, headR * 0.36, headR * 0.15, 1, '#6BA83A', OUT, 2.4);
     this._pvzLeaf(ctx, -headR * 0.01, sproutY - headR * 0.06, headR * 0.28, headR * 0.12, -1, '#5E9433', OUT, 2.4);
 
-    // ---- 7. 表情：大白眼珠 + 开心笑 + 粉腮（参照附图豌豆射手）----
+    // ---- 7. 表情：大白眼珠 + 闭口甜笑 + 粉腮（附图豌豆射手）----
     this._drawPvzFace(ctx, {
-      eyeDX: headR * 0.30, eyeY: headY + headR * 0.10, eyeR: headR * 0.155,
+      eyeDX: headR * 0.31, eyeY: headY + headR * 0.08, eyeR: headR * 0.170,
       white: true, pupilDx: 0.06, pupilDy: -0.08,
       brow: 'none',
-      mouth: 'smile-open',
-      mouthY: headY + headR * 0.46, mouthRx: headR * 0.16, mouthRy: headR * 0.11,
+      mouth: 'smile',
+      mouthY: headY + headR * 0.47, mouthRx: headR * 0.15, mouthRy: headR * 0.095,
       blush: 'rgba(255,132,150,0.55)',
       ink: '#23400F', wobblePhase
     });
@@ -1564,7 +1575,7 @@ class Renderer {
     ctx.ellipse(-headR * 0.40, headY - headR * 0.42, headR * 0.24, headR * 0.14, -0.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // ---- 5. 炮管 + 管口三层火苗 ----
+    // ---- 5. 炮管（奶油白管身 + 橙环纹，附图白炮管特征）+ 管口三层火苗 ----
     const cannonX = headR * 0.52;
     const cannonY = headY - headR * 0.52;
     const cannonLen = headR * 0.58;
@@ -1578,18 +1589,30 @@ class Renderer {
     ctx.ellipse(cannonR * 0.08, 0, cannonR * 0.26, cannonR * 0.92, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
     const cg = ctx.createLinearGradient(0, -cannonR, 0, cannonR);
-    cg.addColorStop(0, '#FFC894');
-    cg.addColorStop(0.5, '#FF8B52');
-    cg.addColorStop(1, '#E05A2B');
+    cg.addColorStop(0, '#FFF7EA');
+    cg.addColorStop(0.5, '#F7E3C4');
+    cg.addColorStop(1, '#E3C39B');
     ctx.fillStyle = cg;
     ctx.beginPath();
     safeRoundRect(ctx, 0, -cannonR, cannonLen, cannonR * 2, cannonR * 0.5);
     ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#B23A14';
+    // 橙色环纹 ×2（白管橙纹，附图特征）
+    ctx.fillStyle = '#F08A3C';
+    ctx.beginPath();
+    safeRoundRect(ctx, cannonLen * 0.30, -cannonR, cannonR * 0.34, cannonR * 2, cannonR * 0.16);
+    ctx.fill();
+    ctx.beginPath();
+    safeRoundRect(ctx, cannonLen * 0.62, -cannonR, cannonR * 0.34, cannonR * 2, cannonR * 0.16);
+    ctx.fill();
+    this._pvzLine(ctx, OUT, 3.0);
+    ctx.beginPath();
+    safeRoundRect(ctx, 0, -cannonR, cannonLen, cannonR * 2, cannonR * 0.5);
+    ctx.stroke();
+    ctx.fillStyle = '#C77B2E';
     ctx.beginPath();
     ctx.ellipse(cannonLen, 0, cannonR * 0.40, cannonR * 0.88, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#3E0F0A';
+    ctx.fillStyle = '#5A2410';
     ctx.beginPath();
     ctx.ellipse(cannonLen, 0, cannonR * 0.26, cannonR * 0.60, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -1621,10 +1644,10 @@ class Renderer {
     this._drawFlame(ctx, -headR * 0.26, headY - headR * 0.80, headR * 0.26, headR * 0.44, -sway * 0.6);
     this._drawFlame(ctx,  headR * 0.24, headY - headR * 0.84, headR * 0.34, headR * 0.60,  sway);
 
-    // ---- 7. 表情：大白眼珠 + 倒八字怒眉 + 咬牙（参照附图火焰射手）----
+    // ---- 7. 表情：大白眼珠 + 倒八字怒眉 + 咬牙（附图火焰射手）----
     const eyeCY = headY + headR * 0.10;
     this._drawPvzFace(ctx, {
-      eyeDX: headR * 0.30, eyeY: eyeCY, eyeR: headR * 0.155,
+      eyeDX: headR * 0.31, eyeY: eyeCY, eyeR: headR * 0.170,
       white: true, pupilDx: 0.02, pupilDy: -0.12,
       brow: 'angry', browColor: '#7E2410', browBold: 2.3,
       mouth: 'grit',
@@ -1686,10 +1709,10 @@ class Renderer {
       ctx.fill();
     });
     ctx.restore();
-    // 左上柔光
-    ctx.fillStyle = 'rgba(255,255,255,0.30)';
+      // 左上柔光（v96 果冻感加强）
+    ctx.fillStyle = 'rgba(255,255,255,0.38)';
     ctx.beginPath();
-    ctx.ellipse(-headR * 0.38, headY - headR * 0.52, headR * 0.22, headR * 0.30, -0.5, 0, Math.PI * 2);
+    ctx.ellipse(-headR * 0.38, headY - headR * 0.52, headR * 0.24, headR * 0.32, -0.5, 0, Math.PI * 2);
     ctx.fill();
     // 顶部小凸蒂
     this._pvzLine(ctx, OUT, 2.6);
@@ -1906,7 +1929,7 @@ class Renderer {
 
     // ---- 6. 表情：大白眼珠 + 倒八字怒眉 + 冰蓝腮（参照附图寒冰射手）----
     this._drawPvzFace(ctx, {
-      eyeDX: headR * 0.30, eyeY: headY + headR * 0.10, eyeR: headR * 0.155,
+      eyeDX: headR * 0.31, eyeY: headY + headR * 0.08, eyeR: headR * 0.170,
       white: true, pupilDx: 0.02, pupilDy: -0.10,
       brow: 'angry', browColor: '#1F5568', browBold: 2.2,
       mouth: fx > 0.35 ? 'o' : 'flat',
@@ -2029,14 +2052,14 @@ class Renderer {
     calyx(lx, ly - lr + r * 0.02, r * 0.40, false);
     calyx(rx, ry - rr + r * 0.02, r * 0.32, true);
 
-    // ---- 5. 双脸：白眼珠怒视 + 倒八字眉 + 撇嘴 ----
+    // ---- 5. 双脸：大白眼珠 + 闭口甜笑（附图双樱可爱脸）----
     const faceOf = (cx, cy, rad, phase) => {
       this._drawPvzFace(ctx, {
-        eyeDX: rad * 0.30, eyeY: cy - rad * 0.10, eyeR: rad * 0.22,
-        white: true, pupilDx: 0.02, pupilDy: -0.18,
-        brow: 'angry', browColor: '#5B1512', browBold: 2.0,
-        mouth: 'frown',
-        mouthY: cy + rad * 0.34, mouthRx: rad * 0.14, mouthRy: rad * 0.07,
+        eyeDX: rad * 0.30, eyeY: cy - rad * 0.08, eyeR: rad * 0.23,
+        white: true, pupilDx: 0.02, pupilDy: -0.16,
+        brow: 'none',
+        mouth: 'smile',
+        mouthY: cy + rad * 0.36, mouthRx: rad * 0.15, mouthRy: rad * 0.10,
         ink: '#3B1210', wobblePhase: phase
       });
     };
@@ -2146,7 +2169,7 @@ class Renderer {
     mouthOpen = Math.max(0.10, Math.min(1.30, mouthOpen));
     const mouthFlash = (chompState === 'snap' && biteP >= 0.4 && biteP <= 0.65) ? 1 : 0;
     const openN = Math.min(1, mouthOpen / 1.30);            // 归一化 0..1
-    const mW = headR * 1.08;                                // 口腔胶囊宽
+    const mW = headR * 1.14;                                // 口腔胶囊宽（v96 附图大嘴加宽）
     const mH = headR * (0.14 + 0.64 * openN);               // 口腔高（随开口度呼吸）
     const mCY = headY + headR * 0.36;                       // 口腔中心（头中下）
     // 厚唇（紫红外圈胶囊）
@@ -2220,9 +2243,9 @@ class Renderer {
     ctx.ellipse(-headR * 0.44, headY - headR * 0.44, headR * 0.22, headR * 0.14, -0.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // ---- 5. 表情：大白眼珠 + 倒八字怒眉（正面大嘴上方）----
+    // ---- 5. 表情：大白眼珠 + 倒八字怒眉（大嘴上方高位，附图眼在头顶）----
     this._drawPvzFace(ctx, {
-      eyeDX: headR * 0.30, eyeY: headY - headR * 0.40, eyeR: headR * 0.135,
+      eyeDX: headR * 0.30, eyeY: headY - headR * 0.46, eyeR: headR * 0.150,
       white: true, pupilDx: 0.02, pupilDy: 0.06,
       brow: 'angry', browColor: '#3B1252', browBold: 2.3,
       mouth: 'none', ink: '#2A0F3E', wobblePhase
@@ -2287,7 +2310,7 @@ class Renderer {
       ctx.fill(); ctx.stroke();
       ctx.restore();
     };
-    const petalRad = headR * 0.76, petalLen = headR * 0.48, petalWid = headR * 0.175;
+    const petalRad = headR * 0.76, petalLen = headR * 0.50, petalWid = headR * 0.19;
     for (let i = 0; i < 12; i++) {
       const angle = (i / 12) * Math.PI * 2 + Math.PI / 12 + wobble * 1.2;
       petal(petalRad - headR * 0.02, petalLen * 0.92, petalWid * 0.92, angle, '#F0A81C', OUT);
@@ -2323,12 +2346,12 @@ class Renderer {
     ctx.ellipse(-discR * 0.38, headY - discR * 0.44, discR * 0.30, discR * 0.16, -0.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // ---- 5. 花盘脸：黑豆大眼 + 大开口笑 + 暖橙腮（v95 脸部随盘放大）----
+    // ---- 5. 花盘脸：黑豆大眼 + 大开口笑 + 暖橙腮（v96 眼再放大）----
     this._drawPvzFace(ctx, {
-      eyeDX: headR * 0.26, eyeY: headY - headR * 0.05, eyeR: headR * 0.135,
+      eyeDX: headR * 0.27, eyeY: headY - headR * 0.04, eyeR: headR * 0.150,
       white: false, brow: 'none',
       mouth: 'smile-open',
-      mouthY: headY + headR * 0.20, mouthRx: headR * 0.26, mouthRy: headR * 0.17,
+      mouthY: headY + headR * 0.21, mouthRx: headR * 0.27, mouthRy: headR * 0.175,
       blush: 'rgba(255,132,72,0.48)',
       ink: '#4A2C0F', wobblePhase
     });

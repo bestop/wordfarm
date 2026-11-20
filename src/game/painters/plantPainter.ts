@@ -112,7 +112,7 @@ export interface PvzFaceOpts {
   brow?: 'worried' | 'angry' | 'cool' | 'none'
   browColor?: string
   browBold?: number
-  mouth?: 'smile-open' | 'grit' | 'frown' | 'flat' | 'o' | 'none'
+  mouth?: 'smile-open' | 'smile' | 'grit' | 'frown' | 'flat' | 'o' | 'none'
   mouthY?: number
   mouthRx?: number
   mouthRy?: number
@@ -225,6 +225,17 @@ export function drawPvzFace(ctx: Ctx2D, pen: Pen, o: PvzFaceOpts) {
     ctx.fillStyle = 'rgba(255,183,110,0.42)'
     ctx.beginPath()
     ctx.ellipse(0, mY + mRy * 1.02, mRx * 0.58, mRy * 0.40, 0, 0, Math.PI * 2)
+    ctx.fill()
+  } else if (mouth === 'smile') {
+    // 闭口微笑弧（v96 附图豌豆/樱桃：一道上弯浅弧 + 极淡下唇影）
+    pvzLine(ctx, pen, ink, 1.7)
+    ctx.beginPath()
+    ctx.moveTo(-mRx, mY)
+    ctx.quadraticCurveTo(0, mY + mRy * 1.30, mRx, mY)
+    ctx.stroke()
+    ctx.fillStyle = 'rgba(94,42,12,0.16)'
+    ctx.beginPath()
+    ctx.ellipse(0, mY + mRy * 0.38, mRx * 0.52, mRy * 0.42, 0, 0, Math.PI * 2)
     ctx.fill()
   } else if (mouth === 'grit') {
     pvzLine(ctx, pen, ink, 1.5)
@@ -483,13 +494,13 @@ function drawShooter(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
   pvzLeaf(ctx, pen, headR * 0.14, sproutY - headR * 0.16, headR * 0.36, headR * 0.15, 1, '#6BA83A', OUT, 2.4)
   pvzLeaf(ctx, pen, -headR * 0.01, sproutY - headR * 0.06, headR * 0.28, headR * 0.12, -1, '#5E9433', OUT, 2.4)
 
-  // 7. 表情：大白眼珠 + 开心笑 + 粉腮（参照附图豌豆射手）
+  // 7. 表情：大白眼珠 + 闭口甜笑 + 粉腮（附图豌豆射手）
   drawPvzFace(ctx, pen, {
-    eyeDX: headR * 0.30, eyeY: headY + headR * 0.10, eyeR: headR * 0.155,
+    eyeDX: headR * 0.31, eyeY: headY + headR * 0.08, eyeR: headR * 0.170,
     white: true, pupilDx: 0.06, pupilDy: -0.08,
     brow: 'none',
-    mouth: 'smile-open',
-    mouthY: headY + headR * 0.46, mouthRx: headR * 0.16, mouthRy: headR * 0.11,
+    mouth: 'smile',
+    mouthY: headY + headR * 0.47, mouthRx: headR * 0.15, mouthRy: headR * 0.095,
     blush: 'rgba(255,132,150,0.55)',
     ink: '#23400F', wobblePhase: p.wobble,
   })
@@ -553,7 +564,7 @@ function drawFire(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
   ctx.ellipse(-headR * 0.40, headY - headR * 0.42, headR * 0.24, headR * 0.14, -0.5, 0, Math.PI * 2)
   ctx.fill()
 
-  // 右向炮管
+  // 右向炮管（奶油白管身 + 橙环纹，附图白炮管特征）
   const cannonX = headR * 0.58
   const cannonY = headY - headR * 0.42
   const cannonLen = headR * 0.58
@@ -567,18 +578,30 @@ function drawFire(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
   ctx.ellipse(cannonR * 0.08, 0, cannonR * 0.26, cannonR * 0.92, 0, 0, Math.PI * 2)
   ctx.fill(); ctx.stroke()
   const cg = ctx.createLinearGradient(0, -cannonR, 0, cannonR)
-  cg.addColorStop(0, '#FFC894')
-  cg.addColorStop(0.5, '#FF8B52')
-  cg.addColorStop(1, '#E05A2B')
+  cg.addColorStop(0, '#FFF7EA')
+  cg.addColorStop(0.5, '#F7E3C4')
+  cg.addColorStop(1, '#E3C39B')
   ctx.fillStyle = cg
   ctx.beginPath()
   safeRoundRect(ctx, 0, -cannonR, cannonLen, cannonR * 2, cannonR * 0.5)
   ctx.fill(); ctx.stroke()
-  ctx.fillStyle = '#B23A14'
+  // 橙色环纹 ×2（白管橙纹，附图特征）
+  ctx.fillStyle = '#F08A3C'
+  ctx.beginPath()
+  safeRoundRect(ctx, cannonLen * 0.30, -cannonR, cannonR * 0.34, cannonR * 2, cannonR * 0.16)
+  ctx.fill()
+  ctx.beginPath()
+  safeRoundRect(ctx, cannonLen * 0.62, -cannonR, cannonR * 0.34, cannonR * 2, cannonR * 0.16)
+  ctx.fill()
+  pvzLine(ctx, pen, OUT, 3.0)
+  ctx.beginPath()
+  safeRoundRect(ctx, 0, -cannonR, cannonLen, cannonR * 2, cannonR * 0.5)
+  ctx.stroke()
+  ctx.fillStyle = '#C77B2E'
   ctx.beginPath()
   ctx.ellipse(cannonLen, 0, cannonR * 0.40, cannonR * 0.88, 0, 0, Math.PI * 2)
   ctx.fill(); ctx.stroke()
-  ctx.fillStyle = '#3E0F0A'
+  ctx.fillStyle = '#5A2410'
   ctx.beginPath()
   ctx.ellipse(cannonLen, 0, cannonR * 0.26, cannonR * 0.60, 0, 0, Math.PI * 2)
   ctx.fill()
@@ -594,7 +617,7 @@ function drawFire(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
   drawFlame(ctx, headR * 0.24, headY - headR * 0.84, headR * 0.34, headR * 0.60, sway)
 
   drawPvzFace(ctx, pen, {
-    eyeDX: headR * 0.30, eyeY: headY + headR * 0.10, eyeR: headR * 0.155,
+    eyeDX: headR * 0.31, eyeY: headY + headR * 0.10, eyeR: headR * 0.170,
     white: true, pupilDx: 0.02, pupilDy: -0.12,
     brow: 'angry', browColor: '#7E2410', browBold: 2.3,
     mouth: 'grit',
@@ -646,9 +669,9 @@ function drawWall(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
     ctx.fill()
   })
   ctx.restore()
-  ctx.fillStyle = 'rgba(255,255,255,0.30)'
+  ctx.fillStyle = 'rgba(255,255,255,0.38)'
   ctx.beginPath()
-  ctx.ellipse(-headR * 0.38, headY - headR * 0.52, headR * 0.22, headR * 0.30, -0.5, 0, Math.PI * 2)
+  ctx.ellipse(-headR * 0.38, headY - headR * 0.52, headR * 0.24, headR * 0.32, -0.5, 0, Math.PI * 2)
   ctx.fill()
   pvzLine(ctx, pen, OUT, 2.6)
   ctx.fillStyle = '#7A4A20'
@@ -832,7 +855,7 @@ function drawFreezer(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
   ctx.restore()
 
   drawPvzFace(ctx, pen, {
-    eyeDX: headR * 0.30, eyeY: headY + headR * 0.10, eyeR: headR * 0.155,
+    eyeDX: headR * 0.31, eyeY: headY + headR * 0.08, eyeR: headR * 0.170,
     white: true, pupilDx: 0.02, pupilDy: -0.10,
     brow: 'angry', browColor: '#1F5568', browBold: 2.2,
     mouth: 'flat',
@@ -950,11 +973,11 @@ function drawCherry(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
 
   const faceOf = (cx: number, cy: number, rad: number, phase: number) => {
     drawPvzFace(ctx, pen, {
-      eyeDX: rad * 0.30, eyeY: cy - rad * 0.06, eyeR: rad * 0.20,
-      white: true, pupilDx: 0.02, pupilDy: -0.18,
-      brow: 'angry', browColor: '#5B1512', browBold: 2.0,
-      mouth: 'frown',
-      mouthY: cy + rad * 0.34, mouthRx: rad * 0.14, mouthRy: rad * 0.07,
+      eyeDX: rad * 0.30, eyeY: cy - rad * 0.08, eyeR: rad * 0.23,
+      white: true, pupilDx: 0.02, pupilDy: -0.16,
+      brow: 'none',
+      mouth: 'smile',
+      mouthY: cy + rad * 0.36, mouthRx: rad * 0.15, mouthRy: rad * 0.10,
       ink: '#3B1210', wobblePhase: phase,
     })
   }
@@ -1057,7 +1080,7 @@ function drawChomper(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
   mouthOpen = Math.max(0.10, Math.min(1.30, mouthOpen))
   const mouthFlash = p.chomperState === 'snap' && biteP >= 0.4 && biteP <= 0.65
   const openN = Math.min(1, mouthOpen / 1.30)
-  const mW = headR * 1.08
+  const mW = headR * 1.14
   const mH = headR * (0.14 + 0.64 * openN)
   const mCY = headY + headR * 0.36
   // 厚唇（紫红外圈胶囊）
@@ -1130,7 +1153,7 @@ function drawChomper(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
   ctx.fill()
 
   drawPvzFace(ctx, pen, {
-    eyeDX: headR * 0.30, eyeY: headY - headR * 0.40, eyeR: headR * 0.135,
+    eyeDX: headR * 0.30, eyeY: headY - headR * 0.46, eyeR: headR * 0.150,
     white: true, pupilDx: 0.02, pupilDy: 0.06,
     brow: 'angry', browColor: '#3B1252', browBold: 2.3,
     mouth: 'none', ink: '#2A0F3E', wobblePhase,
@@ -1177,7 +1200,7 @@ function drawSunflower(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
     ctx.fill(); ctx.stroke()
     ctx.restore()
   }
-  const petalRad = headR * 0.76, petalLen = headR * 0.48, petalWid = headR * 0.175
+  const petalRad = headR * 0.76, petalLen = headR * 0.50, petalWid = headR * 0.19
   for (let i = 0; i < 12; i++) {
     const angle = (i / 12) * Math.PI * 2 + Math.PI / 12 + wobble * 1.2
     petal(petalRad - headR * 0.02, petalLen * 0.92, petalWid * 0.92, angle, '#F0A81C', OUT)
@@ -1213,10 +1236,10 @@ function drawSunflower(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
   ctx.fill()
 
   drawPvzFace(ctx, pen, {
-    eyeDX: headR * 0.26, eyeY: headY - headR * 0.05, eyeR: headR * 0.135,
+    eyeDX: headR * 0.27, eyeY: headY - headR * 0.04, eyeR: headR * 0.150,
     white: false, brow: 'none',
     mouth: 'smile-open',
-    mouthY: headY + headR * 0.20, mouthRx: headR * 0.26, mouthRy: headR * 0.17,
+    mouthY: headY + headR * 0.21, mouthRx: headR * 0.27, mouthRy: headR * 0.175,
     blush: 'rgba(255,132,72,0.48)',
     ink: '#4A2C0F', wobblePhase: p.wobble,
   })

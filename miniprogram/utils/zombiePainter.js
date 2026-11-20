@@ -10,20 +10,20 @@
 const { ZOMBIE_TYPES } = require('./constants.js');
 const { safeRoundRect } = require('./canvasHelpers.js');
 
-/* v95 经典 PvZ 复刻色板（对齐附图）：
-   铁桶=银灰铆钉桶+棕西装白衬衫红领带 / 小鬼=黑乱发+深背心浅衬衫 / 橄榄球=红盔红球衣
-   舞王=黑礼帽紫西装+手杖 / 僵尸王=金冠金袍紫披风；v95 删除圆框眼镜（附图无眼镜） */
+/* v96 附图可爱 3D 风色板（回归用户上传附图基准，保留 v95 眼白独立路径修复）：
+   铁桶=紫桶铆钉+蓝夹克+圆框眼镜 / 小鬼=黑乱发+圆框眼镜+深背心浅衬衫 / 橄榄球=红盔红旗红球衣
+   舞王=黑礼帽紫西装+圆框眼镜+手杖 / 僵尸王=金冠金袍紫披风 */
 const PZ = {
   OUTLINE:   '#39412C',   // 皮肤/全身深橄榄勾边
-  OUT_JK:    '#3D2414',   // 西装深棕勾边（v95 附图棕西装）
-  JK:        '#8B5E3C',   // 西装外套棕（v95 回归附图棕西装）
-  JK_LIGHT:  '#A9744C',
-  JK_DARK:   '#5F3A22',
+  OUT_JK:    '#22304A',   // 西装深蓝勾边（附图蓝夹克）
+  JK:        '#4E6FA8',   // 西装外套蓝（附图铁桶蓝夹克）
+  JK_LIGHT:  '#6284B8',
+  JK_DARK:   '#38517A',
   SHIRT:     '#EFEAD9',   // 白衬衫
   TIE:       '#C62828',   // 红领带
   TIE_DARK:  '#9E1F1F',
-  PANTS:     '#4A4F54',   // 深灰蓝西裤（v95 对齐附图）
-  PANTS_OUT: '#272B2F',
+  PANTS:     '#4E4257',   // 深灰紫西裤
+  PANTS_OUT: '#2B2431',
   SHOES:     '#3A2E26',   // 皮鞋深棕
   MOUTH:     '#6E2424',   // 口腔暗红
   MOUTH_OUT: '#38140F',
@@ -84,7 +84,7 @@ function _zpSetup(type, R) {
   Z.skinLight = (PZ.SKIN[Z.type] || PZ.SKIN.bucket).light;
 
   const SS = R.dpr * Z.T.OFFSCREEN.SUPERSAMPLE;
-  const size = Z.UNIT * 2.8;
+  const size = Z.UNIT * 3.6;   // v96: 2.8→3.6 容纳橄榄球旗杆/铁桶顶余量（消费端 drawSize 等比 ×3.6/2.8）
   Z.canvas = wx.createOffscreenCanvas ? wx.createOffscreenCanvas({
     type: '2d',
     width: Math.round(size * SS),
@@ -733,6 +733,24 @@ function _zpHeadgear(Z, R) {
     ctx.beginPath();
     ctx.ellipse(-hRX * 0.40, domeCY - hRY * 0.55, hRX * 0.10, hRY * 0.18, -0.50, 0, Math.PI * 2);
     ctx.fill();
+    // 盔顶红旗（附图特征：旗杆 + 右飘红旗，v96 加大醒目）
+    const poleX = hRX * 0.38;
+    const poleTopY = domeCY - domeRY * 1.76;
+    const poleBaseY = domeCY - domeRY * 0.88;
+    R._setStroke(Z.ctx, '#6E5A3E', R._strokeW(Z.T.STROKE.THIN) * 1.2);
+    ctx.beginPath();
+    ctx.moveTo(poleX, poleBaseY);
+    ctx.lineTo(poleX + hRX * 0.10, poleTopY);
+    ctx.stroke();
+    ctx.fillStyle = Z.T.COLORS.Z_FH_RED;
+    ctx.beginPath();
+    ctx.moveTo(poleX + hRX * 0.10, poleTopY);
+    ctx.quadraticCurveTo(poleX + hRX * 0.46, poleTopY - hRY * 0.16, poleX + hRX * 0.74, poleTopY + hRY * 0.04);
+    ctx.quadraticCurveTo(poleX + hRX * 0.40, poleTopY + hRY * 0.16, poleX + hRX * 0.14, poleTopY + hRY * 0.34);
+    ctx.closePath();
+    ctx.fill();
+    R._setStroke(Z.ctx, Z.T.COLORS.Z_FH_RED_DARK, R._strokeW(Z.T.STROKE.THIN) * 0.8);
+    ctx.stroke();
     _zpMain(Z, R);
   } else if (Z.type === 'king') {
     // 黄金王冠（三尖冠 + 金珠 + 红宝石 + 冠底金带）
@@ -866,7 +884,39 @@ function _zpFaceVariants(Z, R) {
     }
   }
 
-  // ---- 嘴部（按类型）----（v95 删除圆框眼镜：附图僵尸无眼镜）
+  // ---- 圆框眼镜（bucket/imp/dancer，附图特征；逐镜独立路径 —— 防隐式桥线）----
+  if (Z.type === 'bucket' || Z.type === 'imp' || Z.type === 'dancer') {
+    const lr = eyeR * 1.30;
+    // 镜片淡白底（独立路径 ×2）
+    ctx.fillStyle = 'rgba(252,251,244,0.16)';
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.arc(s * Z.eyeDX, Z.eyeY, lr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // 深色镜框（独立路径 ×2）
+    R._setStroke(Z.ctx, '#2B2A32', R._strokeW(Z.T.STROKE.EYE));
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.arc(s * Z.eyeDX, Z.eyeY, lr, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // 鼻梁桥（独立路径）
+    ctx.beginPath();
+    ctx.moveTo(-Z.eyeDX + lr * 0.94, Z.eyeY - eyeR * 0.22);
+    ctx.quadraticCurveTo(0, Z.eyeY - eyeR * 0.62, Z.eyeDX - lr * 0.94, Z.eyeY - eyeR * 0.22);
+    ctx.stroke();
+    // 镜腿至耳侧（独立路径 ×2）
+    R._setStroke(Z.ctx, '#2B2A32', R._strokeW(Z.T.STROKE.EYE) * 0.8);
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(s * (Z.eyeDX + lr * 0.98), Z.eyeY - eyeR * 0.06);
+      ctx.quadraticCurveTo(s * Z.headRX * 0.96, Z.eyeY + eyeR * 0.18, s * Z.headRX * 1.00, Z.eyeY + eyeR * 0.50);
+      ctx.stroke();
+    }
+  }
+
+  // ---- 嘴部（按类型）----（v96 圆框眼镜回归附图：独立路径无桥线）
   Z.mouthY = Z.headCY + Z.headRY * 0.36;
   R._setStroke(Z.ctx, PZ.MOUTH_OUT, R._strokeW(Z.T.STROKE.LIP));
   if (Z.type === 'bucket' || Z.type === 'football' || Z.type === 'king') {

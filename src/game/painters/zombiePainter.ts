@@ -19,18 +19,18 @@ export interface ZombieSprite {
 
 const UNIT = 50 // 基准单位（全部比例基于此）
 
-/* v95 经典 PvZ 复刻色板（与小程序 PZ 同源，对齐附图） */
+/* v96 附图可爱 3D 风色板（与小程序 PZ 同源，回归用户上传附图基准） */
 const PZ = {
   OUTLINE: '#39412C',
-  OUT_JK: '#3D2414',
-  JK: '#8B5E3C',
-  JK_LIGHT: '#A9744C',
-  JK_DARK: '#5F3A22',
+  OUT_JK: '#22304A',
+  JK: '#4E6FA8',
+  JK_LIGHT: '#6284B8',
+  JK_DARK: '#38517A',
   SHIRT: '#EFEAD9',
   TIE: '#C62828',
   TIE_DARK: '#9E1F1F',
-  PANTS: '#4A4F54',
-  PANTS_OUT: '#272B2F',
+  PANTS: '#4E4257',
+  PANTS_OUT: '#2B2431',
   SHOES: '#3A2E26',
   MOUTH: '#6E2424',
   MOUTH_OUT: '#38140F',
@@ -107,13 +107,13 @@ export function renderZombieToOffscreen(
   face(Z, pen)
   faceVariants(Z, pen)
   cage(Z, pen)
-  return { canvas: Z.canvas, size: UNIT * 2.8 }
+  return { canvas: Z.canvas, size: UNIT * 3.6 }
 }
 
 // ============ 画布建立 + 超采样 + 描边基准 + 地面阴影 ============
 function setup(type: ZombieType, dpr: number, skin: string, pen: Pen): ZState | null {
   const ss = Math.max(0.5, dpr) * OFFSCREEN.SUPERSAMPLE
-  const size = UNIT * 2.8
+  const size = UNIT * 3.6 // v96: 2.8→3.6 容纳橄榄球旗杆（消费端 drawSize 等比 ×3.6/2.8）
   const canvas = makeCanvas(Math.round(size * ss), Math.round(size * ss))
   if (!canvas) return null
   const ctx = canvas.getContext('2d') as Ctx2D | null
@@ -712,6 +712,24 @@ function headgear(Z: ZState, pen: Pen) {
     ctx.beginPath()
     ctx.ellipse(-hRX * 0.40, domeCY - hRY * 0.55, hRX * 0.10, hRY * 0.18, -0.50, 0, Math.PI * 2)
     ctx.fill()
+    // 盔顶红旗（附图特征：旗杆 + 右飘红旗，v96 加大醒目）
+    const poleX = hRX * 0.38
+    const poleTopY = domeCY - domeRY * 1.76
+    const poleBaseY = domeCY - domeRY * 0.88
+    pen.set(ctx, '#6E5A3E', pen.w(STROKE.THIN) * 1.2)
+    ctx.beginPath()
+    ctx.moveTo(poleX, poleBaseY)
+    ctx.lineTo(poleX + hRX * 0.10, poleTopY)
+    ctx.stroke()
+    ctx.fillStyle = COLORS.Z_FH_RED
+    ctx.beginPath()
+    ctx.moveTo(poleX + hRX * 0.10, poleTopY)
+    ctx.quadraticCurveTo(poleX + hRX * 0.46, poleTopY - hRY * 0.16, poleX + hRX * 0.74, poleTopY + hRY * 0.04)
+    ctx.quadraticCurveTo(poleX + hRX * 0.40, poleTopY + hRY * 0.16, poleX + hRX * 0.14, poleTopY + hRY * 0.34)
+    ctx.closePath()
+    ctx.fill()
+    pen.set(ctx, COLORS.Z_FH_RED_DARK, pen.w(STROKE.THIN) * 0.8)
+    ctx.stroke()
     mainStroke(ctx, pen)
   } else if (Z.type === 'king') {
     ctx.save()
@@ -832,7 +850,35 @@ function faceVariants(Z: ZState, pen: Pen) {
     }
   }
 
-  // 嘴部（按类型）（v95 删除圆框眼镜：附图僵尸无眼镜）
+  // 圆框眼镜（bucket/imp/dancer，附图特征；逐镜独立路径 —— 防隐式桥线）
+  if (Z.type === 'bucket' || Z.type === 'imp' || Z.type === 'dancer') {
+    const lr = eyeR * 1.30
+    ctx.fillStyle = 'rgba(252,251,244,0.16)'
+    for (const s of [-1, 1]) {
+      ctx.beginPath()
+      ctx.arc(s * Z.eyeDX, Z.eyeY, lr, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    pen.set(ctx, '#2B2A32', pen.w(STROKE.EYE))
+    for (const s of [-1, 1]) {
+      ctx.beginPath()
+      ctx.arc(s * Z.eyeDX, Z.eyeY, lr, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+    ctx.beginPath()
+    ctx.moveTo(-Z.eyeDX + lr * 0.94, Z.eyeY - eyeR * 0.22)
+    ctx.quadraticCurveTo(0, Z.eyeY - eyeR * 0.62, Z.eyeDX - lr * 0.94, Z.eyeY - eyeR * 0.22)
+    ctx.stroke()
+    pen.set(ctx, '#2B2A32', pen.w(STROKE.EYE) * 0.8)
+    for (const s of [-1, 1]) {
+      ctx.beginPath()
+      ctx.moveTo(s * (Z.eyeDX + lr * 0.98), Z.eyeY - eyeR * 0.06)
+      ctx.quadraticCurveTo(s * Z.headRX * 0.96, Z.eyeY + eyeR * 0.18, s * Z.headRX * 1.0, Z.eyeY + eyeR * 0.50)
+      ctx.stroke()
+    }
+  }
+
+  // 嘴部（按类型）（v96 圆框眼镜回归附图：独立路径无桥线）
   Z.mouthY = Z.headCY + Z.headRY * 0.36
   pen.set(ctx, PZ.MOUTH_OUT, pen.w(STROKE.LIP))
   if (Z.type === 'bucket' || Z.type === 'football' || Z.type === 'king') {

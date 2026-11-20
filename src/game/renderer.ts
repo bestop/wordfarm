@@ -567,7 +567,7 @@ function drawZombie(ctx: Ctx2D, z: EngineZombie, x: number, y: number, t: number
   // 离屏精灵贴图
   const spr = getZombieSprite(z.type, dpr)
   if (spr) {
-    const drawSize = r * 2.4
+    const drawSize = r * 3.09 // v96: 画布 2.8→3.6 等比放大（2.4×3.6/2.8），僵尸视觉尺寸不变
     ctx.drawImage(spr.canvas as CanvasImageSource, -drawSize / 2, -drawSize / 2, drawSize, drawSize)
   } else {
     // 兜底：实心圆
