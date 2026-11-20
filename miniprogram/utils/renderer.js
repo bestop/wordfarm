@@ -105,9 +105,9 @@ const RENDER_TOKENS = {
     FR_CANNON_IN:  '#3E0F0A',   // 炮口内腔 近黑红
     FR_BROW:       '#8D2819',   // 倒八字眉 深红棕
     // v26 铁桶僵尸 Bucket 新增（v94 附图可爱 3D 风：紫色铆钉桶）
-    Z_BUCKET_LIGHT: '#CFC0E8',  // 铁桶亮部 紫罗兰高光带
-    Z_BUCKET:       '#9C7BC4',  // 铁桶基色 中紫
-    Z_BUCKET_DARK:  '#5E4690',  // 铁桶暗部 底缘/侧影/铆钉
+    Z_BUCKET_LIGHT: '#DDE1E6',  // 铁桶亮部 银灰高光带（v95 回归经典银铁桶，对齐附图）
+    Z_BUCKET:       '#AAB2BC',  // 铁桶基色 亮银灰
+    Z_BUCKET_DARK:  '#6A7480',  // 铁桶暗部 底缘/侧影/铆钉 深钢灰
     Z_RUST:         '#A8672F',  // （预留）锈斑棕褐
     Z_SHIRT:        '#9EC6E0',  // 破衬衫 亮天蓝（v65 提鲜）
     Z_SHIRT_DARK:   '#74A0BC',  // 衣影/口袋/撕裂内衬
@@ -1151,26 +1151,29 @@ class Renderer {
 
     if (o.white) {
       // ---- 白眼珠 + 黑瞳（坚果/樱桃/写实系）----
-      this._pvzLine(ctx, ink, 1.5);
+      // v95 修复：两眼各自独立路径 —— 同路径多 ellipse 会在两次 ellipse 间
+      // 产生隐式直线连接，stroke 把它描成「眼镜鼻梁桥」（参照附图差异主因）
+      this._pvzLine(ctx, ink, 0.9);
       ctx.fillStyle = '#FDFBF3';
-      ctx.beginPath();
-      ctx.ellipse(-eyeDX, eyeY, eyeR * 0.80, eyeR * Math.max(0.10, blink), 0, 0, Math.PI * 2);
-      ctx.ellipse( eyeDX, eyeY, eyeR * 0.80, eyeR * Math.max(0.10, blink), 0, 0, Math.PI * 2);
-      ctx.fill(); ctx.stroke();
+      for (const s of [-1, 1]) {
+        ctx.beginPath();
+        ctx.ellipse(s * eyeDX, eyeY, eyeR * 0.82, eyeR * Math.max(0.10, blink), 0, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+      }
       if (blink > 0.4) {
         const pdx = (o.pupilDx || 0) * eyeR;
         const pdy = (o.pupilDy || 0) * eyeR;
         const pr = eyeR * 0.38;
-        ctx.fillStyle = '#262626';
-        ctx.beginPath();
-        ctx.arc(-eyeDX + pdx, eyeY + pdy, pr, 0, Math.PI * 2);
-        ctx.arc( eyeDX + pdx, eyeY + pdy, pr, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.92)';
-        ctx.beginPath();
-        ctx.arc(-eyeDX + pdx - pr * 0.30, eyeY + pdy - pr * 0.34, pr * 0.36, 0, Math.PI * 2);
-        ctx.arc( eyeDX + pdx - pr * 0.30, eyeY + pdy - pr * 0.34, pr * 0.36, 0, Math.PI * 2);
-        ctx.fill();
+        for (const s of [-1, 1]) {
+          ctx.fillStyle = '#262626';
+          ctx.beginPath();
+          ctx.arc(s * eyeDX + pdx, eyeY + pdy, pr, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,0.92)';
+          ctx.beginPath();
+          ctx.arc(s * eyeDX + pdx - pr * 0.30, eyeY + pdy - pr * 0.34, pr * 0.36, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
     } else {
       // ---- 黑豆眼（参考图向日葵/豌豆射手）----
@@ -2284,7 +2287,7 @@ class Renderer {
       ctx.fill(); ctx.stroke();
       ctx.restore();
     };
-    const petalRad = headR * 0.74, petalLen = headR * 0.50, petalWid = headR * 0.155;
+    const petalRad = headR * 0.76, petalLen = headR * 0.48, petalWid = headR * 0.175;
     for (let i = 0; i < 12; i++) {
       const angle = (i / 12) * Math.PI * 2 + Math.PI / 12 + wobble * 1.2;
       petal(petalRad - headR * 0.02, petalLen * 0.92, petalWid * 0.92, angle, '#F0A81C', OUT);
@@ -2294,8 +2297,8 @@ class Renderer {
       petal(petalRad, petalLen, petalWid, angle, i % 2 === 0 ? '#FFD53E' : '#FFC53E', OUT);
     }
 
-    // ---- 3. 花盘（暖橙径向渐变，占花头主体）----
-    const discR = headR * 0.60;
+    // ---- 3. 花盘（暖橙径向渐变，占花头主体；v95 加大对齐附图占比）----
+    const discR = headR * 0.66;
     const discGrad = ctx.createRadialGradient(-discR * 0.3, headY - discR * 0.35, 0, 0, headY, discR * 1.15);
     discGrad.addColorStop(0, '#FFC063');
     discGrad.addColorStop(0.6, '#F7A62B');
@@ -2320,12 +2323,12 @@ class Renderer {
     ctx.ellipse(-discR * 0.38, headY - discR * 0.44, discR * 0.30, discR * 0.16, -0.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // ---- 5. 花盘脸：黑豆大眼 + 大开口笑 + 暖橙腮（参照附图）----
+    // ---- 5. 花盘脸：黑豆大眼 + 大开口笑 + 暖橙腮（v95 脸部随盘放大）----
     this._drawPvzFace(ctx, {
-      eyeDX: headR * 0.23, eyeY: headY - headR * 0.04, eyeR: headR * 0.115,
+      eyeDX: headR * 0.26, eyeY: headY - headR * 0.05, eyeR: headR * 0.135,
       white: false, brow: 'none',
       mouth: 'smile-open',
-      mouthY: headY + headR * 0.16, mouthRx: headR * 0.22, mouthRy: headR * 0.15,
+      mouthY: headY + headR * 0.20, mouthRx: headR * 0.26, mouthRy: headR * 0.17,
       blush: 'rgba(255,132,72,0.48)',
       ink: '#4A2C0F', wobblePhase
     });

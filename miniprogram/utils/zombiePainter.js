@@ -10,20 +10,20 @@
 const { ZOMBIE_TYPES } = require('./constants.js');
 const { safeRoundRect } = require('./canvasHelpers.js');
 
-/* v94 可爱 3D 目标风色板（对照附图取色）：
-   铁桶=紫桶铆钉+蓝夹克+圆框眼镜 / 小鬼=黑乱发+深背心浅衬衫 / 橄榄球=红盔红球衣
-   舞王=黑礼帽紫西装+眼镜+手杖 / 僵尸王=金冠金袍紫披风 */
+/* v95 经典 PvZ 复刻色板（对齐附图）：
+   铁桶=银灰铆钉桶+棕西装白衬衫红领带 / 小鬼=黑乱发+深背心浅衬衫 / 橄榄球=红盔红球衣
+   舞王=黑礼帽紫西装+手杖 / 僵尸王=金冠金袍紫披风；v95 删除圆框眼镜（附图无眼镜） */
 const PZ = {
   OUTLINE:   '#39412C',   // 皮肤/全身深橄榄勾边
-  OUT_JK:    '#22304A',   // 西装深蓝勾边
-  JK:        '#4E6FA8',   // 西装外套蓝（附图铁桶蓝夹克）
-  JK_LIGHT:  '#6284B8',
-  JK_DARK:   '#38517A',
+  OUT_JK:    '#3D2414',   // 西装深棕勾边（v95 附图棕西装）
+  JK:        '#8B5E3C',   // 西装外套棕（v95 回归附图棕西装）
+  JK_LIGHT:  '#A9744C',
+  JK_DARK:   '#5F3A22',
   SHIRT:     '#EFEAD9',   // 白衬衫
   TIE:       '#C62828',   // 红领带
   TIE_DARK:  '#9E1F1F',
-  PANTS:     '#4E4257',   // 深灰紫西裤
-  PANTS_OUT: '#2B2431',
+  PANTS:     '#4A4F54',   // 深灰蓝西裤（v95 对齐附图）
+  PANTS_OUT: '#272B2F',
   SHOES:     '#3A2E26',   // 皮鞋深棕
   MOUTH:     '#6E2424',   // 口腔暗红
   MOUTH_OUT: '#38140F',
@@ -393,13 +393,14 @@ function _zpTorso(Z, R) {
                  Z.type === 'king' ? Z.T.COLORS.Z_KING_ROBE_DARK : PZ.JK_DARK;
   Z.ctx.fillStyle = hemCol;
   const hemY = botY - U * 0.01;
-  for (const [tx, tw] of [[-0.55, 0.32], [-0.02, 0.36], [0.52, 0.30]]) {
+  R._setStroke(Z.ctx, PZ.OUTLINE, R._strokeW(Z.T.STROKE.THIN) * 0.7);
+  for (const [tx, tw] of [[-0.55, 0.26], [-0.02, 0.30], [0.52, 0.25]]) {
     Z.ctx.beginPath();
-    Z.ctx.moveTo(U * (tx - tw / 2), hemY - U * 0.02);
-    Z.ctx.lineTo(U * (tx + tw / 2), hemY - U * 0.02);
-    Z.ctx.lineTo(U * tx, hemY + U * 0.10);
+    Z.ctx.moveTo(U * (tx - tw / 2), hemY - U * 0.01);
+    Z.ctx.lineTo(U * (tx + tw / 2), hemY - U * 0.01);
+    Z.ctx.lineTo(U * tx, hemY + U * 0.07);
     Z.ctx.closePath();
-    Z.ctx.fill();
+    Z.ctx.fill(); Z.ctx.stroke();
   }
   _zpMain(Z, R);
 }
@@ -788,14 +789,14 @@ function _zpFace(Z, R) {
   Z.eyeY = Z.headCY - U * 0.02;
   Z.eyeR = U * (imp ? 0.15 : 0.155);
   Z.eyeDX = Z.headRX * (imp ? 0.50 : 0.42);
-  // 眼白（微浊白，椭圆）
+  // 眼白（微浊白，椭圆；v95 两眼独立路径 —— 同路径多 ellipse 的隐式连接线会被 stroke 描成桥）
+  R._setStroke(Z.ctx, PZ.OUTLINE, R._strokeW(Z.T.STROKE.EYE) * 0.55);
   ctx.fillStyle = imp ? Z.T.COLORS.Z_EYE_YELLOW : '#F4F1E3';
-  ctx.beginPath();
-  ctx.ellipse(-Z.eyeDX, Z.eyeY, Z.eyeR * 0.94, Z.eyeR, 0, 0, Math.PI * 2);
-  ctx.ellipse(Z.eyeDX, Z.eyeY, Z.eyeR * 0.94, Z.eyeR, 0, 0, Math.PI * 2);
-  ctx.fill();
-  R._setStroke(Z.ctx, PZ.OUTLINE, R._strokeW(Z.T.STROKE.EYE));
-  ctx.stroke();
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.ellipse(s * Z.eyeDX, Z.eyeY, Z.eyeR * 0.94 * (s < 0 ? 0.92 : 1), Z.eyeR, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+  }
   // 瞳孔（小黑圆，内侧偏下 = 涣散盯视）
   const pOff = Z.eyeR * (imp ? 0 : 0.16);
   const pupilR = Z.eyeR * (imp ? 0.30 : 0.40);
@@ -865,21 +866,7 @@ function _zpFaceVariants(Z, R) {
     }
   }
 
-  // ---- 圆框眼镜（bucket/imp/dancer，附图特征）----
-  if (Z.type === 'bucket' || Z.type === 'imp' || Z.type === 'dancer') {
-    R._setStroke(Z.ctx, '#26262E', R._strokeW(Z.T.STROKE.EYE));
-    for (const s of [-1, 1]) {
-      ctx.beginPath();
-      ctx.arc(s * Z.eyeDX, Z.eyeY, Z.eyeR * 1.24, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.beginPath();
-    ctx.moveTo(-Z.eyeDX + Z.eyeR * 1.24, Z.eyeY - Z.eyeR * 0.12);
-    ctx.quadraticCurveTo(0, Z.eyeY - Z.eyeR * 0.52, Z.eyeDX - Z.eyeR * 1.24, Z.eyeY - Z.eyeR * 0.12);
-    ctx.stroke();
-  }
-
-  // ---- 嘴部（按类型）----
+  // ---- 嘴部（按类型）----（v95 删除圆框眼镜：附图僵尸无眼镜）
   Z.mouthY = Z.headCY + Z.headRY * 0.36;
   R._setStroke(Z.ctx, PZ.MOUTH_OUT, R._strokeW(Z.T.STROKE.LIP));
   if (Z.type === 'bucket' || Z.type === 'football' || Z.type === 'king') {

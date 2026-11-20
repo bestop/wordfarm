@@ -66,10 +66,10 @@ export const COLORS = {
   CH_MOUTH: '#460C66',
   CH_FLASH: '#D32F2F',
   CH_BROW: '#3B1252',
-  // 铁桶 Bucket v26（v94 附图可爱 3D 风：紫色铆钉桶）
-  Z_BUCKET_LIGHT: '#CFC0E8',
-  Z_BUCKET: '#9C7BC4',
-  Z_BUCKET_DARK: '#5E4690',
+  // 铁桶 Bucket v26（v95 回归经典银铁桶，对齐附图棕西装）
+  Z_BUCKET_LIGHT: '#DDE1E6',
+  Z_BUCKET: '#AAB2BC',
+  Z_BUCKET_DARK: '#6A7480',
   Z_RUST: '#A8672F',
   Z_SHIRT: '#9EC6E0',
   Z_SHIRT_DARK: '#74A0BC',

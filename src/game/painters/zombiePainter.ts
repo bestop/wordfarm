@@ -19,18 +19,18 @@ export interface ZombieSprite {
 
 const UNIT = 50 // 基准单位（全部比例基于此）
 
-/* v94 可爱 3D 目标风色板（与小程序 PZ 同源，对照附图取色） */
+/* v95 经典 PvZ 复刻色板（与小程序 PZ 同源，对齐附图） */
 const PZ = {
   OUTLINE: '#39412C',
-  OUT_JK: '#22304A',
-  JK: '#4E6FA8',
-  JK_LIGHT: '#6284B8',
-  JK_DARK: '#38517A',
+  OUT_JK: '#3D2414',
+  JK: '#8B5E3C',
+  JK_LIGHT: '#A9744C',
+  JK_DARK: '#5F3A22',
   SHIRT: '#EFEAD9',
   TIE: '#C62828',
   TIE_DARK: '#9E1F1F',
-  PANTS: '#4E4257',
-  PANTS_OUT: '#2B2431',
+  PANTS: '#4A4F54',
+  PANTS_OUT: '#272B2F',
   SHOES: '#3A2E26',
   MOUTH: '#6E2424',
   MOUTH_OUT: '#38140F',
@@ -397,13 +397,15 @@ function torso(Z: ZState, pen: Pen) {
     Z.type === 'king' ? COLORS.Z_KING_ROBE_DARK : PZ.JK_DARK
   ctx.fillStyle = hemCol
   const hemY = botY - U * 0.01
-  for (const [tx, tw] of [[-0.55, 0.32], [-0.02, 0.36], [0.52, 0.30]]) {
+  pen.set(ctx, PZ.OUTLINE, pen.w(STROKE.THIN) * 0.7)
+  for (const [tx, tw] of [[-0.55, 0.26], [-0.02, 0.30], [0.52, 0.25]]) {
     ctx.beginPath()
-    ctx.moveTo(U * (tx - tw / 2), hemY - U * 0.02)
-    ctx.lineTo(U * (tx + tw / 2), hemY - U * 0.02)
-    ctx.lineTo(U * tx, hemY + U * 0.10)
+    ctx.moveTo(U * (tx - tw / 2), hemY - U * 0.01)
+    ctx.lineTo(U * (tx + tw / 2), hemY - U * 0.01)
+    ctx.lineTo(U * tx, hemY + U * 0.07)
     ctx.closePath()
     ctx.fill()
+    ctx.stroke()
   }
   mainStroke(ctx, pen)
 }
@@ -761,13 +763,15 @@ function face(Z: ZState, pen: Pen) {
   Z.eyeY = Z.headCY - U * 0.02
   Z.eyeR = U * (imp ? 0.15 : 0.155)
   Z.eyeDX = Z.headRX * (imp ? 0.50 : 0.42)
+  // 眼白（微浊白，椭圆；v95 两眼独立路径修眼镜桥线）
+  pen.set(ctx, PZ.OUTLINE, pen.w(STROKE.EYE) * 0.55)
   ctx.fillStyle = imp ? COLORS.Z_EYE_YELLOW : '#F4F1E3'
-  ctx.beginPath()
-  ctx.ellipse(-Z.eyeDX, Z.eyeY, Z.eyeR * 0.94, Z.eyeR, 0, 0, Math.PI * 2)
-  ctx.ellipse(Z.eyeDX, Z.eyeY, Z.eyeR * 0.94, Z.eyeR, 0, 0, Math.PI * 2)
-  ctx.fill()
-  pen.set(ctx, PZ.OUTLINE, pen.w(STROKE.EYE))
-  ctx.stroke()
+  for (const s of [-1, 1]) {
+    ctx.beginPath()
+    ctx.ellipse(s * Z.eyeDX, Z.eyeY, Z.eyeR * 0.94 * (s < 0 ? 0.92 : 1), Z.eyeR, 0, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.stroke()
+  }
   const pOff = Z.eyeR * (imp ? 0 : 0.16)
   const pupilR = Z.eyeR * (imp ? 0.30 : 0.40)
   ctx.fillStyle = '#2C2C28'
@@ -828,20 +832,7 @@ function faceVariants(Z: ZState, pen: Pen) {
     }
   }
 
-  // 圆框眼镜（bucket/imp/dancer，v94 附图特征）
-  if (Z.type === 'bucket' || Z.type === 'imp' || Z.type === 'dancer') {
-    pen.set(ctx, '#26262E', pen.w(STROKE.EYE))
-    for (const s of [-1, 1]) {
-      ctx.beginPath()
-      ctx.arc(s * Z.eyeDX, Z.eyeY, Z.eyeR * 1.24, 0, Math.PI * 2)
-      ctx.stroke()
-    }
-    ctx.beginPath()
-    ctx.moveTo(-Z.eyeDX + Z.eyeR * 1.24, Z.eyeY - Z.eyeR * 0.12)
-    ctx.quadraticCurveTo(0, Z.eyeY - Z.eyeR * 0.52, Z.eyeDX - Z.eyeR * 1.24, Z.eyeY - Z.eyeR * 0.12)
-    ctx.stroke()
-  }
-
+  // 嘴部（按类型）（v95 删除圆框眼镜：附图僵尸无眼镜）
   Z.mouthY = Z.headCY + Z.headRY * 0.36
   pen.set(ctx, PZ.MOUTH_OUT, pen.w(STROKE.LIP))
   if (Z.type === 'bucket' || Z.type === 'football' || Z.type === 'king') {

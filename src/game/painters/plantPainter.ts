@@ -132,27 +132,28 @@ export function drawPvzFace(ctx: Ctx2D, pen: Pen, o: PvzFaceOpts) {
   const blink = blinkT > 0.94 ? 1 - (blinkT - 0.94) / 0.06 : 1
 
   if (o.white) {
-    // 白眼珠 + 黑瞳
-    pvzLine(ctx, pen, ink, 1.5)
+    // 白眼珠 + 黑瞳（v95 两眼独立路径：同路径多 ellipse 的隐式连接线会被 stroke 描成眼镜桥）
+    pvzLine(ctx, pen, ink, 0.9)
     ctx.fillStyle = '#FDFBF3'
-    ctx.beginPath()
-    ctx.ellipse(-eyeDX, eyeY, eyeR * 0.80, eyeR * Math.max(0.10, blink), 0, 0, Math.PI * 2)
-    ctx.ellipse(eyeDX, eyeY, eyeR * 0.80, eyeR * Math.max(0.10, blink), 0, 0, Math.PI * 2)
-    ctx.fill(); ctx.stroke()
+    for (const s of [-1, 1]) {
+      ctx.beginPath()
+      ctx.ellipse(s * eyeDX, eyeY, eyeR * 0.82, eyeR * Math.max(0.10, blink), 0, 0, Math.PI * 2)
+      ctx.fill(); ctx.stroke()
+    }
     if (blink > 0.4) {
       const pdx = (o.pupilDx ?? 0) * eyeR
       const pdy = (o.pupilDy ?? 0) * eyeR
       const pr = eyeR * 0.38
-      ctx.fillStyle = '#262626'
-      ctx.beginPath()
-      ctx.arc(-eyeDX + pdx, eyeY + pdy, pr, 0, Math.PI * 2)
-      ctx.arc(eyeDX + pdx, eyeY + pdy, pr, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.fillStyle = 'rgba(255,255,255,0.92)'
-      ctx.beginPath()
-      ctx.arc(-eyeDX + pdx - pr * 0.30, eyeY + pdy - pr * 0.34, pr * 0.36, 0, Math.PI * 2)
-      ctx.arc(eyeDX + pdx - pr * 0.30, eyeY + pdy - pr * 0.34, pr * 0.36, 0, Math.PI * 2)
-      ctx.fill()
+      for (const s of [-1, 1]) {
+        ctx.fillStyle = '#262626'
+        ctx.beginPath()
+        ctx.arc(s * eyeDX + pdx, eyeY + pdy, pr, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.fillStyle = 'rgba(255,255,255,0.92)'
+        ctx.beginPath()
+        ctx.arc(s * eyeDX + pdx - pr * 0.30, eyeY + pdy - pr * 0.34, pr * 0.36, 0, Math.PI * 2)
+        ctx.fill()
+      }
     }
   } else {
     // 黑豆眼
@@ -1176,7 +1177,7 @@ function drawSunflower(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
     ctx.fill(); ctx.stroke()
     ctx.restore()
   }
-  const petalRad = headR * 0.74, petalLen = headR * 0.50, petalWid = headR * 0.155
+  const petalRad = headR * 0.76, petalLen = headR * 0.48, petalWid = headR * 0.175
   for (let i = 0; i < 12; i++) {
     const angle = (i / 12) * Math.PI * 2 + Math.PI / 12 + wobble * 1.2
     petal(petalRad - headR * 0.02, petalLen * 0.92, petalWid * 0.92, angle, '#F0A81C', OUT)
@@ -1187,7 +1188,7 @@ function drawSunflower(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
   }
 
   // 花盘
-  const discR = headR * 0.60
+  const discR = headR * 0.66
   const discGrad = ctx.createRadialGradient(-discR * 0.3, headY - discR * 0.35, 0, 0, headY, discR * 1.15)
   discGrad.addColorStop(0, '#FFC063')
   discGrad.addColorStop(0.6, '#F7A62B')
@@ -1212,10 +1213,10 @@ function drawSunflower(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
   ctx.fill()
 
   drawPvzFace(ctx, pen, {
-    eyeDX: headR * 0.23, eyeY: headY - headR * 0.04, eyeR: headR * 0.115,
+    eyeDX: headR * 0.26, eyeY: headY - headR * 0.05, eyeR: headR * 0.135,
     white: false, brow: 'none',
     mouth: 'smile-open',
-    mouthY: headY + headR * 0.16, mouthRx: headR * 0.22, mouthRy: headR * 0.15,
+    mouthY: headY + headR * 0.20, mouthRx: headR * 0.26, mouthRy: headR * 0.17,
     blush: 'rgba(255,132,72,0.48)',
     ink: '#4A2C0F', wobblePhase: p.wobble,
   })
