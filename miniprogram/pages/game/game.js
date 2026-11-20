@@ -8,6 +8,8 @@ const _initPageHeight = _initLayout.windowHeightRpx || 1334;
 const _initSafeBottomRpx = _initLayout.safeBottomRpx || 0;
 const { renderer } = require('../../utils/renderer.js');
 const { pathManager } = require('../../utils/pathManager.js');
+// v90: 角色真实形象头像生成器 — 商店栏头像与游戏内 Canvas 角色 1:1 同源（附图基准）
+const avatarPainter = require('../../utils/avatarPainter.js');
 const { DIFFICULTY_CONFIG, UI, ASSET_KEYS, PLANT_TYPES, PLANT_ORDER, SUNLIGHT, LEVEL, QUIZ } = require('../../utils/constants.js');
 const audioManager = require('../../utils/audioManager.js');
 const storageManager = require('../../utils/storageManager.js');
@@ -85,6 +87,8 @@ Page({
     plantTipVisible: false,
     shovelSelected: false,    // v66: 铲子工具选中态（移除植物/半价回收）
     shopItems: buildShopItems(SUNLIGHT.INITIAL),
+    // v90: 商店栏真实形象头像（onLoad 离屏生成 dataURL，键=植物 type，值='' 时回退 CSS 头像）
+    plantAvatars: {},
     // 题目
     currentQuestion: null,
     feedback: 'idle',         // 'idle' | 'correct' | 'wrong' | 'timeout'
@@ -115,6 +119,10 @@ Page({
     });
     // 应用自适应布局
     applyLayout(this);
+
+    // v90: 商店栏角色头像 — 复用 renderer 矢量管线离屏渲染（形象精准复刻附图）
+    //   一次性毫秒级开销（harness 实测 24ms/7 张）；失败单项返回 ''，WXML 回退 CSS 头像
+    this.setData({ plantAvatars: avatarPainter.buildPlantAvatars(PLANT_ORDER) });
 
     // 初始化游戏（题库 + 难度）— v35: custom 档优先用导入词库；v82~v83: sh 档喂沪教对应年级册整库；
     //   v84: pep 档喂 PEP 对应年级册整库；v86: wy 档喂外研对应年级册整库

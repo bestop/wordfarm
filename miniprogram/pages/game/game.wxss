@@ -417,12 +417,24 @@
   from { transform: rotate(45deg) scale(0.8); opacity: 0.55; }
   to   { transform: rotate(45deg) scale(1.25); opacity: 1; }
 }
+/* ===== v90: 商店栏真实角色形象头像（avatarPainter 离屏 dataURL）
+   与游戏内 Canvas 角色 / 角色图鉴 1:1 同源；44rpx 圆盘略大于旧 CSS 头像（40rpx），
+   选中态随 .shop-item 现有 transform 整体抬起，无需额外样式 ===== */
+.shop-avatar-img {
+  width: 44rpx;
+  height: 44rpx;
+  margin: 0 auto;
+  border-radius: 50%;
+  /* 头像盘自带白描边环，这里只加一层柔和落影增强「贴纸」质感 */
+  filter: drop-shadow(0 2rpx 3rpx rgba(120, 60, 30, 0.18));
+}
 /* ===== 商店栏：纯 CSS 萌系植物头像（设计系统 Tokens v2 - 与 Canvas 1:1 对齐）
    - 眼睛比例：eyeDX=36% headR · eyeR=24% headR（精确 RENDER_TOKENS.FACE）
    - 瞳孔位置：右下 16/12%（Canvas pOffX/Y 同）
    - 腮红位置：X=±62% headR · 底部距离= 70%（Canvas cy+0.38r 对应）
    - 高光统一左上 45°：top 14% · left 18% · 椭圆 -40deg
    - 色彩：全部从 RENDER_TOKENS.COLORS 取值（Hex 值严格对应）
+   - v90: 本组样式降级为头像生成失败时的兜底（正常路径已换 dataURL 真实形象）
 =================================================================== */
 /* ---- 1. 共用头部（与 Canvas head ellipse 同色板） ---- */
 .shop-avatar {

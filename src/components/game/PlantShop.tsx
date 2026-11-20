@@ -1,10 +1,12 @@
 // src/components/game/PlantShop.tsx - 植物商店栏: 选中植物 → 点击草地种植
 // v89 打磨: 窄屏压缩卡片宽度解决 6 株溢出裁切、右缘渐隐提示可横向滚动、scroll-snap 对齐
+// v92 精准复刻: 植物头像从通用 emoji 换成 PlantAvatar（drawPlantArt 同源渲染真实角色形象）
 'use client'
 
 import { PLANT_ORDER, PLANT_TYPES } from '@/game/constants'
 import type { PlantType } from '@/game/constants'
 import type { ViewSnapshot } from '@/game/engine'
+import PlantAvatar from './PlantAvatar'
 
 interface Props {
   snap: ViewSnapshot
@@ -41,7 +43,8 @@ export default function PlantShop({ snap, onSelect, onShovel }: Props) {
                     : 'border border-transparent bg-[#EFE8E0]/70 opacity-55 cursor-not-allowed'
               }`}
             >
-              <span className="text-xl leading-6" aria-hidden>{def.emoji}</span>
+              {/* v92: 真实角色形象头像（drawPlantArt 同源渲染，替代通用 emoji） */}
+              <PlantAvatar type={key} size={40} className="rounded-full" />
               <span className="text-[10px] font-bold text-[#5D4037] leading-3 mt-0.5 whitespace-nowrap">{def.name}</span>
               <span className={`text-[11px] font-black leading-4 ${affordable ? 'text-[#F57F17]' : 'text-[#B08080]'}`}>
                 ☀️{def.cost}

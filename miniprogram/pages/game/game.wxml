@@ -54,8 +54,15 @@
         data-type="{{item.type}}"
         bindtap="onShopSelect"
       >
-        <!-- 纯 CSS 萌系植物图标（与 Canvas 植物风格一致，无图片） -->
-        <view class="shop-avatar shop-avatar-{{item.type}}">
+        <!-- v90: 真实角色形象头像（avatarPainter 离屏渲染 dataURL，
+             与游戏内 Canvas 角色 / 附图 1:1 同源）；生成失败（空值）回退旧 CSS 简化头像 -->
+        <image
+          wx:if="{{plantAvatars[item.type]}}"
+          class="shop-avatar-img"
+          src="{{plantAvatars[item.type]}}"
+          mode="aspectFit"
+        />
+        <view wx:else class="shop-avatar shop-avatar-{{item.type}}">
           <view class="sa-head"></view>
           <view class="sa-deco-top"></view>
           <view class="sa-deco-left"></view>
