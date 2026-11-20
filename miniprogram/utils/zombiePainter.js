@@ -680,6 +680,11 @@ function _zpHeadgear(Z, R) {
     ctx.beginPath();
     safeRoundRect(ctx, -cHalf, -cH, cHalf * 2, cH + hRY * 0.05, hRX * 0.09);
     ctx.fill(); ctx.stroke();
+    // v97 帽带（暗红缎带，礼帽精致度）
+    ctx.fillStyle = '#8E2A2A';
+    ctx.beginPath();
+    safeRoundRect(ctx, -cHalf * 1.01, -cH * 0.30, cHalf * 2.02, cH * 0.15, hRX * 0.02);
+    ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.20)';
     ctx.beginPath();
     ctx.ellipse(-cHalf * 0.52, -cH * 0.46, hRX * 0.09, cH * 0.28, 0.10, 0, Math.PI * 2);
@@ -788,6 +793,15 @@ function _zpHeadgear(Z, R) {
     ctx.fillStyle = Z.T.COLORS.Z_KING_GEM;
     ctx.beginPath();
     ctx.arc(0, -crH * 0.42, hRX * 0.09, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // v97 两侧宝石（蓝/紫，皇冠更华丽）
+    ctx.fillStyle = '#4E7AC8';
+    ctx.beginPath();
+    ctx.arc(-crW * 0.44, -crH * 0.40, hRX * 0.065, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#7A4EC8';
+    ctx.beginPath();
+    ctx.arc(crW * 0.44, -crH * 0.40, hRX * 0.065, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
     // 冠底宽金带
     ctx.fillStyle = Z.T.COLORS.Z_KING_GOLD_DARK;
