@@ -1,17 +1,56 @@
-// utils/zombiePainter.js - 僵尸离屏插画绘制(v55 自 renderer.js 拆分)
-// 纯代码搬运: 原 renderer._renderZombieToOffscreen 单函数 1083 行
-//   按绘制阶段拆分; 阶段函数共享 Z 状态对象(ctx/canvas/type/def/T
-//   tokens/跨阶段局部量), R 为 renderer 实例(提供 T/_strokeW/_setStroke
-//   /dpr — _strokeW 的 _curBaseR 有状态, 经 R 转发保持状态流)
-// 渲染行为与拆分前逐 ctx 调用一致(scripts/task55 轨迹比对验证)
+// utils/zombiePainter.js - 僵尸离屏插画绘制（v93 经典 PvZ 复刻重绘）
+// 参照附图（经典 PvZ 普通僵尸）全面重绘：
+//   · 大头骨椭圆头（灰绿皮肤 + 前额皱纹 + 招风耳 + 头顶乱发）
+//   · 棕色西装外套 + 白衬衫 V 领 + 红领带 + 深色西裤（经典 PvZ 制式）
+//   · 大白眼珠 + 小瞳孔 + 咧嘴喊叫（暗红口腔 + 上排牙）
+//   · 阵营统一深橄榄勾边（#39412C），替代旧 Q 版圆头萌系
+// 阶段管线沿用 v55：setup → sack → cape → arms → torso → shoulders
+//   → legs → head → headgear → face → faceVariants → cage
+// 五僵尸识别符号保留：铁桶 / 小鬼兜帽麻袋 / 橄榄球红盔面罩 / 舞王礼帽紫西装 / 僵尸王金冠斗篷
 const { ZOMBIE_TYPES } = require('./constants.js');
 const { safeRoundRect } = require('./canvasHelpers.js');
 
+/* v93 经典 PvZ 共通色板（对照附图取色） */
+const PZ = {
+  OUTLINE:   '#39412C',   // 皮肤/全身深橄榄勾边
+  OUT_JK:    '#33220F',   // 西装深棕勾边
+  JK:        '#6D4A28',   // 西装外套棕
+  JK_LIGHT:  '#7E5A36',
+  JK_DARK:   '#54371C',
+  SHIRT:     '#EFEAD9',   // 白衬衫
+  TIE:       '#C62828',   // 红领带
+  TIE_DARK:  '#9E1F1F',
+  PANTS:     '#4E4257',   // 深灰紫西裤
+  PANTS_OUT: '#2B2431',
+  SHOES:     '#3A2E26',   // 皮鞋深棕
+  MOUTH:     '#6E2424',   // 口腔暗红
+  MOUTH_OUT: '#38140F',
+  TEETH:     '#F2EFE0',   // 牙齿米白
+  HAIR:      '#3A4230',   // 乱发
+  WRINKLE:   'rgba(70,82,52,0.55)',
+  // 各类型皮肤明暗（base = ZOMBIE_TYPES[].color）
+  SKIN: {
+    bucket:   { light: '#B5C98F', dark: '#6E8452' },
+    imp:      { light: '#C3D6A0', dark: '#84976A' },
+    football: { light: '#9DB77E', dark: '#5E7A48' },
+    dancer:   { light: '#B8CF94', dark: '#7C925C' },
+    king:     { light: '#A9C487', dark: '#6E8A50' }
+  },
+  // 各类型体型（×UNIT）
+  BODY: {
+    bucket:   { bodyW: 0.44, armLen: 0.34, armRot: 0.38, legW: 0.15 },
+    imp:      { bodyW: 0.34, armLen: 0.38, armRot: 0.42, legW: 0.12 },
+    football: { bodyW: 0.50, armLen: 0.30, armRot: 0.34, legW: 0.20 },
+    dancer:   { bodyW: 0.46, armLen: 0.34, armRot: 0.55, legW: 0.16 },
+    king:     { bodyW: 0.52, armLen: 0.30, armRot: 0.30, legW: 0.22 }
+  }
+};
+
 /**
- * 僵尸离屏渲染总入口(orchestrator)
+ * 僵尸离屏渲染总入口（orchestrator）
  * @param {string} type - ZOMBIE_TYPES 键
- * @param {Object} R - renderer 实例(T/_strokeW/_setStroke/dpr)
- * @returns {Object|null} 离屏 canvas(基础库不支持时 null)
+ * @param {Object} R - renderer 实例（T/_strokeW/_setStroke/dpr）
+ * @returns {Object|null} 离屏 canvas（基础库不支持时 null）
  */
 function renderZombieToOffscreen(type, R) {
   const Z = _zpSetup(type, R);
@@ -30,20 +69,23 @@ function renderZombieToOffscreen(type, R) {
   return Z.canvas;
 }
 
-/** 画布建立 + 超采样 + 描边基准 + 地面阴影(返回 Z 状态对象) */
+/** 画布建立 + 超采样 + 描边基准 + 地面阴影 */
 function _zpSetup(type, R) {
-  const Z = { type: type };   // v55: 阶段共享状态对象
+  const Z = { type: type };
   Z.def = ZOMBIE_TYPES[Z.type];
-  Z.T   = R.T;
-  Z.UNIT = 50;               // 基准单位（全部比例基于此）
-  R._strokeW(1, Z.UNIT);        // 把 Z.UNIT 作为描边基准
+  Z.T = R.T;
+  Z.UNIT = 50;
+  R._strokeW(1, Z.UNIT);
+  Z.P = PZ;                                  // v93 经典色板
+  Z.B = PZ.BODY[Z.type] || PZ.BODY.bucket;
+  Z.skinDark = (PZ.SKIN[Z.type] || PZ.SKIN.bucket).dark;
+  Z.skinLight = (PZ.SKIN[Z.type] || PZ.SKIN.bucket).light;
 
-  // 超采样高清化
   const SS = R.dpr * Z.T.OFFSCREEN.SUPERSAMPLE;
-  const size = Z.UNIT * 2.8;       // 画布尺寸（比旧 2.6 增 8%，保证头饰不裁切）
+  const size = Z.UNIT * 2.8;
   Z.canvas = wx.createOffscreenCanvas ? wx.createOffscreenCanvas({
-type: '2d',
-    width:  Math.round(size * SS),
+    type: '2d',
+    width: Math.round(size * SS),
     height: Math.round(size * SS)
   }) : null;
   if (!Z.canvas) return null;
@@ -51,85 +93,85 @@ type: '2d',
   Z.ctx.scale(SS, SS);
   Z.ctx.translate(size / 2, size / 2);
 
-  // 僵尸暗色描边（v3 阵营区分：植物白描边 vs 僵尸暗描边，一眼区分）
   const swMain = R._strokeW(Z.T.STROKE.MAIN);
-  R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, swMain);
+  R._setStroke(Z.ctx, PZ.OUTLINE, swMain * 0.82);   // v93 深橄榄主勾边（略细于旧 4.0 系）
 
-  // 阴影（底部 · 与植物统一 Tokens 色）
+  // 地面阴影
   Z.ctx.fillStyle = Z.T.COLORS.SHADOW;
   Z.ctx.beginPath();
-  Z.ctx.ellipse(0, Z.UNIT * 1.12, Z.UNIT * 0.72, Z.UNIT * 0.22, 0, 0, Math.PI * 2);
+  Z.ctx.ellipse(0, Z.UNIT * 1.10, Z.UNIT * 0.74, Z.UNIT * 0.20, 0, 0, Math.PI * 2);
   Z.ctx.fill();
 
   return Z;
 }
 
-/** v27 小鬼肩挎麻袋(先于手臂/头绘制) */
+/** v93 主勾边恢复（各阶段收尾用） */
+function _zpMain(Z, R) {
+  R._setStroke(Z.ctx, PZ.OUTLINE, R._strokeW(Z.T.STROKE.MAIN) * 0.82);
+}
+
+/** v27 小鬼肩挎麻袋（先于手臂/头绘制，造型保留） */
 function _zpSack(Z, R) {
-  // v27 小鬼僵尸：肩挎麻袋（参照设定图侧姿：粗麻束口袋 + 双道束绳 + 绳结 +
-  //   竖缝线 + 补丁；左肩外侧挂、袋颈朝外上倾斜、袋身探出头部轮廓左侧。
-  //   先于手臂/头绘制：袖子横穿袋右下角=手扶读感，头遮袋内侧=肩背读感）
   if (Z.type === 'imp') {
+    const U = Z.UNIT;
     Z.ctx.save();
-    Z.ctx.translate(-Z.UNIT * 0.70, Z.UNIT * 0.05);
+    Z.ctx.translate(-U * 0.66, U * 0.02);
     Z.ctx.rotate(-0.40);
-    // 袋颈（束口窄梯形，浅麻色）
+    // 袋颈
     Z.ctx.fillStyle = Z.T.COLORS.Z_SACK;
     Z.ctx.beginPath();
-    Z.ctx.moveTo(-Z.UNIT * 0.085, -Z.UNIT * 0.38);
-    Z.ctx.lineTo( Z.UNIT * 0.085, -Z.UNIT * 0.38);
-    Z.ctx.lineTo( Z.UNIT * 0.11, -Z.UNIT * 0.22);
-    Z.ctx.lineTo(-Z.UNIT * 0.11, -Z.UNIT * 0.22);
+    Z.ctx.moveTo(-U * 0.085, -U * 0.38);
+    Z.ctx.lineTo(U * 0.085, -U * 0.38);
+    Z.ctx.lineTo(U * 0.11, -U * 0.22);
+    Z.ctx.lineTo(-U * 0.11, -U * 0.22);
     Z.ctx.closePath();
     Z.ctx.fill(); Z.ctx.stroke();
-    // 袋身（圆润鼓肚：上收口、下鼓胀，粗麻渐变收暗）
-    const sGrad = Z.ctx.createLinearGradient(0, -Z.UNIT * 0.22, 0, Z.UNIT * 0.30);
+    // 袋身
+    const sGrad = Z.ctx.createLinearGradient(0, -U * 0.22, 0, U * 0.30);
     sGrad.addColorStop(0, Z.T.COLORS.Z_SACK);
     sGrad.addColorStop(0.72, Z.T.COLORS.Z_SACK);
     sGrad.addColorStop(1, Z.T.COLORS.Z_SACK_DARK);
     Z.ctx.fillStyle = sGrad;
     Z.ctx.beginPath();
-    Z.ctx.moveTo(-Z.UNIT * 0.11, -Z.UNIT * 0.22);
-    Z.ctx.bezierCurveTo(-Z.UNIT * 0.25, -Z.UNIT * 0.10, -Z.UNIT * 0.26, Z.UNIT * 0.14, -Z.UNIT * 0.15, Z.UNIT * 0.27);
-    Z.ctx.quadraticCurveTo(0, Z.UNIT * 0.36, Z.UNIT * 0.15, Z.UNIT * 0.25);
-    Z.ctx.bezierCurveTo(Z.UNIT * 0.26, Z.UNIT * 0.12, Z.UNIT * 0.25, -Z.UNIT * 0.08, Z.UNIT * 0.11, -Z.UNIT * 0.22);
+    Z.ctx.moveTo(-U * 0.11, -U * 0.22);
+    Z.ctx.bezierCurveTo(-U * 0.25, -U * 0.10, -U * 0.26, U * 0.14, -U * 0.15, U * 0.27);
+    Z.ctx.quadraticCurveTo(0, U * 0.36, U * 0.15, U * 0.25);
+    Z.ctx.bezierCurveTo(U * 0.26, U * 0.12, U * 0.25, -U * 0.08, U * 0.11, -U * 0.22);
     Z.ctx.closePath();
     Z.ctx.fill(); Z.ctx.stroke();
-    // 束绳 2 道 + 左侧绳结（深麻褐）
+    // 束绳 + 绳结 + 缝线 + 补丁
     Z.ctx.fillStyle = Z.T.COLORS.Z_SACK_DARK;
-    Z.ctx.fillRect(-Z.UNIT * 0.125, -Z.UNIT * 0.23, Z.UNIT * 0.25, Z.UNIT * 0.04);
-    Z.ctx.fillRect(-Z.UNIT * 0.117, -Z.UNIT * 0.165, Z.UNIT * 0.234, Z.UNIT * 0.035);
+    Z.ctx.fillRect(-U * 0.125, -U * 0.23, U * 0.25, U * 0.04);
+    Z.ctx.fillRect(-U * 0.117, -U * 0.165, U * 0.234, U * 0.035);
     Z.ctx.beginPath();
-    Z.ctx.arc(-Z.UNIT * 0.125, -Z.UNIT * 0.20, Z.UNIT * 0.055, 0, Math.PI * 2);
+    Z.ctx.arc(-U * 0.125, -U * 0.20, U * 0.055, 0, Math.PI * 2);
     Z.ctx.fill(); Z.ctx.stroke();
-    // 竖向缝线 ×2（半透明暗线）+ 右下补丁
     Z.ctx.globalAlpha = 0.45;
     R._setStroke(Z.ctx, Z.T.COLORS.Z_SACK_DARK, R._strokeW(Z.T.STROKE.THIN));
-    for (const sx of [-Z.UNIT * 0.08, Z.UNIT * 0.06]) {
+    for (const sx of [-U * 0.08, U * 0.06]) {
       Z.ctx.beginPath();
-      Z.ctx.moveTo(sx, -Z.UNIT * 0.10);
-      Z.ctx.lineTo(sx, Z.UNIT * 0.20);
+      Z.ctx.moveTo(sx, -U * 0.10);
+      Z.ctx.lineTo(sx, U * 0.20);
       Z.ctx.stroke();
     }
     Z.ctx.globalAlpha = 0.55;
     Z.ctx.fillStyle = Z.T.COLORS.Z_SACK_DARK;
-    safeRoundRect(Z.ctx, Z.UNIT * 0.01, Z.UNIT * 0.07, Z.UNIT * 0.14, Z.UNIT * 0.12, Z.UNIT * 0.02);
+    Z.ctx.beginPath();
+    safeRoundRect(Z.ctx, U * 0.01, U * 0.07, U * 0.14, U * 0.12, U * 0.02);
     Z.ctx.fill();
     Z.ctx.globalAlpha = 1;
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.MAIN));
+    _zpMain(Z, R);
     Z.ctx.restore();
   }
-
 }
 
-/** v51 僵尸王皇家深红斗篷(先于身体绘制) */
+/** v51 僵尸王皇家深红斗篷（先于身体绘制，造型保留） */
 function _zpCape(Z, R) {
-  // v51 僵尸王：皇家深红斗篷（背后大氅 — 先画被身体/手臂覆盖中段，
-  //   左右+下方探出轮廓 = 王者体量感；下摆锯齿撕裂 = 破落军团之王）
   if (Z.type === 'king') {
-    const capeW = Z.UNIT * 0.72;
-    const capeTop = Z.UNIT * 0.06;
-    const capeBot = Z.UNIT * 0.86;
+    const U = Z.UNIT;
+    const capeW = U * 0.72;
+    const capeTop = U * 0.02;
+    const capeBot = U * 0.84;
     const cpGrad = Z.ctx.createLinearGradient(-capeW, 0, capeW, 0);
     cpGrad.addColorStop(0, Z.T.COLORS.Z_KING_CAPE);
     cpGrad.addColorStop(0.55, Z.T.COLORS.Z_KING_CAPE);
@@ -138,348 +180,224 @@ function _zpCape(Z, R) {
     Z.ctx.beginPath();
     Z.ctx.moveTo(-capeW * 0.60, capeTop);
     Z.ctx.quadraticCurveTo(-capeW, capeBot * 0.55, -capeW * 0.82, capeBot);
-    Z.ctx.lineTo(-capeW * 0.26, capeBot - Z.UNIT * 0.10);
+    Z.ctx.lineTo(-capeW * 0.26, capeBot - U * 0.10);
     Z.ctx.lineTo(0, capeBot);
-    Z.ctx.lineTo(capeW * 0.26, capeBot - Z.UNIT * 0.10);
+    Z.ctx.lineTo(capeW * 0.26, capeBot - U * 0.10);
     Z.ctx.lineTo(capeW * 0.82, capeBot);
     Z.ctx.quadraticCurveTo(capeW, capeBot * 0.55, capeW * 0.60, capeTop);
     Z.ctx.closePath();
     Z.ctx.fill(); Z.ctx.stroke();
-    // 肩扣 ×2（金圆点 — 锁住斗篷的佩戴锚点）
+    // 肩扣 ×2
     Z.ctx.fillStyle = Z.T.COLORS.Z_KING_GOLD;
     for (const s of [-1, 1]) {
       Z.ctx.beginPath();
-      Z.ctx.arc(s * Z.UNIT * 0.40, Z.UNIT * 0.16, Z.UNIT * 0.08, 0, Math.PI * 2);
+      Z.ctx.arc(s * U * 0.38, U * 0.10, U * 0.07, 0, Math.PI * 2);
       Z.ctx.fill(); Z.ctx.stroke();
     }
   }
-
 }
 
-/** 小手臂 + 袖口 + 手掌(Z_BODY 体型 tokens) */
+/** v93 手臂：西装袖 + 僵尸绿手掌（前伸拖步姿态） */
 function _zpArms(Z, R) {
-  // 小手臂（按类型差异化体型，Z_BODY tokens 控制）
-  // v26 铁桶僵尸：衬衫袖 + 袖口 + 僵尸绿手掌（参照设定图长袖破衫）
-  Z.ZB = Z.T.Z_BODY;
-  Z.bodyW = Z.type === 'bucket' ? Z.ZB.BUCKET_BODY_W :
-                Z.type === 'imp' ? Z.ZB.IMP_BODY_W :
-                Z.type === 'football' ? Z.ZB.FOOTBALL_BODY_W :
-                Z.type === 'king' ? Z.ZB.KING_BODY_W : Z.ZB.DANCER_BODY_W;
-  const armLen = Z.type === 'bucket' ? Z.ZB.BUCKET_ARM_LEN :
-                 Z.type === 'imp' ? Z.ZB.IMP_ARM_LEN :
-                 Z.type === 'football' ? Z.ZB.FOOTBALL_ARM_LEN :
-                 Z.type === 'king' ? Z.ZB.KING_ARM_LEN : Z.ZB.DANCER_ARM_LEN;
-  const armX = Z.UNIT * (Z.bodyW + 0.14);
-  // v27 小鬼僵尸：手臂微外张下探（碎步疾走感），袖色 = 破袍灰
-  const armY = Z.type === 'imp' ? Z.UNIT * 0.32 : Z.UNIT * 0.35;
-  // v29 舞王：双臂外张 0.50 rad = 迪斯科展示舞姿（参照设定图双臂展开）
-  const armRot = Z.type === 'imp' ? 0.18 :
-                 Z.type === 'dancer' ? 0.50 :
-                 Z.type === 'king' ? 0.30 : 0.35;   // v51 王: 微张沉稳
-  // v28 橄榄球僵尸：球衣绿短袖（参照设定图 forest green jersey）
-  // v29 舞王僵尸：紫西装长袖（参照设定图紫色套装）
-  Z.ctx.fillStyle = Z.type === 'bucket' ? Z.T.COLORS.Z_SHIRT :
-                  Z.type === 'imp'   ? Z.T.COLORS.Z_HOOD :
-                  Z.type === 'football' ? Z.T.COLORS.Z_FH_JERSEY :
-                  Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT :
-                  Z.type === 'king' ? Z.T.COLORS.Z_KING_ROBE : Z.def.color;   // v51 暗紫王袍袖
-  Z.ctx.beginPath();
-  Z.ctx.ellipse(-armX, armY, Z.UNIT * 0.18, Z.UNIT * armLen, -armRot, 0, Math.PI * 2);
-  Z.ctx.fill(); Z.ctx.stroke();
-  Z.ctx.beginPath();
-  Z.ctx.ellipse( armX, armY, Z.UNIT * 0.18, Z.UNIT * armLen,  armRot, 0, Math.PI * 2);
-  Z.ctx.fill(); Z.ctx.stroke();
-  if (Z.type === 'bucket' || Z.type === 'imp' || Z.type === 'football' || Z.type === 'dancer' || Z.type === 'king') {
-    // 袖口（深一档环）+ 手掌（僵尸绿），沿袖长轴末端双臂对称
-    // v27 imp：复用同结构（袖口=兜帽深灰，手臂微外张末端）
-    // v28 football：袖口=深绿厚护腕（参照设定图 wristbands），手掌=僵尸绿皮肤
-    // v29 dancer：袖口=米白衬衫袖口（参照设定图衬衫袖从西装袖口露出一截）
-    const cuffFill = Z.type === 'bucket' ? Z.T.COLORS.Z_SHIRT_DARK :
-                     Z.type === 'imp'   ? Z.T.COLORS.Z_HOOD_DARK :
-                     Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SHIRT :
-                     Z.type === 'king' ? Z.T.COLORS.Z_KING_GOLD : Z.T.COLORS.Z_FH_WRIST;   // v51 金袖口
-    for (const side of [-1, 1]) {
-      const rot = side < 0 ? -armRot : armRot;
-      const ex = side * armX + Math.sin(rot) * Z.UNIT * armLen;
-      const ey = armY + Math.cos(rot) * Z.UNIT * armLen;
-      Z.ctx.fillStyle = cuffFill;
+  const U = Z.UNIT;
+  const bodyW = Z.B.bodyW;
+  const armLen = Z.B.armLen;
+  const armRot = Z.B.armRot;
+  const armX = U * (bodyW * 0.92 + 0.05);
+  const armY = U * 0.06;
+  // 袖色：铁桶/小鬼=破衫灰蓝，橄榄球=球衣绿短袖，舞王=紫西装，王=暗紫袍
+  const sleeve = Z.type === 'bucket' ? PZ.JK :
+                 Z.type === 'imp' ? '#8A8074' :
+                 Z.type === 'football' ? Z.T.COLORS.Z_FH_JERSEY :
+                 Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT :
+                 Z.type === 'king' ? Z.T.COLORS.Z_KING_ROBE : PZ.JK;
+  const sleeveDark = Z.type === 'bucket' ? PZ.JK_DARK :
+                     Z.type === 'imp' ? '#6E665C' :
+                     Z.type === 'football' ? Z.T.COLORS.Z_FH_JERSEY_DARK :
+                     Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT_DARK :
+                     Z.type === 'king' ? Z.T.COLORS.Z_KING_ROBE_DARK : PZ.JK_DARK;
+  for (const side of [-1, 1]) {
+    const rot = side * armRot;
+    const ex = side * armX + Math.sin(Math.abs(rot)) * U * armLen * side;
+    const ey = armY + Math.cos(armRot) * U * armLen;
+    // 袖（胶囊：径向渐变左亮右暗）
+    const sg = Z.ctx.createLinearGradient(-U * 0.1, 0, U * 0.1, 0);
+    sg.addColorStop(0, sleeve);
+    sg.addColorStop(1, sleeveDark);
+    Z.ctx.fillStyle = sg;
+    Z.ctx.save();
+    Z.ctx.translate(side * (armX + U * 0.04), armY);
+    Z.ctx.rotate(rot * 0.72);
+    Z.ctx.beginPath();
+    Z.ctx.ellipse(0, U * armLen * 0.42, U * 0.098, U * armLen * 0.55, 0, 0, Math.PI * 2);
+    Z.ctx.fill(); Z.ctx.stroke();
+    // 袖口环
+    Z.ctx.fillStyle = sleeveDark;
+    Z.ctx.beginPath();
+    Z.ctx.ellipse(0, U * armLen * 0.88, U * 0.088, U * 0.055, 0, 0, Math.PI * 2);
+    Z.ctx.fill(); Z.ctx.stroke();
+    Z.ctx.restore();
+    // 手掌（僵尸绿 + 三指小圆）
+    const hx = side * (armX + U * 0.04 + Math.sin(armRot) * U * armLen * 0.98);
+    const hy = armY + Math.cos(armRot) * U * armLen * 0.98;
+    Z.ctx.fillStyle = Z.def.color;
+    Z.ctx.beginPath();
+    Z.ctx.arc(hx, hy, U * 0.095, 0, Math.PI * 2);
+    Z.ctx.fill(); Z.ctx.stroke();
+    for (const f of [-0.55, 0.1, 0.7]) {
       Z.ctx.beginPath();
-      Z.ctx.ellipse(ex - Math.sin(rot) * Z.UNIT * 0.07, ey - Math.cos(rot) * Z.UNIT * 0.07,
-                  Z.UNIT * 0.115, Z.UNIT * 0.075, rot, 0, Math.PI * 2);
-      Z.ctx.fill(); Z.ctx.stroke();
-      Z.ctx.fillStyle = Z.def.color;
-      Z.ctx.beginPath();
-      Z.ctx.arc(ex + Math.sin(rot) * Z.UNIT * 0.015, ey + Math.cos(rot) * Z.UNIT * 0.015, Z.UNIT * 0.10, 0, Math.PI * 2);
-      Z.ctx.fill(); Z.ctx.stroke();
+      Z.ctx.arc(hx + Math.cos(rot + f) * U * 0.095, hy + Math.sin(rot + f) * U * 0.095 * 0.6 + U * 0.02, U * 0.038, 0, Math.PI * 2);
+      Z.ctx.fill();
     }
+    Z.ctx.beginPath();
+    Z.ctx.arc(hx, hy, U * 0.095, 0, Math.PI * 2);
+    Z.ctx.stroke();
   }
-
 }
 
-/** 身体主体(按类型差异化: 衬衫/长袍/球衣/王袍/西装) */
+/** v93 躯干：西装外套 + 白衬衫 V + 红领带 + 驳领 + 下摆撕裂 */
 function _zpTorso(Z, R) {
-  // 身体（按类型差异化：普通/瘦长/宽壮/方正）
-  // v26 铁桶僵尸：灰蓝破衬衫（右衣影 + 下摆撕裂 + 胸口袋，参照设定图）
-  // v27 小鬼僵尸：中灰破长袍（加宽飘感 + 加长遮腿，下摆撕裂见 imp 分支）
-  const robeW = Z.type === 'imp' ? 0.36 : Z.bodyW;
-  // v29.1 舞王：西装加长至 0.62（Q 版巨头遮挡胸口，加长+下移领口三件套
-  //   才能从下巴下方露出——v27 麻袋遮挡教训复现）
-  const robeH = Z.type === 'imp' ? 0.64 : Z.type === 'dancer' ? 0.62 :
-                Z.type === 'king' ? 0.64 : 0.55;   // v51 王袍及踝最长
-  // v29 舞王：紫西装外套（参照设定图亮紫西装）
-  Z.ctx.fillStyle = Z.type === 'bucket' ? Z.T.COLORS.Z_SHIRT :
-                  Z.type === 'imp'   ? Z.T.COLORS.Z_HOOD :
-                  Z.type === 'football' ? Z.T.COLORS.Z_FH_JERSEY :
-                  Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT :
-                  Z.type === 'king' ? Z.T.COLORS.Z_KING_ROBE : Z.def.color;   // v51 暗紫王袍
+  const U = Z.UNIT;
+  const bodyW = Z.B.bodyW;
+  // 衣体（小鬼=破衫，橄榄球=球衣，舞王=紫西装，王=暗紫王袍，其余=棕西装）
+  const robeFill = Z.type === 'bucket' ? PZ.JK :
+                   Z.type === 'imp' ? '#8A8074' :
+                   Z.type === 'football' ? Z.T.COLORS.Z_FH_JERSEY :
+                   Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT :
+                   Z.type === 'king' ? Z.T.COLORS.Z_KING_ROBE : PZ.JK;
+  const robeDark = Z.type === 'bucket' ? PZ.JK_DARK :
+                   Z.type === 'imp' ? '#6E665C' :
+                   Z.type === 'football' ? Z.T.COLORS.Z_FH_JERSEY_DARK :
+                   Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT_DARK :
+                   Z.type === 'king' ? Z.T.COLORS.Z_KING_ROBE_DARK : PZ.JK_DARK;
+  const robeOut = Z.type === 'imp' || Z.type === 'football' || Z.type === 'dancer' || Z.type === 'king'
+    ? PZ.OUTLINE : PZ.OUT_JK;
+  const topY = U * -0.12;
+  const botY = Z.type === 'king' ? U * 0.70 : U * 0.66;
+  const tg = Z.ctx.createLinearGradient(-U * bodyW, 0, U * bodyW, 0);
+  tg.addColorStop(0, Z.type === 'bucket' || Z.type === 'imp' ? (Z.type === 'bucket' ? PZ.JK_LIGHT : '#998F82') : (Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT_LIGHT : robeFill));
+  tg.addColorStop(0.55, robeFill);
+  tg.addColorStop(1, robeDark);
+  Z.ctx.fillStyle = tg;
+  R._setStroke(Z.ctx, robeOut, R._strokeW(Z.T.STROKE.MAIN) * 0.82);
   Z.ctx.beginPath();
-  safeRoundRect(Z.ctx, -Z.UNIT * robeW, Z.UNIT * 0.12, Z.UNIT * robeW * 2, Z.UNIT * robeH, Z.UNIT * 0.28);
+  safeRoundRect(Z.ctx, -U * bodyW, topY, U * bodyW * 2, botY - topY, U * 0.22);
   Z.ctx.fill(); Z.ctx.stroke();
-  if (Z.type === 'bucket') {
-    // 右侧衣影（赛璐璐单侧阴影，clip 在身体内）
-    Z.ctx.save();
+  // 右侧衣影
+  Z.ctx.save();
+  Z.ctx.beginPath();
+  safeRoundRect(Z.ctx, -U * bodyW, topY, U * bodyW * 2, botY - topY, U * 0.22);
+  Z.ctx.clip();
+  Z.ctx.globalAlpha = 0.30;
+  Z.ctx.fillStyle = robeDark;
+  Z.ctx.fillRect(U * bodyW * 0.30, topY, U * bodyW * 0.85, botY - topY);
+  Z.ctx.globalAlpha = 1;
+  Z.ctx.restore();
+
+  // 西装三件套（铁桶/舞王：衬衫V + 驳领 + 领带）
+  if (Z.type === 'bucket' || Z.type === 'dancer') {
+    const shirt = Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SHIRT : PZ.SHIRT;
+    const tie = Z.type === 'dancer' ? Z.T.COLORS.Z_DN_TIE : PZ.TIE;
+    const lapel = Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT_DARK : PZ.JK_DARK;
+    // 白衬衫 V 区
+    Z.ctx.fillStyle = shirt;
     Z.ctx.beginPath();
-    safeRoundRect(Z.ctx, -Z.UNIT * Z.bodyW, Z.UNIT * 0.12, Z.UNIT * Z.bodyW * 2, Z.UNIT * 0.55, Z.UNIT * 0.28);
-    Z.ctx.clip();
-    Z.ctx.globalAlpha = 0.5;
-    Z.ctx.fillStyle = Z.T.COLORS.Z_SHIRT_DARK;
-    Z.ctx.fillRect(Z.UNIT * Z.bodyW * 0.30, Z.UNIT * 0.10, Z.UNIT * Z.bodyW * 0.80, Z.UNIT * 0.60);
-    Z.ctx.globalAlpha = 1;
-    Z.ctx.restore();
-    // 下摆撕裂三角 ×3（深色内衬外露）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_SHIRT_DARK;
-    const hemY = Z.UNIT * 0.67;
-    const tears = [[-0.26, 0.15], [-0.03, 0.18], [0.20, 0.13]];
-    for (const [tx, tw] of tears) {
-      Z.ctx.beginPath();
-      Z.ctx.moveTo(Z.UNIT * (tx - tw / 2), hemY - Z.UNIT * 0.02);
-      Z.ctx.lineTo(Z.UNIT * (tx + tw / 2), hemY - Z.UNIT * 0.02);
-      Z.ctx.lineTo(Z.UNIT * tx, hemY + Z.UNIT * 0.10);
-      Z.ctx.closePath();
-      Z.ctx.fill();
-    }
-    // 胸口袋（左胸小方袋）
-    Z.ctx.globalAlpha = 0.8;
-    Z.ctx.beginPath();
-    safeRoundRect(Z.ctx, -Z.UNIT * 0.26, Z.UNIT * 0.22, Z.UNIT * 0.17, Z.UNIT * 0.13, Z.UNIT * 0.025);
+    Z.ctx.moveTo(-U * 0.17, topY + U * 0.02);
+    Z.ctx.lineTo(U * 0.17, topY + U * 0.02);
+    Z.ctx.lineTo(U * 0.05, topY + U * 0.40);
+    Z.ctx.lineTo(-U * 0.05, topY + U * 0.40);
+    Z.ctx.closePath();
     Z.ctx.fill();
-    Z.ctx.globalAlpha = 1;
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.THIN));
+    R._setStroke(Z.ctx, PZ.OUTLINE, R._strokeW(Z.T.STROKE.THIN));
     Z.ctx.stroke();
-    // 恢复主描边（后续腿/头仍用 MAIN）
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.MAIN));
-  }
-  if (Z.type === 'imp') {
-    // v27 破袍细节（参照设定图：右袍影 + 竖褶线 + 左下补丁 + 下摆撕裂 + 短靴）
-    Z.ctx.save();
-    Z.ctx.beginPath();
-    safeRoundRect(Z.ctx, -Z.UNIT * robeW, Z.UNIT * 0.12, Z.UNIT * robeW * 2, Z.UNIT * robeH, Z.UNIT * 0.28);
-    Z.ctx.clip();
-    Z.ctx.globalAlpha = 0.45;
-    Z.ctx.fillStyle = Z.T.COLORS.Z_HOOD_DARK;
-    Z.ctx.fillRect(Z.UNIT * robeW * 0.35, Z.UNIT * 0.10, Z.UNIT * robeW * 0.80, Z.UNIT * 0.70);
-    Z.ctx.globalAlpha = 1;
-    Z.ctx.restore();
-    // 竖向褶线 ×2（中灰压深一档细线）
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_HOOD_DARK, R._strokeW(Z.T.STROKE.THIN));
-    for (const fx of [-Z.UNIT * 0.10, Z.UNIT * 0.05]) {
-      Z.ctx.beginPath();
-      Z.ctx.moveTo(fx, Z.UNIT * 0.32);
-      Z.ctx.quadraticCurveTo(fx + Z.UNIT * 0.02, Z.UNIT * 0.52, fx - Z.UNIT * 0.02, Z.UNIT * 0.70);
-      Z.ctx.stroke();
-    }
-    // 左下小补丁（浅灰褐 + 细描边）
-    Z.ctx.globalAlpha = 0.8;
-    Z.ctx.fillStyle = Z.T.COLORS.Z_HOOD_LIGHT;
-    safeRoundRect(Z.ctx, -Z.UNIT * 0.30, Z.UNIT * 0.36, Z.UNIT * 0.13, Z.UNIT * 0.10, Z.UNIT * 0.02);
-    Z.ctx.fill();
-    Z.ctx.globalAlpha = 1;
-    Z.ctx.stroke();
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.MAIN));
-    // 下摆撕裂三角 ×3（深灰内衬外露，参差下垂）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_HOOD_DARK;
-    const hemY = Z.UNIT * 0.76;
-    for (const [tx, tw] of [[-0.22, 0.14], [-0.02, 0.17], [0.18, 0.12]]) {
-      Z.ctx.beginPath();
-      Z.ctx.moveTo(Z.UNIT * (tx - tw / 2), hemY - Z.UNIT * 0.02);
-      Z.ctx.lineTo(Z.UNIT * (tx + tw / 2), hemY - Z.UNIT * 0.02);
-      Z.ctx.lineTo(Z.UNIT * tx, hemY + Z.UNIT * 0.11);
-      Z.ctx.closePath();
-      Z.ctx.fill();
-    }
-    // 短靴 ×2（深灰圆头，袍长及踝不露腿，靴从袍摆下探出）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_HOOD_DARK;
+    // 驳领 ×2
+    Z.ctx.fillStyle = lapel;
     for (const s of [-1, 1]) {
       Z.ctx.beginPath();
-      Z.ctx.ellipse(s * Z.UNIT * 0.15, Z.UNIT * 0.84, Z.UNIT * 0.095, Z.UNIT * 0.08, 0, 0, Math.PI * 2);
+      Z.ctx.moveTo(s * U * 0.20, topY + U * 0.01);
+      Z.ctx.lineTo(s * U * 0.06, topY + U * 0.02);
+      Z.ctx.lineTo(s * U * 0.03, topY + U * 0.30);
+      Z.ctx.closePath();
       Z.ctx.fill(); Z.ctx.stroke();
     }
-  }
-  if (Z.type === 'football') {
-    // v28 球衣细节（参照设定图：右衣影 + 竖褶线 + 下摆撕裂 ×3）
-    Z.ctx.save();
+    // 领带（小结 + 渐窄带身）
+    R._setStroke(Z.ctx, PZ.OUTLINE, R._strokeW(Z.T.STROKE.THIN) * 0.8);
+    Z.ctx.fillStyle = tie;
     Z.ctx.beginPath();
-    safeRoundRect(Z.ctx, -Z.UNIT * Z.bodyW, Z.UNIT * 0.12, Z.UNIT * Z.bodyW * 2, Z.UNIT * 0.55, Z.UNIT * 0.28);
-    Z.ctx.clip();
-    Z.ctx.globalAlpha = 0.5;
-    Z.ctx.fillStyle = Z.T.COLORS.Z_FH_JERSEY_DARK;
-    Z.ctx.fillRect(Z.UNIT * Z.bodyW * 0.30, Z.UNIT * 0.10, Z.UNIT * Z.bodyW * 0.80, Z.UNIT * 0.60);
-    Z.ctx.globalAlpha = 1;
-    Z.ctx.restore();
-    // 竖向褶线 ×2（深绿细线，胸前运动感）
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_FH_JERSEY_DARK, R._strokeW(Z.T.STROKE.THIN));
-    for (const fx of [-Z.UNIT * 0.12, Z.UNIT * 0.07]) {
+    Z.ctx.moveTo(-U * 0.05, topY + U * 0.02);
+    Z.ctx.lineTo(U * 0.05, topY + U * 0.02);
+    Z.ctx.lineTo(U * 0.085, topY + U * 0.14);
+    Z.ctx.lineTo(-U * 0.085, topY + U * 0.14);
+    Z.ctx.closePath();
+    Z.ctx.fill(); Z.ctx.stroke();
+    Z.ctx.beginPath();
+    Z.ctx.moveTo(-U * 0.062, topY + U * 0.14);
+    Z.ctx.lineTo(U * 0.062, topY + U * 0.14);
+    Z.ctx.lineTo(U * 0.045, topY + U * 0.46);
+    Z.ctx.lineTo(-U * 0.045, topY + U * 0.46);
+    Z.ctx.closePath();
+    Z.ctx.fill(); Z.ctx.stroke();
+  }
+  // 橄榄球球衣胸前白条纹
+  if (Z.type === 'football') {
+    R._setStroke(Z.ctx, Z.T.COLORS.Z_FH_STRIPE, R._strokeW(Z.T.STROKE.THIN) * 1.4);
+    for (const sx of [-U * 0.10, U * 0.02, U * 0.14]) {
       Z.ctx.beginPath();
-      Z.ctx.moveTo(fx, Z.UNIT * 0.50);
-      Z.ctx.quadraticCurveTo(fx + Z.UNIT * 0.02, Z.UNIT * 0.60, fx - Z.UNIT * 0.02, Z.UNIT * 0.70);
+      Z.ctx.moveTo(sx, topY + U * 0.06);
+      Z.ctx.lineTo(sx, topY + U * 0.30);
       Z.ctx.stroke();
     }
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.MAIN));
-    // 下摆撕裂三角 ×3（深绿内衬外露，球衣破损）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_FH_JERSEY_DARK;
-    const hemY = Z.UNIT * 0.67;
-    for (const [tx, tw] of [[-0.28, 0.16], [-0.05, 0.18], [0.20, 0.15]]) {
-      Z.ctx.beginPath();
-      Z.ctx.moveTo(Z.UNIT * (tx - tw / 2), hemY - Z.UNIT * 0.02);
-      Z.ctx.lineTo(Z.UNIT * (tx + tw / 2), hemY - Z.UNIT * 0.02);
-      Z.ctx.lineTo(Z.UNIT * tx, hemY + Z.UNIT * 0.10);
-      Z.ctx.closePath();
-      Z.ctx.fill();
-    }
   }
-  if (Z.type === 'king') {
-    // v51 王袍细节（右衣影 + 金腰带 + 中央红宝石扣 + 下摆撕裂 ×3）
-    Z.ctx.save();
+  // 小鬼破衫补丁
+  if (Z.type === 'imp') {
+    Z.ctx.globalAlpha = 0.8;
+    Z.ctx.fillStyle = '#A79C8D';
     Z.ctx.beginPath();
-    safeRoundRect(Z.ctx, -Z.UNIT * robeW, Z.UNIT * 0.12, Z.UNIT * robeW * 2, Z.UNIT * robeH, Z.UNIT * 0.28);
-    Z.ctx.clip();
-    Z.ctx.globalAlpha = 0.5;
-    Z.ctx.fillStyle = Z.T.COLORS.Z_KING_ROBE_DARK;
-    Z.ctx.fillRect(Z.UNIT * robeW * 0.30, Z.UNIT * 0.10, Z.UNIT * robeW * 0.80, Z.UNIT * 0.70);
+    safeRoundRect(Z.ctx, -U * 0.24, U * 0.24, U * 0.14, U * 0.11, U * 0.02);
+    Z.ctx.fill();
     Z.ctx.globalAlpha = 1;
-    Z.ctx.restore();
-    // 金腰带（横带 + 中央红宝石扣）
+    R._setStroke(Z.ctx, PZ.OUTLINE, R._strokeW(Z.T.STROKE.THIN));
+    Z.ctx.stroke();
+  }
+  // 王袍金腰带 + 红宝石扣
+  if (Z.type === 'king') {
     Z.ctx.fillStyle = Z.T.COLORS.Z_KING_GOLD;
-    safeRoundRect(Z.ctx, -Z.UNIT * 0.40, Z.UNIT * 0.55, Z.UNIT * 0.80, Z.UNIT * 0.10, Z.UNIT * 0.03);
+    Z.ctx.beginPath();
+    safeRoundRect(Z.ctx, -U * 0.38, U * 0.50, U * 0.76, U * 0.10, U * 0.03);
     Z.ctx.fill(); Z.ctx.stroke();
     Z.ctx.fillStyle = Z.T.COLORS.Z_KING_GEM;
     Z.ctx.beginPath();
-    Z.ctx.arc(0, Z.UNIT * 0.60, Z.UNIT * 0.055, 0, Math.PI * 2);
+    Z.ctx.arc(0, U * 0.55, U * 0.05, 0, Math.PI * 2);
     Z.ctx.fill(); Z.ctx.stroke();
-    // 下摆撕裂三角 ×3（深紫内衬外露）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_KING_ROBE_DARK;
-    const hemK = Z.UNIT * 0.75;
-    for (const [tx, tw] of [[-0.28, 0.16], [-0.04, 0.18], [0.22, 0.14]]) {
-      Z.ctx.beginPath();
-      Z.ctx.moveTo(Z.UNIT * (tx - tw / 2), hemK - Z.UNIT * 0.02);
-      Z.ctx.lineTo(Z.UNIT * (tx + tw / 2), hemK - Z.UNIT * 0.02);
-      Z.ctx.lineTo(Z.UNIT * tx, hemK + Z.UNIT * 0.10);
-      Z.ctx.closePath();
-      Z.ctx.fill();
-    }
   }
-  // 肚皮高光（僵尸微弱哑光，Z_HIGHLIGHT，植物用亮白 0.35）
-  Z.ctx.fillStyle = Z.T.COLORS.Z_HIGHLIGHT;
-  Z.ctx.beginPath();
-  Z.ctx.ellipse(-Z.UNIT * 0.14, Z.UNIT * 0.28, Z.UNIT * 0.16, Z.UNIT * 0.26, -0.5, 0, Math.PI * 2);
-  Z.ctx.fill();
-
-  // v29 舞王僵尸：破紫西装（参照设定图：右衣影 + 驳领V + 衬衫V + 领带 +
-  //   单纽扣 + 下摆锯齿撕裂 ×3，替换金属胸甲肩甲）
-  // v29.1 领口三件套下移：Q 版大头(下巴=0.50 Z.UNIT)遮挡胸口，细节压进 0.46~0.70 可见带
-  if (Z.type === 'dancer') {
-    // 右侧衣影（赛璐璐单侧阴影，clip 在身体内，与 bucket/football 同构）
-    Z.ctx.save();
+  // 下摆撕裂 ×3（破损下摆）
+  const hemCol = Z.type === 'bucket' ? PZ.JK_DARK :
+                 Z.type === 'imp' ? '#6E665C' :
+                 Z.type === 'football' ? Z.T.COLORS.Z_FH_JERSEY_DARK :
+                 Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT_DARK :
+                 Z.type === 'king' ? Z.T.COLORS.Z_KING_ROBE_DARK : PZ.JK_DARK;
+  Z.ctx.fillStyle = hemCol;
+  const hemY = botY - U * 0.01;
+  for (const [tx, tw] of [[-0.55, 0.32], [-0.02, 0.36], [0.52, 0.30]]) {
     Z.ctx.beginPath();
-    safeRoundRect(Z.ctx, -Z.UNIT * Z.bodyW, Z.UNIT * 0.12, Z.UNIT * Z.bodyW * 2, Z.UNIT * robeH, Z.UNIT * 0.28);
-    Z.ctx.clip();
-    Z.ctx.globalAlpha = 0.5;
-    Z.ctx.fillStyle = Z.T.COLORS.Z_DN_SUIT_DARK;
-    Z.ctx.fillRect(Z.UNIT * Z.bodyW * 0.30, Z.UNIT * 0.10, Z.UNIT * Z.bodyW * 0.80, Z.UNIT * 0.70);
-    Z.ctx.globalAlpha = 1;
-    Z.ctx.restore();
-    // 衬衫 V 区（米白，顶部从下巴后探出，向下收窄到胸下）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_DN_SHIRT;
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-Z.UNIT * 0.19, Z.UNIT * 0.46);
-    Z.ctx.lineTo( Z.UNIT * 0.19, Z.UNIT * 0.46);
-    Z.ctx.lineTo( Z.UNIT * 0.06, Z.UNIT * 0.60);
-    Z.ctx.lineTo(-Z.UNIT * 0.06, Z.UNIT * 0.60);
+    Z.ctx.moveTo(U * (tx - tw / 2), hemY - U * 0.02);
+    Z.ctx.lineTo(U * (tx + tw / 2), hemY - U * 0.02);
+    Z.ctx.lineTo(U * tx, hemY + U * 0.10);
     Z.ctx.closePath();
     Z.ctx.fill();
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.THIN));
-    Z.ctx.stroke();
-    // 驳领 ×2（深紫三角 = 西装翻领；顶端入下巴后 = 颈后自然感）
-    // v29.2 细节级描边：MAIN/THIN 描边会吞掉 <10px 填充（自吞效应）
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.THIN) * 0.8);
-    Z.ctx.fillStyle = Z.T.COLORS.Z_DN_SUIT_DARK;
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-Z.UNIT * 0.24, Z.UNIT * 0.45);
-    Z.ctx.lineTo(-Z.UNIT * 0.085, Z.UNIT * 0.45);
-    Z.ctx.lineTo(-Z.UNIT * 0.02, Z.UNIT * 0.57);
-    Z.ctx.closePath();
-    Z.ctx.fill(); Z.ctx.stroke();
-    Z.ctx.beginPath();
-    Z.ctx.moveTo( Z.UNIT * 0.24, Z.UNIT * 0.45);
-    Z.ctx.lineTo( Z.UNIT * 0.085, Z.UNIT * 0.45);
-    Z.ctx.lineTo( Z.UNIT * 0.02, Z.UNIT * 0.57);
-    Z.ctx.closePath();
-    Z.ctx.fill(); Z.ctx.stroke();
-    // 领带（深紫黑：小结 + 渐窄带身，垂至裤腰）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_DN_TIE;
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-Z.UNIT * 0.082, Z.UNIT * 0.525);
-    Z.ctx.lineTo( Z.UNIT * 0.082, Z.UNIT * 0.525);
-    Z.ctx.lineTo( Z.UNIT * 0.072, Z.UNIT * 0.67);
-    Z.ctx.lineTo(-Z.UNIT * 0.072, Z.UNIT * 0.67);
-    Z.ctx.closePath();
-    Z.ctx.fill(); Z.ctx.stroke();
-    // 领带小结（深紫黑小梯形，从下巴正下方探出）
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-Z.UNIT * 0.085, Z.UNIT * 0.475);
-    Z.ctx.lineTo( Z.UNIT * 0.085, Z.UNIT * 0.475);
-    Z.ctx.lineTo( Z.UNIT * 0.105, Z.UNIT * 0.53);
-    Z.ctx.lineTo(-Z.UNIT * 0.105, Z.UNIT * 0.53);
-    Z.ctx.closePath();
-    Z.ctx.fill(); Z.ctx.stroke();
-    // 领带米白斜纹 ×2（细斜线，参照设定图斜条纹领带）
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_DN_SHIRT, R._strokeW(Z.T.STROKE.THIN) * 0.8);
-    for (const ty of [Z.UNIT * 0.555, Z.UNIT * 0.615]) {
-      Z.ctx.beginPath();
-      Z.ctx.moveTo(-Z.UNIT * 0.062, ty + Z.UNIT * 0.028);
-      Z.ctx.lineTo( Z.UNIT * 0.062, ty - Z.UNIT * 0.028);
-      Z.ctx.stroke();
-    }
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.MAIN));
-    // 单纽扣（腹中偏下，深紫圆点，参照设定图未扣的单排扣）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_DN_SUIT_DARK;
-    Z.ctx.beginPath();
-    Z.ctx.arc(0, Z.UNIT * 0.705, Z.UNIT * 0.033, 0, Math.PI * 2);
-    Z.ctx.fill();
-    // 下摆撕裂三角 ×3（深紫内衬外露，锯齿破损下摆）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_DN_SUIT_DARK;
-    const hemY = Z.UNIT * 0.74;
-    for (const [tx, tw] of [[-0.26, 0.15], [-0.03, 0.18], [0.21, 0.13]]) {
-      Z.ctx.beginPath();
-      Z.ctx.moveTo(Z.UNIT * (tx - tw / 2), hemY - Z.UNIT * 0.02);
-      Z.ctx.lineTo(Z.UNIT * (tx + tw / 2), hemY - Z.UNIT * 0.02);
-      Z.ctx.lineTo(Z.UNIT * tx, hemY + Z.UNIT * 0.10);
-      Z.ctx.closePath();
-      Z.ctx.fill();
-    }
   }
+  _zpMain(Z, R);
 }
 
-/** v28 橄榄球护肩 ×2(探出头部轮廓) */
+/** v28 橄榄球护肩 ×2（探出头轮廓，造型保留） */
 function _zpShoulders(Z, R) {
   if (Z.type === 'football') {
-    // v28 护肩 ×2（参照设定图：球状红色护肩覆在短袖上、外探出头部轮廓两侧；
-    //   v27 教训：Q 版巨头遮挡，肩部配件必须探出头部轮廓才有辨识度）
+    const U = Z.UNIT;
     for (const s of [-1, 1]) {
-      const px = s * Z.UNIT * 0.64;
-      const py = Z.UNIT * 0.20;
-      const prx = Z.UNIT * 0.24;
-      const pry = Z.UNIT * 0.185;
+      const px = s * U * 0.62;
+      const py = U * 0.10;
+      const prx = U * 0.24;
+      const pry = U * 0.185;
       const pGrad = Z.ctx.createLinearGradient(px - prx, py - pry, px + prx, py + pry);
       pGrad.addColorStop(0, Z.T.COLORS.Z_FH_RED_LIGHT);
       pGrad.addColorStop(0.55, Z.T.COLORS.Z_FH_RED);
@@ -488,674 +406,566 @@ function _zpShoulders(Z, R) {
       Z.ctx.beginPath();
       Z.ctx.ellipse(px, py, prx, pry, s * 0.18, 0, Math.PI * 2);
       Z.ctx.fill(); Z.ctx.stroke();
-      // 甲片缝线弧（下半圈深红细线 = 分瓣感）
       R._setStroke(Z.ctx, Z.T.COLORS.Z_FH_RED_DARK, R._strokeW(Z.T.STROKE.THIN));
       Z.ctx.beginPath();
       Z.ctx.ellipse(px, py, prx * 0.74, pry * 0.64, s * 0.18, Math.PI * 0.15, Math.PI * 0.85);
       Z.ctx.stroke();
-      // 顶部受光高光（左上小椭圆，赛璐璐）
       Z.ctx.fillStyle = 'rgba(255,255,255,0.30)';
       Z.ctx.beginPath();
       Z.ctx.ellipse(px - prx * 0.34, py - pry * 0.42, prx * 0.30, pry * 0.26, s * -0.30, 0, Math.PI * 2);
       Z.ctx.fill();
-      R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.MAIN));
+      _zpMain(Z, R);
     }
   }
-
 }
 
-/** 腿 + 靴(按类型差异化粗细/配色) */
+/** v93 腿：西裤 + 皮鞋（微开步站姿） */
 function _zpLegs(Z, R) {
-  // 腿（按类型差异化粗细）
-  // v26 铁桶僵尸：深灰破裤 + 暗棕工装靴（裤靴双色）
-  const legW = Z.type === 'bucket' ? Z.ZB.BUCKET_LEG_W :
-               Z.type === 'imp' ? Z.ZB.IMP_LEG_W :
-               Z.type === 'football' ? Z.ZB.FOOTBALL_LEG_W :
-               Z.type === 'king' ? Z.ZB.KING_LEG_W : Z.ZB.DANCER_LEG_W;
-  // v27 小鬼僵尸：袍长及踝不露腿，靴子改画在袍摆下（见身体段 imp 分支）
-  if (Z.type !== 'imp') {
-    // v29 舞王：紫西裤（套装同色）
-    Z.ctx.fillStyle = Z.type === 'bucket' ? Z.T.COLORS.Z_PANTS :
-                    Z.type === 'football' ? Z.T.COLORS.Z_FH_JERSEY :
-                    Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT :
-                    Z.type === 'king' ? Z.T.COLORS.Z_KING_ROBE_DARK : Z.def.color;   // v51 深紫袍裤
+  const U = Z.UNIT;
+  const legW = Z.B.legW;
+  // 裤色
+  const pants = Z.type === 'bucket' ? PZ.PANTS :
+                Z.type === 'imp' ? '#5C544C' :
+                Z.type === 'football' ? '#3E5233' :
+                Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SUIT_DARK :
+                Z.type === 'king' ? Z.T.COLORS.Z_KING_ROBE_DARK : PZ.PANTS;
+  const pantsOut = Z.type === 'bucket' ? PZ.PANTS_OUT : PZ.OUTLINE;
+  const shoe = Z.type === 'king' ? Z.T.COLORS.Z_KING_CAPE_DARK :
+               Z.type === 'football' ? Z.T.COLORS.Z_FH_CLEAT :
+               Z.type === 'dancer' ? Z.T.COLORS.Z_DN_SHOE : PZ.SHOES;
+  R._setStroke(Z.ctx, pantsOut, R._strokeW(Z.T.STROKE.MAIN) * 0.82);
+  Z.ctx.fillStyle = pants;
+  for (const s of [-1, 1]) {
+    const lx = s * U * 0.19;
+    const lg = Z.ctx.createLinearGradient(lx - U * legW, 0, lx + U * legW, 0);
+    lg.addColorStop(0, pants);
+    lg.addColorStop(1, pants);
+    Z.ctx.fillStyle = lg;
     Z.ctx.beginPath();
-    Z.ctx.ellipse(-Z.UNIT * 0.2, Z.UNIT * 0.8, Z.UNIT * legW, Z.UNIT * 0.14, 0, 0, Math.PI * 2);
-    Z.ctx.fill(); Z.ctx.stroke();
-    Z.ctx.beginPath();
-    Z.ctx.ellipse( Z.UNIT * 0.2, Z.UNIT * 0.8, Z.UNIT * legW, Z.UNIT * 0.14, 0, 0, Math.PI * 2);
-    Z.ctx.fill(); Z.ctx.stroke();
-  }
-  if (Z.type === 'bucket') {
-    // 工装靴（外侧偏移椭圆 = 靴头）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_BOOT;
-    Z.ctx.beginPath();
-    Z.ctx.ellipse(-Z.UNIT * 0.27, Z.UNIT * 0.84, Z.UNIT * 0.105, Z.UNIT * 0.095, 0, 0, Math.PI * 2);
-    Z.ctx.fill(); Z.ctx.stroke();
-    Z.ctx.beginPath();
-    Z.ctx.ellipse( Z.UNIT * 0.27, Z.UNIT * 0.84, Z.UNIT * 0.105, Z.UNIT * 0.095, 0, 0, Math.PI * 2);
+    safeRoundRect(Z.ctx, lx - U * legW, U * 0.52, U * legW * 2, U * 0.40, U * legW * 0.8);
     Z.ctx.fill(); Z.ctx.stroke();
   }
-  if (Z.type === 'football') {
-    // v28 短裤侧条纹（外侧奶油白短弧 ×2）+ 棕色橄榄球鞋（参照设定图）
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_FH_STRIPE, R._strokeW(Z.T.STROKE.THIN));
-    for (const s of [-1, 1]) {
-      Z.ctx.beginPath();
-      Z.ctx.moveTo(s * Z.UNIT * 0.36, Z.UNIT * 0.72);
-      Z.ctx.quadraticCurveTo(s * Z.UNIT * 0.41, Z.UNIT * 0.80, s * Z.UNIT * 0.35, Z.UNIT * 0.88);
-      Z.ctx.stroke();
-    }
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.MAIN));
-    Z.ctx.fillStyle = Z.T.COLORS.Z_FH_CLEAT;
-    for (const s of [-1, 1]) {
-      Z.ctx.beginPath();
-      Z.ctx.ellipse(s * Z.UNIT * 0.27, Z.UNIT * 0.85, Z.UNIT * 0.11, Z.UNIT * 0.095, 0, 0, Math.PI * 2);
-      Z.ctx.fill(); Z.ctx.stroke();
-    }
+  // 鞋（外八微张）
+  Z.ctx.fillStyle = shoe;
+  for (const s of [-1, 1]) {
+    Z.ctx.beginPath();
+    Z.ctx.ellipse(s * U * 0.21, U * 0.94, U * 0.13, U * 0.085, s * 0.14, 0, Math.PI * 2);
+    Z.ctx.fill(); Z.ctx.stroke();
   }
-  if (Z.type === 'dancer') {
-    // v29 圆头皮鞋 ×2（深棕牛津鞋，外八字微张 = 舞步站姿；v29.1 工艺复查修正僵硬平行）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_DN_SHOE;
-    for (const s of [-1, 1]) {
-      Z.ctx.beginPath();
-      Z.ctx.ellipse(s * Z.UNIT * 0.25, Z.UNIT * 0.85, Z.UNIT * 0.115, Z.UNIT * 0.09, s * 0.12, 0, Math.PI * 2);
-      Z.ctx.fill(); Z.ctx.stroke();
-    }
-  }
-  if (Z.type === 'king') {
-    // v51 暗红战靴 ×2（金环靴口 = 王室规格）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_KING_CAPE_DARK;
-    for (const s of [-1, 1]) {
-      Z.ctx.beginPath();
-      Z.ctx.ellipse(s * Z.UNIT * 0.26, Z.UNIT * 0.85, Z.UNIT * 0.12, Z.UNIT * 0.10, 0, 0, Math.PI * 2);
-      Z.ctx.fill(); Z.ctx.stroke();
-    }
-    Z.ctx.fillStyle = Z.T.COLORS.Z_KING_GOLD;
-    for (const s of [-1, 1]) {
-      Z.ctx.beginPath();
-      Z.ctx.ellipse(s * Z.UNIT * 0.26, Z.UNIT * 0.78, Z.UNIT * 0.085, Z.UNIT * 0.035, 0, 0, Math.PI * 2);
-      Z.ctx.fill(); Z.ctx.stroke();
-    }
-  }
-
+  _zpMain(Z, R);
 }
 
-/** Q 版大头 + 头顶哑光高光 */
+/** v93 头：大头骨椭圆（灰绿皮肤 + 分层明暗 + 招风耳 + 皱纹 + 乱发） */
 function _zpHead(Z, R) {
-  // 大头（Q版核心：占身体 60% 以上，上移以便装饰头顶）
-  const H = Z.T.HEAD;
-  Z.headCY = Z.UNIT * H.ZOMBIE_HEAD_CY;
-  Z.headR  = Z.UNIT * H.ZOMBIE_HEAD_R;
-  Z.ctx.fillStyle = Z.def.color;
-  Z.ctx.beginPath();
-  Z.ctx.arc(0, Z.headCY, Z.headR, 0, Math.PI * 2);
-  Z.ctx.fill(); Z.ctx.stroke();
+  const U = Z.UNIT;
+  const imp = Z.type === 'imp';
+  Z.headRX = U * (imp ? 0.52 : 0.58);
+  Z.headRY = U * (imp ? 0.58 : 0.64);
+  Z.headCY = U * (imp ? -0.44 : -0.50);
+  const { ctx } = Z;
+  const headPath = () => {
+    ctx.beginPath();
+    ctx.ellipse(0, Z.headCY, Z.headRX, Z.headRY, 0, 0, Math.PI * 2);
+  };
 
-  // 头顶高光（僵尸微弱哑光，与植物亮白高光明确区分）
-  Z.ctx.fillStyle = Z.T.COLORS.Z_HIGHLIGHT;
-  Z.ctx.beginPath();
-  Z.ctx.ellipse(Z.headR * H.HLIGHT_X, Z.headCY + Z.headR * H.HLIGHT_Y,
-              Z.headR * H.HLIGHT_W, Z.headR * H.HLIGHT_H,
-              H.HLIGHT_ROT, 0, Math.PI * 2);
-  Z.ctx.fill();
+  // 招风耳 ×2（先画，压在头下）
+  for (const s of [-1, 1]) {
+    ctx.fillStyle = Z.skinDark;
+    ctx.beginPath();
+    ctx.ellipse(s * Z.headRX * 0.99, Z.headCY + U * 0.10, U * 0.105, U * 0.17, s * -0.15, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+  }
 
+  // 头骨主体（径向渐变：左上亮 → 基色 → 右下暗）
+  const hg = ctx.createRadialGradient(-Z.headRX * 0.40, Z.headCY - Z.headRY * 0.45, 0, 0, Z.headCY, Z.headRX * 1.45);
+  hg.addColorStop(0, Z.skinLight);
+  hg.addColorStop(0.58, Z.def.color);
+  hg.addColorStop(1, Z.skinDark);
+  ctx.fillStyle = hg;
+  headPath();
+  ctx.fill(); ctx.stroke();
+
+  // 下颌体积分层（clip 头内）
+  ctx.save();
+  headPath(); ctx.clip();
+  ctx.fillStyle = 'rgba(57,65,44,0.16)';
+  ctx.beginPath();
+  ctx.ellipse(Z.headRX * 0.30, Z.headCY + Z.headRY * 0.68, Z.headRX * 0.85, Z.headRY * 0.42, 0.15, 0, Math.PI * 2);
+  ctx.fill();
+  // 颧骨暗影（眼下）
+  ctx.fillStyle = 'rgba(57,65,44,0.12)';
+  ctx.beginPath();
+  ctx.ellipse(-Z.headRX * 0.42, Z.headCY + Z.headRY * 0.18, Z.headRX * 0.20, Z.headRY * 0.10, 0.3, 0, Math.PI * 2);
+  ctx.ellipse(Z.headRX * 0.42, Z.headCY + Z.headRY * 0.18, Z.headRX * 0.20, Z.headRY * 0.10, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  // 左上哑光高光
+  ctx.fillStyle = 'rgba(255,255,255,0.14)';
+  ctx.beginPath();
+  ctx.ellipse(-Z.headRX * 0.42, Z.headCY - Z.headRY * 0.52, Z.headRX * 0.30, Z.headRY * 0.16, -0.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 头顶乱发 ×4（短弧线戳出头顶；小鬼兜帽下不画）
+  if (Z.type !== 'imp') {
+    R._setStroke(Z.ctx, PZ.HAIR, R._strokeW(Z.T.STROKE.THIN));
+    const hairBase = Z.headCY - Z.headRY * 0.94;
+    const strands = [[-0.30, -0.07], [-0.08, -0.11], [0.12, -0.10], [0.32, -0.06]];
+    for (const [sx, sl] of strands) {
+      const bx = sx * Z.headRX;
+      ctx.beginPath();
+      ctx.moveTo(bx, hairBase + Z.headRY * 0.06);
+      ctx.quadraticCurveTo(bx + sx * 0.05 * U, hairBase + sl * Z.headRY * 0.5, bx + sx * 0.11 * U, hairBase + sl * Z.headRY);
+      ctx.stroke();
+    }
+    _zpMain(Z, R);
+  }
 }
 
-/** 头顶装饰(铁桶/破兜帽/高顶礼帽/头盔/黄金王冠) */
+/** 头顶装饰（铁桶/破兜帽/高顶礼帽/头盔/黄金王冠，适配新头骨几何） */
 function _zpHeadgear(Z, R) {
-  // 头顶装饰（按类型差异化：铁桶/蝴蝶结/头盔+角/全盔）
+  const U = Z.UNIT;
+  const { ctx } = Z;
+  const hcY = Z.headCY;
+  const hRX = Z.headRX, hRY = Z.headRY;
+
   if (Z.type === 'bucket') {
-    // v26 金属铁桶（参照设定图：上窄下宽圆台 ≈1:1.65 锥度夸张、桶口朝下扣头、
-    //   左→右银灰→中灰→暗灰渐变、厚底缘环、两侧 D 形吊耳(突出桶壁)、顶 V 形锈
-    //   缺口、锈斑 ×3；桶口下缘上移留出眉区空间）
-    const bTop = Z.headCY - Z.headR * 1.69;            // 桶顶
-    const bBot = Z.headCY - Z.headR * 0.52;            // 桶口下缘（眉线上方，脸全露）
-    const bHalfTop = Z.headR * 0.62;                 // 顶半宽（上窄，锥度夸张）
-    const bHalfBot = Z.headR * 1.02;                 // 底半宽（下宽，盖过头侧）
-    // 桶身：梯形 + 底边微弧
-    const bGrad = Z.ctx.createLinearGradient(-bHalfBot, 0, bHalfBot, 0);
+    // 金属铁桶（上窄下宽圆台，深扣至眉上方，参考图大桶比例）
+    const rimY = hcY - hRY * 0.26;              // 桶口下缘（眉上方）
+    const topY = rimY - U * 0.72;               // 桶顶
+    const halfTop = hRX * 0.78;
+    const halfBot = hRX * 1.12;
+    const bGrad = ctx.createLinearGradient(-halfBot, 0, halfBot, 0);
     bGrad.addColorStop(0, Z.T.COLORS.Z_BUCKET_LIGHT);
     bGrad.addColorStop(0.45, Z.T.COLORS.Z_BUCKET);
     bGrad.addColorStop(1, Z.T.COLORS.Z_BUCKET_DARK);
-    Z.ctx.fillStyle = bGrad;
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-bHalfTop, bTop);
-    Z.ctx.lineTo( bHalfTop, bTop);
-    Z.ctx.lineTo( bHalfBot, bBot - Z.headR * 0.06);
-    Z.ctx.quadraticCurveTo(0, bBot + Z.headR * 0.07, -bHalfBot, bBot - Z.headR * 0.06);
-    Z.ctx.closePath();
-    Z.ctx.fill(); Z.ctx.stroke();
-    // 左侧竖向金属高光带（赛璐璐反光，与全队高光位一致）
-    Z.ctx.fillStyle = 'rgba(255,255,255,0.30)';
-    Z.ctx.beginPath();
-    Z.ctx.ellipse(-bHalfBot * 0.44, bTop + Z.headR * 0.60, Z.headR * 0.10, Z.headR * 0.34, -0.06, 0, Math.PI * 2);
-    Z.ctx.fill();
-    // 厚底缘环带（3D 桶口，比桶身略宽）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_BUCKET_DARK;
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-bHalfBot * 1.04, bBot - Z.headR * 0.10);
-    Z.ctx.lineTo( bHalfBot * 1.04, bBot - Z.headR * 0.10);
-    Z.ctx.quadraticCurveTo(0, bBot + Z.headR * 0.07, -bHalfBot * 1.04, bBot - Z.headR * 0.10);
-    Z.ctx.closePath();
-    Z.ctx.fill(); Z.ctx.stroke();
-    // 两侧 D 形吊耳（桶壁中上段、突出桶壁轮廓外，暗色耳 + 亮色耳孔）
-    const hy = bTop + (bBot - bTop) * 0.40;
-    const hwHy = bHalfTop + (bHalfBot - bHalfTop) * 0.40;   // 吊耳高度处桶壁半宽
+    ctx.fillStyle = bGrad;
+    ctx.beginPath();
+    ctx.moveTo(-halfTop, topY);
+    ctx.lineTo(halfTop, topY);
+    ctx.lineTo(halfBot, rimY - hRY * 0.06);
+    ctx.quadraticCurveTo(0, rimY + hRY * 0.05, -halfBot, rimY - hRY * 0.06);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // 竖向金属高光带
+    ctx.fillStyle = 'rgba(255,255,255,0.30)';
+    ctx.beginPath();
+    ctx.ellipse(-halfBot * 0.44, topY + U * 0.26, hRX * 0.10, U * 0.18, -0.06, 0, Math.PI * 2);
+    ctx.fill();
+    // 厚底缘环带
+    ctx.fillStyle = Z.T.COLORS.Z_BUCKET_DARK;
+    ctx.beginPath();
+    ctx.moveTo(-halfBot * 1.04, rimY - hRY * 0.10);
+    ctx.lineTo(halfBot * 1.04, rimY - hRY * 0.10);
+    ctx.quadraticCurveTo(0, rimY + hRY * 0.05, -halfBot * 1.04, rimY - hRY * 0.10);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // 两侧 D 形吊耳（缩小，避免误读为耳朵）
+    const hy = topY + (rimY - topY) * 0.42;
+    const hwHy = halfTop + (halfBot - halfTop) * 0.42;
     for (const s of [-1, 1]) {
-      Z.ctx.fillStyle = Z.T.COLORS.Z_BUCKET_DARK;
-      Z.ctx.beginPath();
-      Z.ctx.ellipse(s * (hwHy + Z.headR * 0.02), hy, Z.headR * 0.16, Z.headR * 0.24, s * 0.22, 0, Math.PI * 2);
-      Z.ctx.fill(); Z.ctx.stroke();
-      Z.ctx.fillStyle = Z.T.COLORS.Z_BUCKET_LIGHT;
-      Z.ctx.beginPath();
-      Z.ctx.ellipse(s * (hwHy + Z.headR * 0.02), hy, Z.headR * 0.07, Z.headR * 0.13, s * 0.22, 0, Math.PI * 2);
-      Z.ctx.fill();
+      ctx.fillStyle = Z.T.COLORS.Z_BUCKET_DARK;
+      ctx.beginPath();
+      ctx.ellipse(s * (hwHy + hRX * 0.01), hy, hRX * 0.11, hRX * 0.16, s * 0.22, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = Z.T.COLORS.Z_BUCKET_LIGHT;
+      ctx.beginPath();
+      ctx.ellipse(s * (hwHy + hRX * 0.01), hy, hRX * 0.048, hRX * 0.09, s * 0.22, 0, Math.PI * 2);
+      ctx.fill();
     }
-    // 顶部 V 形锈缺口（破损记号）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_RUST;
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-Z.headR * 0.16, bTop - Z.headR * 0.02);
-    Z.ctx.lineTo( Z.headR * 0.16, bTop - Z.headR * 0.02);
-    Z.ctx.lineTo(0, bTop + Z.headR * 0.17);
-    Z.ctx.closePath();
-    Z.ctx.fill(); Z.ctx.stroke();
-    // 锈斑 ×3（顶右缘 / 右壁中下 / 左壁近缘）
-    for (const [rx, ry, rw, rh, rr] of [
-      [ bHalfTop * 0.50, bTop + Z.headR * 0.12, 0.17, 0.10, 0.45],
-      [ bHalfBot * 0.55, bBot - Z.headR * 0.32, 0.14, 0.09, -0.30],
-      [-bHalfBot * 0.60, bBot - Z.headR * 0.18, 0.11, 0.075, 0.20],
+    // 顶部 V 形锈缺口 + 锈斑 ×3
+    ctx.fillStyle = Z.T.COLORS.Z_RUST;
+    ctx.beginPath();
+    ctx.moveTo(-hRX * 0.16, topY - hRY * 0.015);
+    ctx.lineTo(hRX * 0.16, topY - hRY * 0.015);
+    ctx.lineTo(0, topY + hRY * 0.14);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    for (const [rxp, ryp, rw, rh, rr] of [
+      [halfTop * 0.50, topY + hRY * 0.10, 0.17, 0.10, 0.45],
+      [halfBot * 0.55, rimY - hRY * 0.30, 0.14, 0.09, -0.30],
+      [-halfBot * 0.60, rimY - hRY * 0.16, 0.11, 0.075, 0.20],
     ]) {
-      Z.ctx.beginPath();
-      Z.ctx.ellipse(rx, ry, Z.headR * rw, Z.headR * rh, rr, 0, Math.PI * 2);
-      Z.ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(rxp, ryp, hRX * rw, hRX * rh, rr, 0, Math.PI * 2);
+      ctx.fill();
     }
+    _zpMain(Z, R);
   } else if (Z.type === 'imp') {
-    // v27 破兜帽（参照设定图：罩头顶+两侧包边、波浪内缘在眉线上方、
-    //   左上受光→右下深影渐变、竖褶线 ×2、左缘 V 形撕裂口、黑色乱发钻出）
-    const hcY = Z.headCY + Z.headR * 0.02;
-    const hR1 = Z.headR * 1.10;
-    const wy = Z.headCY - Z.headR * 0.52;
-    const hGrad = Z.ctx.createLinearGradient(-Z.headR * 0.9, wy - Z.headR * 0.55, Z.headR * 0.95, Z.headCY + Z.headR * 0.1);
+    // 破兜帽（罩头顶 + 波浪内缘在眉上方 + 竖褶 + 撕裂口 + 乱发）
+    const hcY2 = hcY + hRY * 0.02;
+    const hR1 = hRX * 1.14;
+    const wy = hcY - hRY * 0.46;
+    const hGrad = ctx.createLinearGradient(-hRX * 0.9, wy - hRY * 0.55, hRX * 0.95, hcY + hRY * 0.1);
     hGrad.addColorStop(0, Z.T.COLORS.Z_HOOD_LIGHT);
     hGrad.addColorStop(0.55, Z.T.COLORS.Z_HOOD);
     hGrad.addColorStop(1, Z.T.COLORS.Z_HOOD_DARK);
-    Z.ctx.fillStyle = hGrad;
-    Z.ctx.beginPath();
-    Z.ctx.arc(0, hcY, hR1, Math.PI * 1.07, Math.PI * 1.93);
-    Z.ctx.lineTo(Z.headR * 0.84, wy - Z.headR * 0.03);
-    Z.ctx.quadraticCurveTo(Z.headR * 0.45, wy + Z.headR * 0.09, Z.headR * 0.12, wy - Z.headR * 0.01);
-    Z.ctx.quadraticCurveTo(-Z.headR * 0.20, wy + Z.headR * 0.10, -Z.headR * 0.55, wy);
-    Z.ctx.quadraticCurveTo(-Z.headR * 0.80, wy - Z.headR * 0.06, -Z.headR * 0.84, wy - Z.headR * 0.03);
-    Z.ctx.closePath();
-    Z.ctx.fill(); Z.ctx.stroke();
-    // 兜帽竖褶线 ×2（顶部向两侧压弯的细弧）
+    ctx.fillStyle = hGrad;
+    ctx.beginPath();
+    ctx.arc(0, hcY2, hR1, Math.PI * 1.07, Math.PI * 1.93);
+    ctx.lineTo(hRX * 0.84, wy - hRY * 0.03);
+    ctx.quadraticCurveTo(hRX * 0.45, wy + hRY * 0.09, hRX * 0.12, wy - hRY * 0.01);
+    ctx.quadraticCurveTo(-hRX * 0.20, wy + hRY * 0.10, -hRX * 0.55, wy);
+    ctx.quadraticCurveTo(-hRX * 0.80, wy - hRY * 0.06, -hRX * 0.84, wy - hRY * 0.03);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // 竖褶线 ×2
     R._setStroke(Z.ctx, Z.T.COLORS.Z_HOOD_DARK, R._strokeW(Z.T.STROKE.THIN));
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-Z.headR * 0.28, Z.headCY - Z.headR * 0.86);
-    Z.ctx.quadraticCurveTo(-Z.headR * 0.55, Z.headCY - Z.headR * 0.70, -Z.headR * 0.66, Z.headCY - Z.headR * 0.44);
-    Z.ctx.stroke();
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(Z.headR * 0.30, Z.headCY - Z.headR * 0.84);
-    Z.ctx.quadraticCurveTo(Z.headR * 0.58, Z.headCY - Z.headR * 0.64, Z.headR * 0.64, Z.headCY - Z.headR * 0.42);
-    Z.ctx.stroke();
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.MAIN));
-    // 左缘 V 形撕裂口（兜帽破损记号）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_HOOD_DARK;
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-hR1 * 0.965, Z.headCY - Z.headR * 0.40);
-    Z.ctx.lineTo(-hR1 * 0.82, Z.headCY - Z.headR * 0.26);
-    Z.ctx.lineTo(-hR1 * 0.965, Z.headCY - Z.headR * 0.14);
-    Z.ctx.closePath();
-    Z.ctx.fill();
-    // 黑色乱发：额前 2 缕 + 右侧 1 撇（INK 细曲线，兜帽内缘下钻出）
-    R._setStroke(Z.ctx, Z.T.COLORS.INK, R._strokeW(Z.T.STROKE.THIN));
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-Z.headR * 0.30, wy + Z.headR * 0.02);
-    Z.ctx.quadraticCurveTo(-Z.headR * 0.36, wy + Z.headR * 0.08, -Z.headR * 0.24, wy + Z.headR * 0.13);
-    Z.ctx.stroke();
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(Z.headR * 0.22, wy + Z.headR * 0.02);
-    Z.ctx.quadraticCurveTo(Z.headR * 0.28, wy + Z.headR * 0.08, Z.headR * 0.19, wy + Z.headR * 0.12);
-    Z.ctx.stroke();
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(Z.headR * 0.78, Z.headCY - Z.headR * 0.36);
-    Z.ctx.quadraticCurveTo(Z.headR * 1.00, Z.headCY - Z.headR * 0.36, Z.headR * 1.13, Z.headCY - Z.headR * 0.22);
-    Z.ctx.stroke();
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.MAIN));
+    ctx.beginPath();
+    ctx.moveTo(-hRX * 0.28, hcY - hRY * 0.86);
+    ctx.quadraticCurveTo(-hRX * 0.55, hcY - hRY * 0.70, -hRX * 0.66, hcY - hRY * 0.44);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(hRX * 0.30, hcY - hRY * 0.84);
+    ctx.quadraticCurveTo(hRX * 0.58, hcY - hRY * 0.64, hRX * 0.64, hcY - hRY * 0.42);
+    ctx.stroke();
+    _zpMain(Z, R);
+    // 左缘 V 形撕裂口
+    ctx.fillStyle = Z.T.COLORS.Z_HOOD_DARK;
+    ctx.beginPath();
+    ctx.moveTo(-hR1 * 0.965, hcY - hRY * 0.40);
+    ctx.lineTo(-hR1 * 0.82, hcY - hRY * 0.26);
+    ctx.lineTo(-hR1 * 0.965, hcY - hRY * 0.14);
+    ctx.closePath();
+    ctx.fill();
+    // 黑色乱发（额前 2 缕 + 右侧 1 撇）
+    R._setStroke(Z.ctx, PZ.HAIR, R._strokeW(Z.T.STROKE.THIN));
+    ctx.beginPath();
+    ctx.moveTo(-hRX * 0.30, wy + hRY * 0.02);
+    ctx.quadraticCurveTo(-hRX * 0.36, wy + hRY * 0.08, -hRX * 0.24, wy + hRY * 0.13);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(hRX * 0.22, wy + hRY * 0.02);
+    ctx.quadraticCurveTo(hRX * 0.28, wy + hRY * 0.08, hRX * 0.19, wy + hRY * 0.12);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(hRX * 0.78, hcY - hRY * 0.36);
+    ctx.quadraticCurveTo(hRX * 1.00, hcY - hRY * 0.36, hRX * 1.13, hcY - hRY * 0.22);
+    ctx.stroke();
+    _zpMain(Z, R);
   } else if (Z.type === 'dancer') {
-    // v29 黑高顶礼帽（参照设定图：直筒帽冠 + 宽平帽檐、帽檐压眉线上方、
-    //   轻微歪戴 ~-0.10 rad = 随性舞者感；耳朵全被帽檐遮（设定图确认）、
-    //   无缎带。v29.1 工艺复查修正：帽檐后画盖住冠底缘=接缝干净无断线；
-    //   帽冠改对称圆角直筒（消除顶部圆角不对称+左缘渐变锯齿）
-    Z.ctx.save();
-    Z.ctx.translate(0, Z.headCY - Z.headR * 0.46);
-    Z.ctx.rotate(-0.10);
-    const brimHalf = Z.headR * 0.95;   // 帽檐半宽（比该高度头轮廓更宽）
-    const brimH    = Z.headR * 0.13;   // 帽檐半厚
-    const cHalf    = Z.headR * 0.52;   // 帽冠半宽（对称直筒）
-    const cH       = Z.headR * 0.82;   // 帽冠高（高顶识别符号）
-    // 帽冠（对称圆角直筒，左受光→右暗渐变）
-    const cGrad = Z.ctx.createLinearGradient(-cHalf, 0, cHalf, 0);
+    // 黑高顶礼帽（歪戴 -0.10 rad）
+    ctx.save();
+    ctx.translate(0, hcY - hRY * 0.46);
+    ctx.rotate(-0.10);
+    const brimHalf = hRX * 0.95;
+    const brimH = hRY * 0.13;
+    const cHalf = hRX * 0.52;
+    const cH = hRY * 0.72;
+    const cGrad = ctx.createLinearGradient(-cHalf, 0, cHalf, 0);
     cGrad.addColorStop(0, Z.T.COLORS.Z_DN_HAT_LIGHT);
     cGrad.addColorStop(0.38, Z.T.COLORS.Z_DN_HAT);
     cGrad.addColorStop(1, Z.T.COLORS.Z_DN_HAT_DARK);
-    Z.ctx.fillStyle = cGrad;
-    Z.ctx.beginPath();
-    safeRoundRect(Z.ctx, -cHalf, -cH, cHalf * 2, cH + Z.headR * 0.05, Z.headR * 0.09);
-    Z.ctx.fill(); Z.ctx.stroke();
-    // 帽冠左上受光竖带（赛璐璐反光，与全队高光位一致）
-    Z.ctx.fillStyle = 'rgba(255,255,255,0.20)';
-    Z.ctx.beginPath();
-    Z.ctx.ellipse(-cHalf * 0.52, -cH * 0.46, Z.headR * 0.09, cH * 0.28, 0.10, 0, Math.PI * 2);
-    Z.ctx.fill();
-    // 帽檐（后画=盖在帽冠底缘之上，近黑扁平椭圆带，接缝干净）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_DN_HAT_DARK;
-    Z.ctx.beginPath();
-    Z.ctx.ellipse(0, 0, brimHalf, brimH, 0, 0, Math.PI * 2);
-    Z.ctx.fill(); Z.ctx.stroke();
-    Z.ctx.restore();
-    // 恢复主描边（僵尸暗色）
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.MAIN));
+    ctx.fillStyle = cGrad;
+    ctx.beginPath();
+    safeRoundRect(ctx, -cHalf, -cH, cHalf * 2, cH + hRY * 0.05, hRX * 0.09);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.20)';
+    ctx.beginPath();
+    ctx.ellipse(-cHalf * 0.52, -cH * 0.46, hRX * 0.09, cH * 0.28, 0.10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = Z.T.COLORS.Z_DN_HAT_DARK;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, brimHalf, brimH, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+    _zpMain(Z, R);
   } else if (Z.type === 'football') {
-    // v28 橄榄球头盔（参照设定图：红色圆顶穹壳 + 奶油中条纹 + 侧气孔 +
-    //   眉缘缓冲条；盔口下缘压在眼上方 = 眼从盔缘下露出。锈斑删除：
-    //   v28.2 VLM 复查锈斑与左上高光带拥挤被误读为杂点，磨损感由球衣下摆
-    //   撕裂/短裤破口承担（SIMPLIFY）
-    const domeR = Z.headR * 0.95;
-    const hGrad = Z.ctx.createLinearGradient(-domeR, 0, domeR, 0);
+    // 红色圆顶头盔 + 奶油中条纹 + 眉缘缓冲条 + 侧气孔
+    const domeRX = hRX * 1.06;
+    const domeRY = hRY * 1.00;
+    const domeCY = hcY - hRY * 0.10;
+    const hGrad = ctx.createLinearGradient(-domeRX, 0, domeRX, 0);
     hGrad.addColorStop(0, Z.T.COLORS.Z_FH_RED_LIGHT);
     hGrad.addColorStop(0.5, Z.T.COLORS.Z_FH_RED);
     hGrad.addColorStop(1, Z.T.COLORS.Z_FH_RED_DARK);
-    Z.ctx.fillStyle = hGrad;
-    Z.ctx.beginPath();
-    Z.ctx.arc(0, Z.headCY, domeR, Math.PI * 1.02, Math.PI * 1.98);
-    Z.ctx.lineTo( Z.headR * 0.92, Z.headCY);
-    Z.ctx.lineTo(-Z.headR * 0.92, Z.headCY);
-    Z.ctx.closePath();
-    Z.ctx.fill(); Z.ctx.stroke();
-    // 中条纹（奶油白，盔顶中线，上窄下宽垂至眉缘条）
-    const sHalf = Z.headR * 0.21;
-    Z.ctx.fillStyle = Z.T.COLORS.Z_FH_STRIPE;
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-sHalf * 0.55, Z.headCY - domeR * 0.985);
-    Z.ctx.quadraticCurveTo(-sHalf, Z.headCY - domeR * 0.45, -sHalf, Z.headCY - Z.headR * 0.04);
-    Z.ctx.lineTo( sHalf, Z.headCY - Z.headR * 0.04);
-    Z.ctx.quadraticCurveTo( sHalf, Z.headCY - domeR * 0.45, sHalf * 0.55, Z.headCY - domeR * 0.985);
-    Z.ctx.closePath();
-    Z.ctx.fill(); Z.ctx.stroke();
-    // 眉缘缓冲条（深红横带 = 参照图 brow bumper，比盔口略宽）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_FH_RED_DARK;
-    safeRoundRect(Z.ctx, -Z.headR * 0.95, Z.headCY - Z.headR * 0.14, Z.headR * 1.90, Z.headR * 0.11, Z.headR * 0.045);
-    Z.ctx.fill(); Z.ctx.stroke();
-    // 侧气孔 ×1 每侧（暗红小圆点，条纹两侧对称，避开左上高光带）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_FH_RED_DARK;
+    ctx.fillStyle = hGrad;
+    ctx.beginPath();
+    ctx.ellipse(0, domeCY, domeRX, domeRY, 0, Math.PI * 1.03, Math.PI * 1.97);
+    ctx.lineTo(hRX * 1.0, hcY - hRY * 0.16);
+    ctx.quadraticCurveTo(0, hcY - hRY * 0.28, -hRX * 1.0, hcY - hRY * 0.16);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // 中条纹
+    const sHalf = hRX * 0.21;
+    ctx.fillStyle = Z.T.COLORS.Z_FH_STRIPE;
+    ctx.beginPath();
+    ctx.moveTo(-sHalf * 0.55, domeCY - domeRY * 0.99);
+    ctx.quadraticCurveTo(-sHalf, domeCY - domeRY * 0.45, -sHalf, hcY - hRY * 0.18);
+    ctx.lineTo(sHalf, hcY - hRY * 0.18);
+    ctx.quadraticCurveTo(sHalf, domeCY - domeRY * 0.45, sHalf * 0.55, domeCY - domeRY * 0.99);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // 眉缘缓冲条
+    ctx.fillStyle = Z.T.COLORS.Z_FH_RED_DARK;
+    ctx.beginPath();
+    safeRoundRect(ctx, -hRX * 1.02, hcY - hRY * 0.30, hRX * 2.04, hRY * 0.11, hRY * 0.045);
+    ctx.fill(); ctx.stroke();
+    // 侧气孔
+    ctx.fillStyle = Z.T.COLORS.Z_FH_RED_DARK;
     for (const s of [-1, 1]) {
-      Z.ctx.beginPath();
-      Z.ctx.arc(s * Z.headR * 0.60, Z.headCY - Z.headR * 0.45, Z.headR * 0.055, 0, Math.PI * 2);
-      Z.ctx.fill();
+      ctx.beginPath();
+      ctx.arc(s * hRX * 0.62, domeCY - hRY * 0.42, hRX * 0.055, 0, Math.PI * 2);
+      ctx.fill();
     }
-    // 盔体左上高光带（赛璐璐反光，与全队高光位一致，收窄避免与气孔拥挤）
-    Z.ctx.fillStyle = 'rgba(255,255,255,0.30)';
-    Z.ctx.beginPath();
-    Z.ctx.ellipse(-Z.headR * 0.40, Z.headCY - Z.headR * 0.60, Z.headR * 0.10, Z.headR * 0.20, -0.50, 0, Math.PI * 2);
-    Z.ctx.fill();
+    // 左上高光带
+    ctx.fillStyle = 'rgba(255,255,255,0.30)';
+    ctx.beginPath();
+    ctx.ellipse(-hRX * 0.40, domeCY - hRY * 0.55, hRX * 0.10, hRY * 0.18, -0.50, 0, Math.PI * 2);
+    ctx.fill();
+    _zpMain(Z, R);
   } else if (Z.type === 'king') {
-    // v51 黄金王冠（三尖冠 + 尖顶金珠 + 中央红宝石 + 冠底宽金带；
-    //   轻微后仰 -0.06 rad = 王者从容；底带后画盖住冠底缘 = 接缝干净(同 v29.1 礼帽工艺)）
-    Z.ctx.save();
-    Z.ctx.translate(0, Z.headCY - Z.headR * 0.55);
-    Z.ctx.rotate(-0.06);
-    const crW = Z.headR * 0.88;            // 冠身半宽
-    const crH = Z.headR * 0.42;            // 冠身高度
-    const tipH = Z.headR * 0.30;           // 尖齿高（中央尖更高）
-    const gGrad = Z.ctx.createLinearGradient(-crW, 0, crW, 0);
+    // 黄金王冠（三尖冠 + 金珠 + 红宝石 + 冠底金带）
+    ctx.save();
+    ctx.translate(0, hcY - hRY * 0.60);
+    ctx.rotate(-0.06);
+    const crW = hRX * 0.86;
+    const crH = hRY * 0.34;
+    const tipH = hRY * 0.24;
+    const gGrad = ctx.createLinearGradient(-crW, 0, crW, 0);
     gGrad.addColorStop(0, Z.T.COLORS.Z_KING_GOLD);
     gGrad.addColorStop(0.55, Z.T.COLORS.Z_KING_GOLD);
     gGrad.addColorStop(1, Z.T.COLORS.Z_KING_GOLD_DARK);
-    Z.ctx.fillStyle = gGrad;
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-crW, 0);
-    Z.ctx.lineTo(-crW, -crH);
-    Z.ctx.lineTo(-crW * 0.62, -crH - tipH * 0.85);
-    Z.ctx.lineTo(-crW * 0.34, -crH * 0.72);
-    Z.ctx.lineTo(0, -crH - tipH);
-    Z.ctx.lineTo(crW * 0.34, -crH * 0.72);
-    Z.ctx.lineTo(crW * 0.62, -crH - tipH * 0.85);
-    Z.ctx.lineTo(crW, -crH);
-    Z.ctx.lineTo(crW, 0);
-    Z.ctx.closePath();
-    Z.ctx.fill(); Z.ctx.stroke();
-    // 尖顶金珠 ×3（左/中/右尖上, 中尖珠略大）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_KING_GOLD;
-    for (const [bx, br] of [[-crW * 0.62, Z.headR * 0.055], [0, Z.headR * 0.07], [crW * 0.62, Z.headR * 0.055]]) {
-      Z.ctx.beginPath();
-      Z.ctx.arc(bx, -crH - tipH * 0.85 - Z.headR * 0.02, br, 0, Math.PI * 2);
-      Z.ctx.fill(); Z.ctx.stroke();
+    ctx.fillStyle = gGrad;
+    ctx.beginPath();
+    ctx.moveTo(-crW, 0);
+    ctx.lineTo(-crW, -crH);
+    ctx.lineTo(-crW * 0.62, -crH - tipH * 0.85);
+    ctx.lineTo(-crW * 0.34, -crH * 0.72);
+    ctx.lineTo(0, -crH - tipH);
+    ctx.lineTo(crW * 0.34, -crH * 0.72);
+    ctx.lineTo(crW * 0.62, -crH - tipH * 0.85);
+    ctx.lineTo(crW, -crH);
+    ctx.lineTo(crW, 0);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // 尖顶金珠 ×3
+    ctx.fillStyle = Z.T.COLORS.Z_KING_GOLD;
+    for (const [bx, br] of [[-crW * 0.62, hRX * 0.05], [0, hRX * 0.065], [crW * 0.62, hRX * 0.05]]) {
+      ctx.beginPath();
+      ctx.arc(bx, -crH - tipH * 0.85 - hRX * 0.02, br, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
     }
-    // 中央红宝石（冠身正中, 深红圆）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_KING_GEM;
-    Z.ctx.beginPath();
-    Z.ctx.arc(0, -crH * 0.42, Z.headR * 0.10, 0, Math.PI * 2);
-    Z.ctx.fill(); Z.ctx.stroke();
-    // 冠底宽金带（后画 = 佩戴接缝干净）
-    Z.ctx.fillStyle = Z.T.COLORS.Z_KING_GOLD_DARK;
-    safeRoundRect(Z.ctx, -crW * 1.06, -crH * 0.30, crW * 2.12, crH * 0.32, Z.headR * 0.05);
-    Z.ctx.fill(); Z.ctx.stroke();
-    Z.ctx.restore();
-    // 恢复主描边（僵尸暗色）
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.MAIN));
+    // 中央红宝石
+    ctx.fillStyle = Z.T.COLORS.Z_KING_GEM;
+    ctx.beginPath();
+    ctx.arc(0, -crH * 0.42, hRX * 0.09, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // 冠底宽金带
+    ctx.fillStyle = Z.T.COLORS.Z_KING_GOLD_DARK;
+    ctx.beginPath();
+    safeRoundRect(ctx, -crW * 1.06, -crH * 0.30, crW * 2.12, crH * 0.34, hRX * 0.05);
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+    _zpMain(Z, R);
   }
-
 }
 
-/** 表情系统(Z_FACE 独立比例: 眼白/瞳孔/高光) */
+/** v93 表情：大白眼珠 + 小瞳孔（僵尸阵营，无腮红） */
 function _zpFace(Z, R) {
-  /* =============================================================
-     表情系统 v3 阵营区分：使用 Z_FACE 独立比例 + 类型差异化表情
-     - 植物：Z.T.FACE 白描边 · 大圆眼 · 无辜感
-     - 僵尸：Z_FACE 暗描边 · 小眼距宽 · 病态/疯狂/愤怒/冷酷
-     ============================================================= */
-  Z.ZF = Z.T.Z_FACE;
-  Z.eyeY  = Z.headCY + Z.headR * Z.ZF.EYE_Y_OFFSET;
-  // v27 小鬼僵尸：超大圆眼（0.20 → 0.27 Z.headR），眼白换浑浊淡黄
-  // v28 橄榄球僵尸：凸眼（0.20 → 0.23 Z.headR），狂乱瞪视感
-  // v29 舞王：凸出圆眼 0.24（参照设定图极度兴奋癫狂）
-  Z.eyeR  = Z.headR * (Z.type === 'imp' ? 0.27 :
-                        Z.type === 'football' ? 0.23 :
-                        Z.type === 'dancer' ? 0.24 : Z.ZF.EYE_R_RATIO);
-  Z.eyeDX = Z.headR * Z.ZF.EYE_DX_RATIO;
-
-  // 眼白（僵尸用暗色眼白描边，与植物白描边对比；v27 imp 浑浊淡黄；
-  //   v28 football 同浑浊淡黄 = 病态运动员）
-  Z.ctx.fillStyle = Z.type === 'imp' || Z.type === 'football' || Z.type === 'dancer' ?
-                  Z.T.COLORS.Z_EYE_YELLOW : Z.T.COLORS.STROKE;
-  Z.ctx.beginPath();
-  Z.ctx.ellipse(-Z.eyeDX, Z.eyeY, Z.eyeR * 0.96, Z.eyeR, 0, 0, Math.PI * 2);
-  Z.ctx.ellipse( Z.eyeDX, Z.eyeY, Z.eyeR * 0.96, Z.eyeR, 0, 0, Math.PI * 2);
-  Z.ctx.fill();
-  R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.EYE));
-  Z.ctx.stroke();
-
-  // 瞳孔（Z_FACE 比例：更小更偏，无神感；v27 imp 极小居中偏下=呆滞惊恐；
-  //   v28 football 极小近居中 = 狂乱瞪视）
-  Z.ctx.fillStyle = Z.T.COLORS.INK;
-  // v29 舞王：瞳孔极小 0.36、居中偏上 = 沉浸音乐的癫狂上翻凝视
-  const pupilR = Z.eyeR * (Z.type === 'imp' ? 0.30 :
-                         Z.type === 'football' ? 0.42 :
-                         Z.type === 'dancer' ? 0.36 : Z.ZF.PUPIL_R_RATIO);
-  const pOffX  = Z.type === 'imp' ? 0 :
-                 Z.type === 'football' ? Z.eyeR * 0.05 :
-                 Z.type === 'dancer' ? 0 : Z.eyeR * Z.ZF.PUPIL_OFF_X;
-  const pOffY  = Z.type === 'imp' ? Z.eyeR * 0.10 :
-                 Z.type === 'football' ? Z.eyeR * 0.06 :
-                 Z.type === 'dancer' ? -Z.eyeR * 0.07 : Z.eyeR * Z.ZF.PUPIL_OFF_Y;
-  Z.ctx.beginPath();
-  Z.ctx.arc(-Z.eyeDX + pOffX, Z.eyeY + pOffY, pupilR, 0, Math.PI * 2);
-  Z.ctx.arc( Z.eyeDX + pOffX, Z.eyeY + pOffY, pupilR, 0, Math.PI * 2);
-  Z.ctx.fill();
-
-  // 双高光（僵尸微弱，只有单颗小高光，植物是双大高光）
-  // v27 imp：高光贴瞳孔左上、稍大（衬托极小瞳孔的空洞感）
-  Z.ctx.fillStyle = Z.T.COLORS.STROKE;
-  const hOffX = Z.type === 'imp' ? -pupilR * 0.45 : Z.eyeR * 0.05;
-  const hOffY = Z.type === 'imp' ? Z.eyeR * 0.16 : Z.eyeR * 0.08;
-  const hR    = pupilR * (Z.type === 'imp' ? 0.50 : 0.35);
-  Z.ctx.beginPath();
-  Z.ctx.arc(-Z.eyeDX + hOffX, Z.eyeY - hOffY, hR, 0, Math.PI * 2);
-  Z.ctx.arc( Z.eyeDX + hOffX, Z.eyeY - hOffY, hR, 0, Math.PI * 2);
-  Z.ctx.fill();
-
+  const U = Z.UNIT;
+  const { ctx } = Z;
+  const imp = Z.type === 'imp';
+  Z.eyeY = Z.headCY - U * 0.02;
+  Z.eyeR = U * (imp ? 0.15 : 0.155);
+  Z.eyeDX = Z.headRX * (imp ? 0.50 : 0.42);
+  // 眼白（微浊白，椭圆）
+  ctx.fillStyle = imp ? Z.T.COLORS.Z_EYE_YELLOW : '#F4F1E3';
+  ctx.beginPath();
+  ctx.ellipse(-Z.eyeDX, Z.eyeY, Z.eyeR * 0.94, Z.eyeR, 0, 0, Math.PI * 2);
+  ctx.ellipse(Z.eyeDX, Z.eyeY, Z.eyeR * 0.94, Z.eyeR, 0, 0, Math.PI * 2);
+  ctx.fill();
+  R._setStroke(Z.ctx, PZ.OUTLINE, R._strokeW(Z.T.STROKE.EYE));
+  ctx.stroke();
+  // 瞳孔（小黑圆，内侧偏下 = 涣散盯视）
+  const pOff = Z.eyeR * (imp ? 0 : 0.16);
+  const pupilR = Z.eyeR * (imp ? 0.30 : 0.40);
+  ctx.fillStyle = '#2C2C28';
+  ctx.beginPath();
+  ctx.arc(-Z.eyeDX + pOff, Z.eyeY + Z.eyeR * 0.12, pupilR, 0, Math.PI * 2);
+  ctx.arc(Z.eyeDX - pOff, Z.eyeY + Z.eyeR * 0.12, pupilR, 0, Math.PI * 2);
+  ctx.fill();
+  // 单高光
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.beginPath();
+  ctx.arc(-Z.eyeDX + pOff - pupilR * 0.30, Z.eyeY + Z.eyeR * 0.12 - pupilR * 0.36, pupilR * 0.34, 0, Math.PI * 2);
+  ctx.arc(Z.eyeDX - pOff - pupilR * 0.30, Z.eyeY + Z.eyeR * 0.12 - pupilR * 0.36, pupilR * 0.34, 0, Math.PI * 2);
+  ctx.fill();
 }
 
-/** 类型差异化表情(眉形/嘴部/獠牙/舌头) */
+/** 类型差异化表情（皱纹/眉形/嘴部/獠牙/舌头） */
 function _zpFaceVariants(Z, R) {
-  // 类型差异化表情特征
-  R._setStroke(Z.ctx, Z.T.COLORS.INK, R._strokeW(Z.T.STROKE.INK));
+  const U = Z.UNIT;
+  const { ctx } = Z;
+  const eyeR = Z.eyeR;
+  const browY = Z.eyeY - eyeR * 1.45;
+
+  // ---- 前额皱纹 ×1（高置，避免与眉毛打架）----
+  R._setStroke(Z.ctx, PZ.WRINKLE, R._strokeW(Z.T.STROKE.THIN) * 0.75);
+  ctx.beginPath();
+  ctx.moveTo(-Z.headRX * 0.13, Z.eyeY - eyeR * 2.85);
+  ctx.quadraticCurveTo(0, Z.eyeY - eyeR * 3.02, Z.headRX * 0.13, Z.eyeY - eyeR * 2.85);
+  ctx.stroke();
+
+  // ---- 眉形（按类型）----
+  const browW = eyeR * 1.15;
+  R._setStroke(Z.ctx, PZ.HAIR, R._strokeW(Z.T.STROKE.INK));
   if (Z.type === 'bucket') {
-    // v26 担忧眉（内低外高短弧 + 加粗 1.5×，参照设定图呆滞/惊恐表情）
-    R._setStroke(Z.ctx, Z.T.COLORS.INK, R._strokeW(Z.T.STROKE.INK) * 1.5);
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-Z.eyeDX - Z.eyeR * 1.00, Z.eyeY - Z.eyeR * 2.05);
-    Z.ctx.quadraticCurveTo(-Z.eyeDX - Z.eyeR * 0.10, Z.eyeY - Z.eyeR * 1.45, -Z.eyeDX + Z.eyeR * 0.60, Z.eyeY - Z.eyeR * 1.15);
-    Z.ctx.stroke();
-    Z.ctx.beginPath();
-    Z.ctx.moveTo( Z.eyeDX + Z.eyeR * 1.00, Z.eyeY - Z.eyeR * 2.05);
-    Z.ctx.quadraticCurveTo( Z.eyeDX + Z.eyeR * 0.10, Z.eyeY - Z.eyeR * 1.45,  Z.eyeDX - Z.eyeR * 0.60, Z.eyeY - Z.eyeR * 1.15);
-    Z.ctx.stroke();
-    R._setStroke(Z.ctx, Z.T.COLORS.INK, R._strokeW(Z.T.STROKE.INK));
-    // 眼角下垂线（丧萌/疲惫，经典保留）
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-Z.eyeDX - Z.eyeR * 0.95, Z.eyeY + Z.eyeR * 0.2);
-    Z.ctx.quadraticCurveTo(-Z.eyeDX - Z.eyeR * 0.5, Z.eyeY + Z.eyeR * 0.55, -Z.eyeDX + Z.eyeR * 0.1, Z.eyeY + Z.eyeR * 0.7);
-    Z.ctx.stroke();
-    Z.ctx.beginPath();
-    Z.ctx.moveTo( Z.eyeDX + Z.eyeR * 0.95, Z.eyeY + Z.eyeR * 0.2);
-    Z.ctx.quadraticCurveTo( Z.eyeDX + Z.eyeR * 0.5, Z.eyeY + Z.eyeR * 0.55,  Z.eyeDX - Z.eyeR * 0.1, Z.eyeY + Z.eyeR * 0.7);
-    Z.ctx.stroke();
+    // 担忧眉（内高外低）
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(s * Z.eyeDX - s * browW, browY + eyeR * 0.45);
+      ctx.quadraticCurveTo(s * Z.eyeDX, browY - eyeR * 0.30, s * Z.eyeDX + s * browW * 0.4, browY - eyeR * 0.42);
+      ctx.stroke();
+    }
   } else if (Z.type === 'imp') {
-    // v27 紧张细眉（短弧、内端上抬，参照设定图惊恐/无神表情）
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-Z.eyeDX - Z.eyeR * 0.78, Z.eyeY - Z.eyeR * 1.38);
-    Z.ctx.quadraticCurveTo(-Z.eyeDX - Z.eyeR * 0.10, Z.eyeY - Z.eyeR * 1.66, -Z.eyeDX + Z.eyeR * 0.58, Z.eyeY - Z.eyeR * 1.55);
-    Z.ctx.stroke();
-    Z.ctx.beginPath();
-    Z.ctx.moveTo( Z.eyeDX + Z.eyeR * 0.78, Z.eyeY - Z.eyeR * 1.38);
-    Z.ctx.quadraticCurveTo( Z.eyeDX + Z.eyeR * 0.10, Z.eyeY - Z.eyeR * 1.66,  Z.eyeDX - Z.eyeR * 0.58, Z.eyeY - Z.eyeR * 1.55);
-    Z.ctx.stroke();
-  } else if (Z.type === 'football') {
-    // v28 怒眉（参照设定图：粗重 V 形压眉，1.8× 加粗 + 内端下压盖向眼）
-    R._setStroke(Z.ctx, Z.T.COLORS.INK, R._strokeW(Z.T.STROKE.INK) * 1.8);
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-Z.eyeDX - Z.eyeR * 1.05, Z.eyeY - Z.eyeR * 1.30);
-    Z.ctx.quadraticCurveTo(-Z.eyeDX - Z.eyeR * 0.20, Z.eyeY - Z.eyeR * 1.02, -Z.eyeDX + Z.eyeR * 0.55, Z.eyeY - Z.eyeR * 0.78);
-    Z.ctx.stroke();
-    Z.ctx.beginPath();
-    Z.ctx.moveTo( Z.eyeDX + Z.eyeR * 1.05, Z.eyeY - Z.eyeR * 1.30);
-    Z.ctx.quadraticCurveTo( Z.eyeDX + Z.eyeR * 0.20, Z.eyeY - Z.eyeR * 1.02,  Z.eyeDX - Z.eyeR * 0.55, Z.eyeY - Z.eyeR * 0.78);
-    Z.ctx.stroke();
-    R._setStroke(Z.ctx, Z.T.COLORS.INK, R._strokeW(Z.T.STROKE.INK));
-  } else if (Z.type === 'king') {
-    // v51 王者怒眉（2.0× 加粗 + 内端重压 = 怒视战场, 比 football 更沉）
-    R._setStroke(Z.ctx, Z.T.COLORS.INK, R._strokeW(Z.T.STROKE.INK) * 2.0);
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-Z.eyeDX - Z.eyeR * 1.05, Z.eyeY - Z.eyeR * 1.34);
-    Z.ctx.quadraticCurveTo(-Z.eyeDX - Z.eyeR * 0.20, Z.eyeY - Z.eyeR * 1.00, -Z.eyeDX + Z.eyeR * 0.55, Z.eyeY - Z.eyeR * 0.74);
-    Z.ctx.stroke();
-    Z.ctx.beginPath();
-    Z.ctx.moveTo( Z.eyeDX + Z.eyeR * 1.05, Z.eyeY - Z.eyeR * 1.34);
-    Z.ctx.quadraticCurveTo( Z.eyeDX + Z.eyeR * 0.20, Z.eyeY - Z.eyeR * 1.00,  Z.eyeDX - Z.eyeR * 0.55, Z.eyeY - Z.eyeR * 0.74);
-    Z.ctx.stroke();
-    R._setStroke(Z.ctx, Z.T.COLORS.INK, R._strokeW(Z.T.STROKE.INK));
+    // 惊恐高挑眉
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(s * Z.eyeDX - s * browW, browY + eyeR * 0.30);
+      ctx.quadraticCurveTo(s * Z.eyeDX, browY - eyeR * 0.60, s * Z.eyeDX + s * browW * 0.4, browY - eyeR * 0.55);
+      ctx.stroke();
+    }
+  } else if (Z.type === 'football' || Z.type === 'king') {
+    // 怒眉（粗 V 形内端下压）
+    const bold = Z.type === 'king' ? 2.0 : 1.8;
+    R._setStroke(Z.ctx, PZ.HAIR, R._strokeW(Z.T.STROKE.INK) * bold);
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(s * Z.eyeDX - s * browW, browY - eyeR * 0.50);
+      ctx.quadraticCurveTo(s * Z.eyeDX, browY + eyeR * 0.05, s * Z.eyeDX + s * browW * 0.4, browY + eyeR * 0.42);
+      ctx.stroke();
+    }
   } else if (Z.type === 'dancer') {
-    // v29 兴奋高挑细眉（内端上扬弧 = 倒八字滑稽狂热，参照设定图细长眉）
-    Z.ctx.beginPath();
-    Z.ctx.moveTo(-Z.eyeDX - Z.eyeR * 0.78, Z.eyeY - Z.eyeR * 1.18);
-    Z.ctx.quadraticCurveTo(-Z.eyeDX - Z.eyeR * 0.05, Z.eyeY - Z.eyeR * 1.48, -Z.eyeDX + Z.eyeR * 0.60, Z.eyeY - Z.eyeR * 1.26);
-    Z.ctx.stroke();
-    Z.ctx.beginPath();
-    Z.ctx.moveTo( Z.eyeDX + Z.eyeR * 0.78, Z.eyeY - Z.eyeR * 1.18);
-    Z.ctx.quadraticCurveTo( Z.eyeDX + Z.eyeR * 0.05, Z.eyeY - Z.eyeR * 1.48,  Z.eyeDX - Z.eyeR * 0.60, Z.eyeY - Z.eyeR * 1.26);
-    Z.ctx.stroke();
+    // 兴奋细眉（内端上扬）
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(s * Z.eyeDX - s * browW, browY + eyeR * 0.30);
+      ctx.quadraticCurveTo(s * Z.eyeDX, browY - eyeR * 0.45, s * Z.eyeDX + s * browW * 0.4, browY - eyeR * 0.40);
+      ctx.stroke();
+    }
   }
 
-  // 腮红（僵尸更大更暗 = 病态红晕，Z_FACE 比例）
-  Z.ctx.fillStyle = Z.T.COLORS.BLUSH_ZOMBIE;
-  const blushCX = Z.headR * Z.ZF.BLUSH_CX;
-  const blushCY = Z.eyeY + Z.headR * Z.ZF.BLUSH_CY;
-  const blushR  = Z.headR * Z.ZF.BLUSH_SIZE;
-  Z.ctx.beginPath();
-  Z.ctx.arc(-blushCX, blushCY, blushR, 0, Math.PI * 2);
-  Z.ctx.arc( blushCX, blushCY, blushR, 0, Math.PI * 2);
-  Z.ctx.fill();
-
-  // 嘴型：按类型差异化（v3 阵营区分）
-  Z.mouthY = Z.eyeY + Z.headR * Z.ZF.MOUTH_Y_OFFSET;
-  if (Z.type === 'bucket') {
-    // v26 呆滞张大嘴（参照设定图：暗红口腔 + 参差獠牙）
-    const mW = Z.headR * 0.34;
-    const mH = Z.headR * 0.26;
-    Z.ctx.fillStyle = Z.T.COLORS.Z_MOUTH;
-    Z.ctx.beginPath();
-    Z.ctx.ellipse(0, Z.mouthY, mW, mH, 0, 0, Math.PI * 2);
-    Z.ctx.fill();
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.LIP));
-    Z.ctx.stroke();
-    // 上排獠牙 ×4（长短不齐，从上唇垂下）
-    Z.ctx.fillStyle = Z.T.COLORS.STROKE;
-    const teethTop = [
-      [-0.66, 0.28, 0.42], [-0.30, 0.30, 0.55],
-      [ 0.04, 0.28, 0.48], [ 0.38, 0.26, 0.38],
-    ];
-    for (const [tx, tw, th] of teethTop) {
-      safeRoundRect(Z.ctx, mW * tx, Z.mouthY - mH * 0.82, mW * tw, mH * th, mW * 0.09);
+  // ---- 嘴部（按类型）----
+  Z.mouthY = Z.headCY + Z.headRY * 0.36;
+  R._setStroke(Z.ctx, PZ.MOUTH_OUT, R._strokeW(Z.T.STROKE.LIP));
+  if (Z.type === 'bucket' || Z.type === 'football' || Z.type === 'king') {
+    // 咧嘴喊叫：暗红大口 + 上排参差牙
+    const mW = Z.headRX * (Z.type === 'king' ? 0.48 : Z.type === 'football' ? 0.40 : 0.44);
+    const mH = Z.headRY * (Z.type === 'king' ? 0.28 : Z.type === 'football' ? 0.23 : 0.25);
+    ctx.fillStyle = PZ.MOUTH;
+    ctx.beginPath();
+    ctx.ellipse(0, Z.mouthY, mW, mH, 0, 0, Math.PI * 2);
+    ctx.fill();
+    R._setStroke(Z.ctx, PZ.MOUTH_OUT, R._strokeW(Z.T.STROKE.LIP));
+    ctx.stroke();
+    // 口腔底部舌影
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(0, Z.mouthY, mW, mH, 0, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.fillStyle = 'rgba(255,120,120,0.30)';
+    ctx.beginPath();
+    ctx.ellipse(0, Z.mouthY + mH * 0.55, mW * 0.55, mH * 0.42, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    // 上排獠牙 ×4（参差）
+    ctx.fillStyle = PZ.TEETH;
+    const teeth = [[-0.62, 0.30, 0.52], [-0.24, 0.26, 0.72], [0.10, 0.26, 0.58], [0.44, 0.24, 0.42]];
+    for (const [tx, tw, th] of teeth) {
+      Z.ctx.beginPath();
+      safeRoundRect(Z.ctx, mW * tx, Z.mouthY - mH * 0.86, mW * tw, mH * th, mW * 0.08);
       Z.ctx.fill();
     }
-    // 下排牙 ×2（短小，贴下唇）
-    safeRoundRect(Z.ctx, mW * -0.42, Z.mouthY + mH * 0.34, mW * 0.24, mH * 0.30, mW * 0.08);
-    Z.ctx.fill();
-    safeRoundRect(Z.ctx, mW * 0.18, Z.mouthY + mH * 0.30, mW * 0.22, mH * 0.26, mW * 0.08);
-    Z.ctx.fill();
-  } else if (Z.type === 'imp') {
-    // v27 呆滞 O 型张嘴（参照设定图：近黑口腔 + 上 2 方牙/下 2 小牙）
-    const mW = Z.headR * 0.30;
-    const mH = Z.headR * 0.22;
-    Z.ctx.fillStyle = Z.T.COLORS.INK;
-    Z.ctx.beginPath();
-    Z.ctx.ellipse(0, Z.mouthY, mW, mH, 0, 0, Math.PI * 2);
-    Z.ctx.fill();
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.LIP));
-    Z.ctx.stroke();
-    // 上排方牙 ×2（不齐，从上唇垂下）
-    Z.ctx.fillStyle = Z.T.COLORS.STROKE;
-    safeRoundRect(Z.ctx, -mW * 0.52, Z.mouthY - mH * 0.90, mW * 0.34, mH * 0.42, mW * 0.06);
-    Z.ctx.fill();
-    safeRoundRect(Z.ctx, mW * 0.16, Z.mouthY - mH * 0.94, mW * 0.32, mH * 0.48, mW * 0.06);
-    Z.ctx.fill();
-    // 下排小牙 ×2（贴下唇）
-    safeRoundRect(Z.ctx, -mW * 0.36, Z.mouthY + mH * 0.48, mW * 0.26, mH * 0.32, mW * 0.05);
-    Z.ctx.fill();
-    safeRoundRect(Z.ctx, mW * 0.10, Z.mouthY + mH * 0.52, mW * 0.22, mH * 0.28, mW * 0.05);
-    Z.ctx.fill();
-  } else if (Z.type === 'football') {
-    // v28 咆哮张嘴（参照设定图：暗红口腔 + 参差不齐獠牙，面罩格栅后嘶吼）
-    const mW = Z.headR * 0.32;
-    const mH = Z.headR * 0.24;
-    Z.ctx.fillStyle = Z.T.COLORS.Z_MOUTH;
-    Z.ctx.beginPath();
-    Z.ctx.ellipse(0, Z.mouthY, mW, mH, 0, 0, Math.PI * 2);
-    Z.ctx.fill();
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.LIP));
-    Z.ctx.stroke();
-    // 上排獠牙 ×4（长短不齐，从上唇垂下）
-    Z.ctx.fillStyle = Z.T.COLORS.STROKE;
-    const teethTop = [
-      [-0.64, 0.26, 0.40], [-0.28, 0.28, 0.55],
-      [ 0.06, 0.26, 0.46], [ 0.40, 0.24, 0.36],
-    ];
-    for (const [tx, tw, th] of teethTop) {
-      safeRoundRect(Z.ctx, mW * tx, Z.mouthY - mH * 0.82, mW * tw, mH * th, mW * 0.08);
-      Z.ctx.fill();
-    }
-    // 下排牙 ×2（短小，贴下唇）
-    safeRoundRect(Z.ctx, mW * -0.40, Z.mouthY + mH * 0.36, mW * 0.24, mH * 0.28, mW * 0.07);
-    Z.ctx.fill();
-    safeRoundRect(Z.ctx, mW * 0.16, Z.mouthY + mH * 0.32, mW * 0.22, mH * 0.24, mW * 0.07);
-    Z.ctx.fill();
-  } else if (Z.type === 'king') {
-    // v51 王者咆哮（暗红大口腔 + 双长獠牙 = 军团冲锋号令）
-    const mW = Z.headR * 0.34;
-    const mH = Z.headR * 0.24;
-    Z.ctx.fillStyle = Z.T.COLORS.Z_MOUTH;
-    Z.ctx.beginPath();
-    Z.ctx.ellipse(0, Z.mouthY, mW, mH, 0, 0, Math.PI * 2);
-    Z.ctx.fill();
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.LIP));
-    Z.ctx.stroke();
-    // 双长獠牙（比 football 更长 = 压迫感）
-    Z.ctx.fillStyle = Z.T.COLORS.STROKE;
-    safeRoundRect(Z.ctx, mW * -0.52, Z.mouthY - mH * 0.88, mW * 0.26, mH * 0.62, mW * 0.08);
-    Z.ctx.fill();
-    safeRoundRect(Z.ctx, mW * 0.26, Z.mouthY - mH * 0.88, mW * 0.26, mH * 0.62, mW * 0.08);
-    Z.ctx.fill();
     // 下排短牙 ×2
-    safeRoundRect(Z.ctx, mW * -0.34, Z.mouthY + mH * 0.40, mW * 0.24, mH * 0.26, mW * 0.07);
+    Z.ctx.beginPath();
+    safeRoundRect(Z.ctx, mW * -0.40, Z.mouthY + mH * 0.36, mW * 0.22, mH * 0.26, mW * 0.06);
     Z.ctx.fill();
-    safeRoundRect(Z.ctx, mW * 0.10, Z.mouthY + mH * 0.40, mW * 0.22, mH * 0.24, mW * 0.07);
+    Z.ctx.beginPath();
+    safeRoundRect(Z.ctx, mW * 0.16, Z.mouthY + mH * 0.34, mW * 0.20, mH * 0.24, mW * 0.06);
+    Z.ctx.fill();
+  } else if (Z.type === 'imp') {
+    // 呆滞 O 型小张嘴
+    const mW = Z.headRX * 0.34;
+    const mH = Z.headRY * 0.24;
+    ctx.fillStyle = PZ.MOUTH;
+    ctx.beginPath();
+    ctx.ellipse(0, Z.mouthY, mW, mH, 0, 0, Math.PI * 2);
+    ctx.fill();
+    R._setStroke(Z.ctx, PZ.MOUTH_OUT, R._strokeW(Z.T.STROKE.LIP));
+    ctx.stroke();
+    ctx.fillStyle = PZ.TEETH;
+    Z.ctx.beginPath();
+    safeRoundRect(Z.ctx, -mW * 0.52, Z.mouthY - mH * 0.90, mW * 0.32, mH * 0.44, mW * 0.06);
+    Z.ctx.fill();
+    Z.ctx.beginPath();
+    safeRoundRect(Z.ctx, mW * 0.18, Z.mouthY - mH * 0.94, mW * 0.30, mH * 0.50, mW * 0.06);
     Z.ctx.fill();
   } else if (Z.type === 'dancer') {
-    // v29 狂笑大张嘴（参照设定图：暗红口腔 + 鲜红舌头 + 参差獠牙 =
-    //   沉浸音乐癫狂高歌）
-    const mW = Z.headR * 0.30;
-    const mH = Z.headR * 0.25;
-    Z.ctx.fillStyle = Z.T.COLORS.Z_MOUTH;
-    Z.ctx.beginPath();
-    Z.ctx.ellipse(0, Z.mouthY, mW, mH, 0, 0, Math.PI * 2);
-    Z.ctx.fill();
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.LIP));
-    Z.ctx.stroke();
-    // 舌头（鲜红，口腔底部，clip 在嘴内；v29.1 收窄避开下排牙）
-    Z.ctx.save();
-    Z.ctx.beginPath();
-    Z.ctx.ellipse(0, Z.mouthY, mW, mH, 0, 0, Math.PI * 2);
-    Z.ctx.clip();
-    Z.ctx.fillStyle = Z.T.COLORS.Z_DN_TONGUE;
-    Z.ctx.beginPath();
-    Z.ctx.ellipse(0, Z.mouthY + mH * 0.55, mW * 0.55, mH * 0.50, 0, 0, Math.PI * 2);
-    Z.ctx.fill();
-    Z.ctx.restore();
-    // 上排獠牙 ×4（长短不齐，从上唇垂下）
-    Z.ctx.fillStyle = Z.T.COLORS.STROKE;
-    const teethTop = [
-      [-0.58, 0.24, 0.40], [-0.24, 0.27, 0.55],
-      [ 0.08, 0.25, 0.46], [ 0.40, 0.22, 0.36],
-    ];
-    for (const [tx, tw, th] of teethTop) {
-      safeRoundRect(Z.ctx, mW * tx, Z.mouthY - mH * 0.82, mW * tw, mH * th, mW * 0.08);
+    // 狂笑大张嘴 + 鲜红舌头
+    const mW = Z.headRX * 0.42;
+    const mH = Z.headRY * 0.28;
+    ctx.fillStyle = PZ.MOUTH;
+    ctx.beginPath();
+    ctx.ellipse(0, Z.mouthY, mW, mH, 0, 0, Math.PI * 2);
+    ctx.fill();
+    R._setStroke(Z.ctx, PZ.MOUTH_OUT, R._strokeW(Z.T.STROKE.LIP));
+    ctx.stroke();
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(0, Z.mouthY, mW, mH, 0, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.fillStyle = Z.T.COLORS.Z_DN_TONGUE;
+    ctx.beginPath();
+    ctx.ellipse(0, Z.mouthY + mH * 0.55, mW * 0.52, mH * 0.50, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = PZ.TEETH;
+    const teeth = [[-0.60, 0.26, 0.46], [-0.24, 0.28, 0.66], [0.08, 0.27, 0.52], [0.42, 0.24, 0.40]];
+    for (const [tx, tw, th] of teeth) {
+      Z.ctx.beginPath();
+      safeRoundRect(Z.ctx, mW * tx, Z.mouthY - mH * 0.86, mW * tw, mH * th, mW * 0.07);
       Z.ctx.fill();
     }
-    // 下排牙 ×2（短小，贴下唇两角；v29.1 外移+参差化）
-    safeRoundRect(Z.ctx, mW * -0.74, Z.mouthY + mH * 0.28, mW * 0.22, mH * 0.24, mW * 0.07);
-    Z.ctx.fill();
-    safeRoundRect(Z.ctx, mW * 0.50, Z.mouthY + mH * 0.30, mW * 0.26, mH * 0.30, mW * 0.07);
-    Z.ctx.fill();
   }
 
+  // ---- 鼻孔 hint（两点，僵尸鼻）----
+  ctx.fillStyle = 'rgba(56,20,15,0.55)';
+  ctx.beginPath();
+  ctx.arc(-U * 0.045, Z.mouthY - Z.headRY * 0.22, U * 0.022, 0, Math.PI * 2);
+  ctx.arc(U * 0.045, Z.mouthY - Z.headRY * 0.22, U * 0.022, 0, Math.PI * 2);
+  ctx.fill();
 }
 
-/** v28 橄榄球面罩格栅(最后绘制罩嘴部之上) */
+/** v28 橄榄球面罩格栅（最后绘制罩嘴部之上，坐标适配） */
 function _zpCage(Z, R) {
-  // v28 橄榄球僵尸面罩格栅（最后绘制，罩在嘴部之上；参照设定图：
-  //   仅罩口鼻/下颌区，2 横杆 + 2 竖杆 + 两侧上扬侧臂接盔侧，眼全露）
   if (Z.type === 'football') {
-    // 侧臂 ×2（暖银粗杆，从口区两侧上扬接盔侧）
+    const U = Z.UNIT;
+    const { ctx } = Z;
     R._setStroke(Z.ctx, Z.T.COLORS.Z_FH_CAGE, R._strokeW(Z.T.STROKE.THIN) * 1.35);
     for (const s of [-1, 1]) {
-      Z.ctx.beginPath();
-      Z.ctx.moveTo(s * Z.headR * 0.56, Z.mouthY + Z.headR * 0.14);
-      Z.ctx.quadraticCurveTo(s * Z.headR * 0.78, Z.mouthY - Z.headR * 0.12, s * Z.headR * 0.88, Z.headCY + Z.headR * 0.06);
-      Z.ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(s * Z.headRX * 0.56, Z.mouthY + U * 0.14);
+      ctx.quadraticCurveTo(s * Z.headRX * 0.80, Z.mouthY - U * 0.10, s * Z.headRX * 0.90, Z.headCY + U * 0.06);
+      ctx.stroke();
     }
-    // 横杆 ×2（口区微弧）
     R._setStroke(Z.ctx, Z.T.COLORS.Z_FH_CAGE, R._strokeW(Z.T.STROKE.THIN) * 1.15);
     for (const [y1, y2] of [
-      [Z.mouthY - Z.headR * 0.06, Z.mouthY + Z.headR * 0.01],
-      [Z.mouthY + Z.headR * 0.12, Z.mouthY + Z.headR * 0.19],
+      [Z.mouthY - U * 0.06, Z.mouthY + U * 0.01],
+      [Z.mouthY + U * 0.12, Z.mouthY + U * 0.19],
     ]) {
-      Z.ctx.beginPath();
-      Z.ctx.moveTo(-Z.headR * 0.52, y1);
-      Z.ctx.quadraticCurveTo(0, y2, Z.headR * 0.52, y1);
-      Z.ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-Z.headRX * 0.52, y1);
+      ctx.quadraticCurveTo(0, y2, Z.headRX * 0.52, y1);
+      ctx.stroke();
     }
-    // 竖杆 ×2（口区中央两侧，短直杆）
     R._setStroke(Z.ctx, Z.T.COLORS.Z_FH_CAGE, R._strokeW(Z.T.STROKE.THIN));
     for (const s of [-1, 1]) {
-      Z.ctx.beginPath();
-      Z.ctx.moveTo(s * Z.headR * 0.18, Z.mouthY - Z.headR * 0.10);
-      Z.ctx.lineTo(s * Z.headR * 0.16, Z.mouthY + Z.headR * 0.22);
-      Z.ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(s * Z.headRX * 0.18, Z.mouthY - U * 0.10);
+      ctx.lineTo(s * Z.headRX * 0.16, Z.mouthY + U * 0.22);
+      ctx.stroke();
     }
-    // 恢复主描边（僵尸暗色）
-    R._setStroke(Z.ctx, Z.T.COLORS.Z_STROKE, R._strokeW(Z.T.STROKE.MAIN));
+    _zpMain(Z, R);
   }
 }
 
