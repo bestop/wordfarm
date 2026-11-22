@@ -112,54 +112,70 @@ function _zpMain(Z, R) {
   R._setStroke(Z.ctx, PZ.OUTLINE, R._strokeW(Z.T.STROKE.MAIN) * 0.82);
 }
 
-/** v27 小鬼肩挎麻袋（先于手臂/头绘制，造型保留） */
+/** v27 小鬼肩挎麻袋（先于手臂/头绘制）v99: 重画为圆胖束口袋 + 绳结垂穗 + 十字缝线 */
 function _zpSack(Z, R) {
   if (Z.type === 'imp') {
     const U = Z.UNIT;
     Z.ctx.save();
     Z.ctx.translate(-U * 0.66, U * 0.02);
     Z.ctx.rotate(-0.40);
-    // 袋颈
+    // 袋颈（v99: 短收口，改被绳结覆盖）
     Z.ctx.fillStyle = Z.T.COLORS.Z_SACK;
     Z.ctx.beginPath();
-    Z.ctx.moveTo(-U * 0.085, -U * 0.38);
-    Z.ctx.lineTo(U * 0.085, -U * 0.38);
-    Z.ctx.lineTo(U * 0.11, -U * 0.22);
-    Z.ctx.lineTo(-U * 0.11, -U * 0.22);
+    Z.ctx.moveTo(-U * 0.10, -U * 0.36);
+    Z.ctx.lineTo(U * 0.10, -U * 0.36);
+    Z.ctx.lineTo(U * 0.13, -U * 0.20);
+    Z.ctx.lineTo(-U * 0.13, -U * 0.20);
     Z.ctx.closePath();
     Z.ctx.fill(); Z.ctx.stroke();
-    // 袋身
+    // 袋身（v99: 圆胖鼓胀轮廓，宽 0.26→0.30）
     const sGrad = Z.ctx.createLinearGradient(0, -U * 0.22, 0, U * 0.30);
     sGrad.addColorStop(0, Z.T.COLORS.Z_SACK);
     sGrad.addColorStop(0.72, Z.T.COLORS.Z_SACK);
     sGrad.addColorStop(1, Z.T.COLORS.Z_SACK_DARK);
     Z.ctx.fillStyle = sGrad;
     Z.ctx.beginPath();
-    Z.ctx.moveTo(-U * 0.11, -U * 0.22);
-    Z.ctx.bezierCurveTo(-U * 0.25, -U * 0.10, -U * 0.26, U * 0.14, -U * 0.15, U * 0.27);
-    Z.ctx.quadraticCurveTo(0, U * 0.36, U * 0.15, U * 0.25);
-    Z.ctx.bezierCurveTo(U * 0.26, U * 0.12, U * 0.25, -U * 0.08, U * 0.11, -U * 0.22);
+    Z.ctx.moveTo(-U * 0.13, -U * 0.20);
+    Z.ctx.bezierCurveTo(-U * 0.30, -U * 0.06, -U * 0.31, U * 0.16, -U * 0.16, U * 0.28);
+    Z.ctx.quadraticCurveTo(0, U * 0.40, U * 0.16, U * 0.28);
+    Z.ctx.bezierCurveTo(U * 0.31, U * 0.16, U * 0.30, -U * 0.06, U * 0.13, -U * 0.20);
     Z.ctx.closePath();
     Z.ctx.fill(); Z.ctx.stroke();
-    // 束绳 + 绳结 + 缝线 + 补丁
-    Z.ctx.fillStyle = Z.T.COLORS.Z_SACK_DARK;
-    Z.ctx.fillRect(-U * 0.125, -U * 0.23, U * 0.25, U * 0.04);
-    Z.ctx.fillRect(-U * 0.117, -U * 0.165, U * 0.234, U * 0.035);
+    // v99 束绳绳圈（绕颈，棕色粗绳 + 结头）
+    R._setStroke(Z.ctx, '#8A6B3A', R._strokeW(Z.T.STROKE.MAIN) * 0.8);
     Z.ctx.beginPath();
-    Z.ctx.arc(-U * 0.125, -U * 0.20, U * 0.055, 0, Math.PI * 2);
+    Z.ctx.ellipse(0, -U * 0.20, U * 0.155, U * 0.055, 0.06, 0, Math.PI * 2);
+    Z.ctx.stroke();
+    // 绳结头 + 垂穗两条
+    Z.ctx.fillStyle = '#8A6B3A';
+    Z.ctx.beginPath();
+    Z.ctx.arc(U * 0.16, -U * 0.185, U * 0.055, 0, Math.PI * 2);
     Z.ctx.fill(); Z.ctx.stroke();
-    Z.ctx.globalAlpha = 0.45;
+    R._setStroke(Z.ctx, '#8A6B3A', R._strokeW(Z.T.STROKE.THIN) * 1.2);
+    Z.ctx.beginPath();
+    Z.ctx.moveTo(U * 0.175, -U * 0.15);
+    Z.ctx.quadraticCurveTo(U * 0.235, -U * 0.02, U * 0.20, U * 0.10);
+    Z.ctx.stroke();
+    Z.ctx.beginPath();
+    Z.ctx.moveTo(U * 0.15, -U * 0.14);
+    Z.ctx.quadraticCurveTo(U * 0.185, -U * 0.04, U * 0.15, U * 0.05);
+    Z.ctx.stroke();
+    // v99 十字缝线 ×2（替代旧竖缝线，麻布质感）
+    Z.ctx.globalAlpha = 0.50;
     R._setStroke(Z.ctx, Z.T.COLORS.Z_SACK_DARK, R._strokeW(Z.T.STROKE.THIN));
-    for (const sx of [-U * 0.08, U * 0.06]) {
+    for (const [mx, my] of [[-U * 0.10, U * 0.02], [U * 0.06, U * 0.06]]) {
       Z.ctx.beginPath();
-      Z.ctx.moveTo(sx, -U * 0.10);
-      Z.ctx.lineTo(sx, U * 0.20);
+      Z.ctx.moveTo(mx - U * 0.045, my - U * 0.045);
+      Z.ctx.lineTo(mx + U * 0.045, my + U * 0.045);
+      Z.ctx.moveTo(mx + U * 0.045, my - U * 0.045);
+      Z.ctx.lineTo(mx - U * 0.045, my + U * 0.045);
       Z.ctx.stroke();
     }
+    // 补丁
     Z.ctx.globalAlpha = 0.55;
     Z.ctx.fillStyle = Z.T.COLORS.Z_SACK_DARK;
     Z.ctx.beginPath();
-    safeRoundRect(Z.ctx, U * 0.01, U * 0.07, U * 0.14, U * 0.12, U * 0.02);
+    safeRoundRect(Z.ctx, -U * 0.02, U * 0.16, U * 0.15, U * 0.12, U * 0.02);
     Z.ctx.fill();
     Z.ctx.globalAlpha = 1;
     _zpMain(Z, R);
@@ -483,6 +499,11 @@ function _zpLegs(Z, R) {
     Z.ctx.beginPath();
     Z.ctx.arc(cx0, U * 0.22, U * 0.078, 0, Math.PI * 2);
     Z.ctx.fill(); Z.ctx.stroke();
+    // v99 金球杖头高光点
+    Z.ctx.fillStyle = 'rgba(255,255,255,0.70)';
+    Z.ctx.beginPath();
+    Z.ctx.arc(cx0 - U * 0.024, U * 0.195, U * 0.024, 0, Math.PI * 2);
+    Z.ctx.fill();
   }
   _zpMain(Z, R);
 }
@@ -587,11 +608,20 @@ function _zpHeadgear(Z, R) {
     ctx.beginPath();
     ctx.ellipse(0, topY + U * 0.02, halfTop * 0.78, halfTop * 0.20, 0, 0, Math.PI * 2);
     ctx.fill();
-    // 竖向金属高光带
+    // 竖向金属高光带（v99: 双层高光 —— 宽柔光 + 窄亮芯，金属质感）
     ctx.fillStyle = 'rgba(255,255,255,0.30)';
     ctx.beginPath();
     ctx.ellipse(-halfBot * 0.44, topY + U * 0.26, hRX * 0.10, U * 0.18, -0.06, 0, Math.PI * 2);
     ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.beginPath();
+    ctx.ellipse(-halfBot * 0.47, topY + U * 0.26, hRX * 0.038, U * 0.15, -0.06, 0, Math.PI * 2);
+    ctx.fill();
+    // v99 桶口沿左缘亮弧（边缘反光）
+    R._setStroke(Z.ctx, 'rgba(255,255,255,0.45)', R._strokeW(Z.T.STROKE.THIN) * 0.8);
+    ctx.beginPath();
+    ctx.ellipse(0, topY, halfTop, halfTop * 0.30, 0, Math.PI * 1.10, Math.PI * 1.75);
+    ctx.stroke();
     // v98 桶身磨损划痕 ×2（旧桶质感）
     R._setStroke(Z.ctx, 'rgba(255,255,255,0.28)', R._strokeW(Z.T.STROKE.THIN) * 0.7);
     ctx.beginPath();
@@ -789,6 +819,12 @@ function _zpHeadgear(Z, R) {
     ctx.fill();
     R._setStroke(Z.ctx, Z.T.COLORS.Z_FH_RED_DARK, R._strokeW(Z.T.STROKE.THIN) * 0.8);
     ctx.stroke();
+    // v99 旗面飘动高光（红旗光泽）
+    R._setStroke(Z.ctx, 'rgba(255,255,255,0.40)', R._strokeW(Z.T.STROKE.THIN) * 0.55);
+    ctx.beginPath();
+    ctx.moveTo(poleX + hRX * 0.18, poleTopY + hRY * 0.02);
+    ctx.quadraticCurveTo(poleX + hRX * 0.44, poleTopY - hRY * 0.06, poleX + hRX * 0.64, poleTopY + hRY * 0.02);
+    ctx.stroke();
     _zpMain(Z, R);
   } else if (Z.type === 'king') {
     // 黄金王冠（三尖冠 + 金珠 + 红宝石 + 冠底金带）
@@ -815,12 +851,17 @@ function _zpHeadgear(Z, R) {
     ctx.lineTo(crW, 0);
     ctx.closePath();
     ctx.fill(); ctx.stroke();
-    // 尖顶金珠 ×3
+    // 尖顶金珠 ×3（v99: 中央珠加大 + 各珠加白高光点）
     ctx.fillStyle = Z.T.COLORS.Z_KING_GOLD;
-    for (const [bx, br] of [[-crW * 0.62, hRX * 0.05], [0, hRX * 0.065], [crW * 0.62, hRX * 0.05]]) {
+    for (const [bx, br] of [[-crW * 0.62, hRX * 0.05], [0, hRX * 0.075], [crW * 0.62, hRX * 0.05]]) {
       ctx.beginPath();
       ctx.arc(bx, -crH - tipH * 0.85 - hRX * 0.02, br, 0, Math.PI * 2);
       ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.65)';
+      ctx.beginPath();
+      ctx.arc(bx - br * 0.30, -crH - tipH * 0.85 - hRX * 0.02 - br * 0.34, br * 0.30, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = Z.T.COLORS.Z_KING_GOLD;
     }
     // 中央红宝石
     ctx.fillStyle = Z.T.COLORS.Z_KING_GEM;

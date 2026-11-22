@@ -138,51 +138,70 @@ function setup(type: ZombieType, dpr: number, skin: string, pen: Pen): ZState | 
   }
 }
 
-// ============ 小鬼肩挎麻袋（先于手臂/头绘制） ============
+// ============ 小鬼肩挎麻袋（先于手臂/头绘制）v99: 圆胖束口袋 + 绳结垂穗 + 十字缝线，与小程序同源 ============
 function sack(Z: ZState, pen: Pen) {
   if (Z.type !== 'imp') return
   const { ctx, U } = Z
   ctx.save()
   ctx.translate(-U * 0.66, U * 0.02)
   ctx.rotate(-0.4)
+  // 袋颈（v99: 短收口，改被绳结覆盖）
   ctx.fillStyle = COLORS.Z_SACK
   ctx.beginPath()
-  ctx.moveTo(-U * 0.085, -U * 0.38)
-  ctx.lineTo(U * 0.085, -U * 0.38)
-  ctx.lineTo(U * 0.11, -U * 0.22)
-  ctx.lineTo(-U * 0.11, -U * 0.22)
+  ctx.moveTo(-U * 0.10, -U * 0.36)
+  ctx.lineTo(U * 0.10, -U * 0.36)
+  ctx.lineTo(U * 0.13, -U * 0.20)
+  ctx.lineTo(-U * 0.13, -U * 0.20)
   ctx.closePath()
   ctx.fill(); ctx.stroke()
+  // 袋身（v99: 圆胖鼓胀轮廓，宽 0.26→0.30）
   const sGrad = ctx.createLinearGradient(0, -U * 0.22, 0, U * 0.30)
   sGrad.addColorStop(0, COLORS.Z_SACK)
   sGrad.addColorStop(0.72, COLORS.Z_SACK)
   sGrad.addColorStop(1, COLORS.Z_SACK_DARK)
   ctx.fillStyle = sGrad
   ctx.beginPath()
-  ctx.moveTo(-U * 0.11, -U * 0.22)
-  ctx.bezierCurveTo(-U * 0.25, -U * 0.10, -U * 0.26, U * 0.14, -U * 0.15, U * 0.27)
-  ctx.quadraticCurveTo(0, U * 0.36, U * 0.15, U * 0.25)
-  ctx.bezierCurveTo(U * 0.26, U * 0.12, U * 0.25, -U * 0.08, U * 0.11, -U * 0.22)
+  ctx.moveTo(-U * 0.13, -U * 0.20)
+  ctx.bezierCurveTo(-U * 0.30, -U * 0.06, -U * 0.31, U * 0.16, -U * 0.16, U * 0.28)
+  ctx.quadraticCurveTo(0, U * 0.40, U * 0.16, U * 0.28)
+  ctx.bezierCurveTo(U * 0.31, U * 0.16, U * 0.30, -U * 0.06, U * 0.13, -U * 0.20)
   ctx.closePath()
   ctx.fill(); ctx.stroke()
-  ctx.fillStyle = COLORS.Z_SACK_DARK
-  ctx.fillRect(-U * 0.125, -U * 0.23, U * 0.25, U * 0.04)
-  ctx.fillRect(-U * 0.117, -U * 0.165, U * 0.234, U * 0.035)
+  // v99 束绳绳圈（绕颈，棕色粗绳 + 结头）
+  pen.set(ctx, '#8A6B3A', pen.w(STROKE.MAIN) * 0.8)
   ctx.beginPath()
-  ctx.arc(-U * 0.125, -U * 0.20, U * 0.055, 0, Math.PI * 2)
+  ctx.ellipse(0, -U * 0.20, U * 0.155, U * 0.055, 0.06, 0, Math.PI * 2)
+  ctx.stroke()
+  // 绳结头 + 垂穗两条
+  ctx.fillStyle = '#8A6B3A'
+  ctx.beginPath()
+  ctx.arc(U * 0.16, -U * 0.185, U * 0.055, 0, Math.PI * 2)
   ctx.fill(); ctx.stroke()
-  ctx.globalAlpha = 0.45
+  pen.set(ctx, '#8A6B3A', pen.w(STROKE.THIN) * 1.2)
+  ctx.beginPath()
+  ctx.moveTo(U * 0.175, -U * 0.15)
+  ctx.quadraticCurveTo(U * 0.235, -U * 0.02, U * 0.20, U * 0.10)
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.moveTo(U * 0.15, -U * 0.14)
+  ctx.quadraticCurveTo(U * 0.185, -U * 0.04, U * 0.15, U * 0.05)
+  ctx.stroke()
+  // v99 十字缝线 ×2（替代旧竖缝线，麻布质感）
+  ctx.globalAlpha = 0.50
   pen.set(ctx, COLORS.Z_SACK_DARK, pen.w(STROKE.THIN))
-  for (const sx of [-U * 0.08, U * 0.06]) {
+  for (const [mx, my] of [[-U * 0.10, U * 0.02], [U * 0.06, U * 0.06]] as const) {
     ctx.beginPath()
-    ctx.moveTo(sx, -U * 0.10)
-    ctx.lineTo(sx, U * 0.20)
+    ctx.moveTo(mx - U * 0.045, my - U * 0.045)
+    ctx.lineTo(mx + U * 0.045, my + U * 0.045)
+    ctx.moveTo(mx + U * 0.045, my - U * 0.045)
+    ctx.lineTo(mx - U * 0.045, my + U * 0.045)
     ctx.stroke()
   }
+  // 补丁
   ctx.globalAlpha = 0.55
   ctx.fillStyle = COLORS.Z_SACK_DARK
   ctx.beginPath()
-  safeRoundRect(ctx, U * 0.01, U * 0.07, U * 0.14, U * 0.12, U * 0.02)
+  safeRoundRect(ctx, -U * 0.02, U * 0.16, U * 0.15, U * 0.12, U * 0.02)
   ctx.fill()
   ctx.globalAlpha = 1
   mainStroke(ctx, pen)
@@ -480,6 +499,11 @@ function legs(Z: ZState, pen: Pen) {
     ctx.beginPath()
     ctx.arc(cx0, U * 0.22, U * 0.078, 0, Math.PI * 2)
     ctx.fill(); ctx.stroke()
+    // v99 金球杖头高光点（与小程序同源）
+    ctx.fillStyle = 'rgba(255,255,255,0.70)'
+    ctx.beginPath()
+    ctx.arc(cx0 - U * 0.024, U * 0.195, U * 0.024, 0, Math.PI * 2)
+    ctx.fill()
   }
   mainStroke(ctx, pen)
 }
@@ -579,6 +603,15 @@ function headgear(Z: ZState, pen: Pen) {
     ctx.beginPath()
     ctx.ellipse(-halfBot * 0.44, topY + U * 0.28, hRX * 0.10, U * 0.20, -0.06, 0, Math.PI * 2)
     ctx.fill()
+    // v99 双层高光：窄亮芯 + 桶口沿左缘亮弧（金属质感，与小程序同源）
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'
+    ctx.beginPath()
+    ctx.ellipse(-halfBot * 0.47, topY + U * 0.28, hRX * 0.038, U * 0.165, -0.06, 0, Math.PI * 2)
+    ctx.fill()
+    pen.set(ctx, 'rgba(255,255,255,0.45)', pen.w(STROKE.THIN) * 0.8)
+    ctx.beginPath()
+    ctx.ellipse(0, topY, halfTop, halfTop * 0.30, 0, Math.PI * 1.10, Math.PI * 1.75)
+    ctx.stroke()
     // v98 桶身磨损划痕 ×2（旧桶质感，与小程序同源）
     pen.set(ctx, 'rgba(255,255,255,0.28)', pen.w(STROKE.THIN) * 0.7)
     ctx.beginPath()
@@ -768,6 +801,12 @@ function headgear(Z: ZState, pen: Pen) {
     ctx.fill()
     pen.set(ctx, COLORS.Z_FH_RED_DARK, pen.w(STROKE.THIN) * 0.8)
     ctx.stroke()
+    // v99 旗面飘动高光（红旗光泽，与小程序同源）
+    pen.set(ctx, 'rgba(255,255,255,0.40)', pen.w(STROKE.THIN) * 0.55)
+    ctx.beginPath()
+    ctx.moveTo(poleX + hRX * 0.18, poleTopY + hRY * 0.02)
+    ctx.quadraticCurveTo(poleX + hRX * 0.44, poleTopY - hRY * 0.06, poleX + hRX * 0.64, poleTopY + hRY * 0.02)
+    ctx.stroke()
     mainStroke(ctx, pen)
   } else if (Z.type === 'king') {
     ctx.save()
@@ -794,10 +833,17 @@ function headgear(Z: ZState, pen: Pen) {
     ctx.closePath()
     ctx.fill(); ctx.stroke()
     ctx.fillStyle = COLORS.Z_KING_GOLD
-    for (const [bx, br] of [[-crW * 0.62, hRX * 0.05], [0, hRX * 0.065], [crW * 0.62, hRX * 0.05]] as Array<[number, number]>) {
+    // 尖顶金珠 ×3（v99: 中央珠加大 + 各珠白高光，与小程序同源）
+    ctx.fillStyle = COLORS.Z_KING_GOLD
+    for (const [bx, br] of [[-crW * 0.62, hRX * 0.05], [0, hRX * 0.075], [crW * 0.62, hRX * 0.05]] as Array<[number, number]>) {
       ctx.beginPath()
       ctx.arc(bx, -crH - tipH * 0.85 - hRX * 0.02, br, 0, Math.PI * 2)
       ctx.fill(); ctx.stroke()
+      ctx.fillStyle = 'rgba(255,255,255,0.65)'
+      ctx.beginPath()
+      ctx.arc(bx - br * 0.30, -crH - tipH * 0.85 - hRX * 0.02 - br * 0.34, br * 0.30, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.fillStyle = COLORS.Z_KING_GOLD
     }
     ctx.fillStyle = COLORS.Z_KING_GEM
     ctx.beginPath()

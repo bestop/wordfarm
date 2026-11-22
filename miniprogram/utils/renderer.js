@@ -1436,10 +1436,10 @@ class Renderer {
     ctx.translate(cannonX, cannonY);
     ctx.rotate(-0.55);
     this._pvzLine(ctx, OUT, 3.0);
-    // 安装环
+    // 安装环（v99: 加大 0.26→0.31 / 0.92→1.00，与头衔接更饱满）
     ctx.fillStyle = '#5E9433';
     ctx.beginPath();
-    ctx.ellipse(cannonR * 0.08, 0, cannonR * 0.26, cannonR * 0.92, 0, 0, Math.PI * 2);
+    ctx.ellipse(cannonR * 0.08, 0, cannonR * 0.31, cannonR * 1.00, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
     // 外管（线性渐变）
     const cg = ctx.createLinearGradient(0, -cannonR, 0, cannonR);
@@ -1497,17 +1497,17 @@ class Renderer {
     }
     ctx.restore();
 
-    // ---- 6. 头顶卷芽嫩茎（卷曲小茎 + 双叶，参照附图卷芽特征）----
+    // ---- 6. 头顶卷芽嫩茎（v99: 茎加长立起 + 双叶上扬，附图站立嫩芽特征）----
     const sproutY = headY - headR * 0.88;
     this._pvzLine(ctx, OUT, 2.4);
     ctx.strokeStyle = OUT; ctx.lineWidth = Math.max(1, r * 0.035); ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(0, sproutY);
-    ctx.quadraticCurveTo(headR * 0.04, sproutY - headR * 0.14, headR * 0.14, sproutY - headR * 0.16);
+    ctx.quadraticCurveTo(headR * 0.05, sproutY - headR * 0.20, headR * 0.15, sproutY - headR * 0.26);
     ctx.stroke();
-    // v97: 卷芽双叶加长饱满（0.36/0.28→0.44/0.34）
-    this._pvzLeaf(ctx, headR * 0.14, sproutY - headR * 0.16, headR * 0.44, headR * 0.17, 1, '#6BA83A', OUT, 2.4);
-    this._pvzLeaf(ctx, -headR * 0.01, sproutY - headR * 0.06, headR * 0.34, headR * 0.14, -1, '#5E9433', OUT, 2.4);
+    // v97: 卷芽双叶加长饱满（0.36/0.28→0.44/0.34）；v99 叶位随茎上提，角度上扬
+    this._pvzLeaf(ctx, headR * 0.15, sproutY - headR * 0.26, headR * 0.44, headR * 0.17, 1, '#6BA83A', OUT, 2.4);
+    this._pvzLeaf(ctx, -headR * 0.02, sproutY - headR * 0.10, headR * 0.34, headR * 0.14, -1, '#5E9433', OUT, 2.4);
 
     // ---- 7. 表情：大白眼珠 + 闭口甜笑 + 粉腮（附图豌豆射手）----
     this._drawPvzFace(ctx, {
@@ -1695,10 +1695,10 @@ class Renderer {
     const wallHp = (plant && typeof plant === 'object' && plant.maxHealth > 0)
       ? Math.max(0, plant.health / plant.maxHealth) : 1;
 
-    // ---- 1. 主体：高椭圆核桃 ----
+    // ---- 1. 主体：高椭圆核桃（v99: 加宽 0.90→0.94 / 略压扁 1.06→1.03 更敦实）----
     const bodyPath = () => {
       ctx.beginPath();
-      ctx.ellipse(0, headY, headR * 0.90, headR * 1.06, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, headY, headR * 0.94, headR * 1.03, 0, 0, Math.PI * 2);
     };
     const wg = ctx.createRadialGradient(-headR * 0.34, headY - headR * 0.44, 0, 0, headY, headR * 1.35);
     wg.addColorStop(0, '#E2B173');
@@ -1753,12 +1753,16 @@ class Renderer {
     ctx.beginPath();
     ctx.ellipse(-headR * 0.38, headY - headR * 0.52, headR * 0.21, headR * 0.27, -0.5, 0, Math.PI * 2);
     ctx.fill();
-    // 顶部小凸蒂
+    // 顶部小凸蒂（v99: 加大 0.13→0.17 更醒目，经典坚果茎蒂特征）
     this._pvzLine(ctx, OUT, 2.6);
     ctx.fillStyle = '#7A4A20';
     ctx.beginPath();
-    ctx.ellipse(0, headY - headR * 1.06, headR * 0.13, headR * 0.09, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, headY - headR * 1.05, headR * 0.17, headR * 0.115, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,220,170,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(-headR * 0.045, headY - headR * 1.075, headR * 0.065, headR * 0.04, -0.3, 0, Math.PI * 2);
+    ctx.fill();
 
     // ---- 2. 耐久裂纹（>2/3 无 → <2/3 两道 → <1/3 重裂+崩口）----
     if (wallHp < 0.66) {
@@ -1808,7 +1812,7 @@ class Renderer {
       white: true, pupilDx: -0.12, pupilDy: -0.30,
       brow: 'worried', browColor: '#4A2C10', browBold: 1.8,
       mouth: wallHp < 0.33 ? 'frown' : 'flat',
-      mouthY: headY + headR * 0.34, mouthRx: headR * 0.12, mouthRy: headR * 0.06,
+      mouthY: headY + headR * 0.34, mouthRx: headR * 0.17, mouthRy: headR * 0.06,
       ink: '#3B2B1A', wobblePhase
     });
   }
@@ -1949,6 +1953,14 @@ class Renderer {
     ctx.save();
     ctx.translate(0, headY - headR * 0.86);
     ctx.rotate(-0.10);
+    // v99 簇后寒气光晕（冷雾衬底，冰晶更晶莹）
+    const frostGlow = ctx.createRadialGradient(0, -headR * 0.42, 0, 0, -headR * 0.30, headR * 0.62);
+    frostGlow.addColorStop(0, 'rgba(214,244,250,0.55)');
+    frostGlow.addColorStop(1, 'rgba(214,244,250,0)');
+    ctx.fillStyle = frostGlow;
+    ctx.beginPath();
+    ctx.arc(0, -headR * 0.30, headR * 0.62, 0, Math.PI * 2);
+    ctx.fill();
     // v97 簇底雪座（白椭圆垫，冰晶与头过渡）
     ctx.fillStyle = 'rgba(255,255,255,0.60)';
     ctx.beginPath();
@@ -1981,14 +1993,17 @@ class Renderer {
       ctx.stroke();
       ctx.restore();
     };
+    // v99 外侧小冰棱 ×2（簇形更丰满）
+    drawCrystal(headR * 0.15, headR * 0.28, -0.88);
+    drawCrystal(headR * 0.15, headR * 0.28,  0.88);
     drawCrystal(headR * 0.26, headR * 0.44, -0.62);
     drawCrystal(headR * 0.26, headR * 0.44,  0.62);
     drawCrystal(headR * 0.30, headR * 0.58, -0.34);
     drawCrystal(headR * 0.34, headR * 0.66,  0.34);
-    drawCrystal(headR * 0.38, headR * 0.92,  0);
+    drawCrystal(headR * 0.38, headR * 1.02,  0);
     // v98 主冰晶尖四角星光（晶莹闪烁）
     ctx.fillStyle = 'rgba(255,255,255,0.95)';
-    this._drawStarShape(ctx, 0, -headR * 0.94, headR * 0.12, 4, 0.30);
+    this._drawStarShape(ctx, 0, -headR * 1.04, headR * 0.12, 4, 0.30);
     ctx.fill();
     ctx.restore();
 
@@ -2017,8 +2032,9 @@ class Renderer {
       : 0;
     const OUT = '#8E1B12';
     const headY = -r * 0.05;
-    const lx = -r * 0.40, ly = headY + r * 0.08, lr = r * 0.58;
-    const rx =  r * 0.44, ry = headY - r * 0.00, rr = r * 0.44;
+    const lx = -r * 0.42, ly = headY + r * 0.08, lr = r * 0.58;
+    // v99: 右果右移 0.44→0.52 减少遮挡，露出完整表情
+    const rx =  r * 0.52, ry = headY + r * 0.02, rr = r * 0.42;
 
     ctx.save();
     if (shake) ctx.translate(shake, 0);
@@ -2244,9 +2260,10 @@ class Renderer {
     mouthOpen = Math.max(0.10, Math.min(1.30, mouthOpen));
     const mouthFlash = (chompState === 'snap' && biteP >= 0.4 && biteP <= 0.65) ? 1 : 0;
     const openN = Math.min(1, mouthOpen / 1.30);            // 归一化 0..1
-    const mW = headR * 1.14;                                // 口腔胶囊宽（v96 附图大嘴加宽）
-    const mH = headR * (0.14 + 0.64 * openN);               // 口腔高（随开口度呼吸）
-    const mCY = headY + headR * 0.36;                       // 口腔中心（头中下）
+    // v99: 大嘴占比再升级 —— 口腔加宽 1.14→1.30、开度加高 0.64→0.72（贴近经典食人花血盆大口）
+    const mW = headR * 1.30;                                // 口腔胶囊宽
+    const mH = headR * (0.16 + 0.72 * openN);               // 口腔高（随开口度呼吸）
+    const mCY = headY + headR * 0.34;                       // 口腔中心（头中下）
     // 厚唇（紫红外圈胶囊）
     this._pvzLine(ctx, OUT, 3.0);
     ctx.fillStyle = '#8A46B4';
@@ -2269,7 +2286,7 @@ class Renderer {
     ctx.fillStyle = mouthFlash ? '#D32F2F' : '#3A0D52';
     cavPath();
     ctx.fill();
-    // 上下双排獠牙（白，悬垂/立起，随开口度出现）
+    // 上下双排獠牙（v99: 5→4 颗/排更粗壮，齿高上限 0.20→0.24 更狰狞可爱）
     if (mH > headR * 0.20) {
       ctx.save();
       cavPath(); ctx.clip();
@@ -2278,31 +2295,43 @@ class Renderer {
       ctx.beginPath();
       ctx.ellipse(0, mCY - mH / 2 + inPad * 0.5, mW * 0.42, mH * 0.16, 0, 0, Math.PI * 2);
       ctx.fill();
-      const toothH = Math.min(mH * 0.40, headR * 0.20);
+      const toothH = Math.min(mH * 0.42, headR * 0.24);
       const topY = mCY - mH / 2 + inPad;
       const botY = mCY + mH / 2 - inPad;
-      const nx = 5, gap = (mW - inPad * 2.2) / nx;   // v97 獗牙 4→5 颗/排更细密
+      const nx = 4, gap = (mW - inPad * 2.2) / nx;   // v99 獠牙 5→4 颗/排更粗
       ctx.fillStyle = '#FFF7EA';
       for (let i = 0; i < nx; i++) {
         const tx = -mW / 2 + inPad * 1.1 + gap * (i + 0.5);
         ctx.beginPath();
-        ctx.moveTo(tx - gap * 0.30, topY);
-        ctx.lineTo(tx + gap * 0.30, topY);
+        ctx.moveTo(tx - gap * 0.34, topY);
+        ctx.lineTo(tx + gap * 0.34, topY);
         ctx.lineTo(tx, topY + toothH * (i % 2 === 0 ? 1 : 0.70));
         ctx.closePath();
         ctx.fill();
         ctx.beginPath();
-        ctx.moveTo(tx - gap * 0.26, botY);
-        ctx.lineTo(tx + gap * 0.26, botY);
+        ctx.moveTo(tx - gap * 0.30, botY);
+        ctx.lineTo(tx + gap * 0.30, botY);
         ctx.lineTo(tx + gap * 0.03, botY - toothH * (i % 2 === 1 ? 0.95 : 0.62));
         ctx.closePath();
         ctx.fill();
       }
-      // 喉底暗红舌影
+      // 喉底暗红影（先于舌头，垫底）
       ctx.fillStyle = 'rgba(150,40,80,0.45)';
       ctx.beginPath();
       ctx.ellipse(0, botY - mH * 0.08, mW * 0.30, mH * 0.15, 0, 0, Math.PI * 2);
       ctx.fill();
+      // v99 舌头（经典食人花粉舌：底部椭圆 + 中缝深线）
+      const tongueH = Math.min(mH * 0.30, headR * 0.14);
+      ctx.fillStyle = '#E8576E';
+      ctx.beginPath();
+      ctx.ellipse(0, botY - tongueH * 0.55, mW * 0.22, tongueH * 0.62, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(122,20,50,0.55)';
+      ctx.lineWidth = Math.max(1, headR * 0.022);
+      ctx.beginPath();
+      ctx.moveTo(0, botY - tongueH * 0.95);
+      ctx.lineTo(0, botY - tongueH * 0.18);
+      ctx.stroke();
       ctx.restore();
     }
 
@@ -2327,6 +2356,17 @@ class Renderer {
     ctx.beginPath();
     ctx.ellipse(-headR * 0.44, headY - headR * 0.44, headR * 0.22, headR * 0.14, -0.5, 0, Math.PI * 2);
     ctx.fill();
+
+    // ---- 4.5 v99 头顶小嫩芽（经典食人花头顶卷茎特征）----
+    const sproutBaseY = headY - headR * 0.94;
+    this._pvzLine(ctx, '#2F5E1E', 2.4);
+    ctx.strokeStyle = '#2F5E1E'; ctx.lineWidth = Math.max(1, r * 0.032); ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, sproutBaseY + headR * 0.06);
+    ctx.quadraticCurveTo(headR * 0.02, sproutBaseY - headR * 0.10, headR * 0.12, sproutBaseY - headR * 0.12);
+    ctx.stroke();
+    this._pvzLeaf(ctx, headR * 0.12, sproutBaseY - headR * 0.12, headR * 0.34, headR * 0.13, 1, '#5FA83E', '#2F5E1E', 2.4);
+    this._pvzLeaf(ctx, -headR * 0.01, sproutBaseY - headR * 0.04, headR * 0.26, headR * 0.11, -1, '#4E9133', '#2F5E1E', 2.4);
 
     // ---- 5. 表情：大白眼珠 + 倒八字怒眉（大嘴上方高位，附图眼在头顶）----
     this._drawPvzFace(ctx, {
