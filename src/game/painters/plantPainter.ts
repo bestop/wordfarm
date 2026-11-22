@@ -78,12 +78,13 @@ function flameShape(ctx: Ctx2D, w: number, h: number) {
   ctx.closePath()
 }
 
-/** 三层火苗：外深橙红 / 中橙 / 内亮黄 */
+/** 四层火苗：外深橙红 / 中橙 / 内亮黄 / 白热芯（v98 与小程序同源） */
 function drawFlame(ctx: Ctx2D, cx: number, cy: number, w: number, h: number, sway: number) {
   const layers: Array<[string, number, number, number]> = [
     [COLORS.FIRE_BODY_DARK, w, h, sway],
     [COLORS.FIRE_FLAME, w * 0.70, h * 0.70, sway * 0.55],
     [COLORS.FIRE_CORE, w * 0.40, h * 0.42, sway * 0.30],
+    ['#FFFDE7', w * 0.24, h * 0.26, sway * 0.15],
   ]
   ctx.save()
   ctx.translate(cx, cy)
@@ -489,6 +490,12 @@ function drawShooter(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
   ctx.beginPath()
   ctx.ellipse(cannonLen, 0, cannonR * 0.30, cannonR * 0.68, 0, 0, Math.PI * 2)
   ctx.fill()
+  // v98 口环前沿亮弧（喇叭口金属反光，与小程序同源）
+  pvzLine(ctx, pen, 'rgba(255,255,255,0.42)', 1.3)
+  ctx.beginPath()
+  ctx.arc(cannonLen, 0, cannonR * 0.74, Math.PI * 1.08, Math.PI * 1.82)
+  ctx.stroke()
+  pvzLine(ctx, pen, OUT, 3.0)
   ctx.restore()
 
   // 6. 头顶卷芽嫩茎（卷曲小茎 + 双叶，参照附图卷芽特征）
@@ -675,6 +682,14 @@ function drawWall(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
     ctx.beginPath()
     ctx.moveTo(gx, headY - headR * 1.00)
     ctx.quadraticCurveTo(gx * 1.30, headY, gx, headY + headR * 1.00)
+    ctx.stroke()
+  }
+  // v98 沟纹右缘副亮线（雕刻立体感，与小程序同源）
+  pvzLine(ctx, pen, 'rgba(255,235,200,0.30)', 1.4)
+  for (const gx of [-headR * 0.42, 0, headR * 0.42]) {
+    ctx.beginPath()
+    ctx.moveTo(gx + headR * 0.085, headY - headR * 0.92)
+    ctx.quadraticCurveTo(gx * 1.30 + headR * 0.085, headY, gx + headR * 0.085, headY + headR * 0.92)
     ctx.stroke()
   }
   ctx.fillStyle = 'rgba(93,58,26,0.30)'
@@ -902,6 +917,10 @@ function drawFreezer(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
   drawCrystal(headR * 0.30, headR * 0.58, -0.34)
   drawCrystal(headR * 0.34, headR * 0.66, 0.34)
   drawCrystal(headR * 0.38, headR * 0.92, 0)
+  // v98 主冰晶尖四角星光（晶莹闪烁，与小程序同源）
+  ctx.fillStyle = 'rgba(255,255,255,0.95)'
+  starShape(ctx, 0, -headR * 0.94, headR * 0.12, 4, 0.30)
+  ctx.fill()
   ctx.restore()
 
   drawPvzFace(ctx, pen, {
@@ -1169,6 +1188,11 @@ function drawChomper(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
   if (mH > headR * 0.20) {
     ctx.save()
     cavPath(); ctx.clip()
+    // v98 口腔顶部暗弧（内腔深度感，与小程序同源）
+    ctx.fillStyle = 'rgba(18,4,28,0.50)'
+    ctx.beginPath()
+    ctx.ellipse(0, mCY - mH / 2 + inPad * 0.5, mW * 0.42, mH * 0.16, 0, 0, Math.PI * 2)
+    ctx.fill()
     const toothH = Math.min(mH * 0.40, headR * 0.20)
     const topY = mCY - mH / 2 + inPad
     const botY = mCY + mH / 2 - inPad
@@ -1247,15 +1271,23 @@ function drawSunflower(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
   pvzLeaf(ctx, pen, -r * 0.12, r * 0.40, r * 0.62, r * 0.26, -1, '#5E9433', '#2F5E1E', 2.8)
   pvzLeaf(ctx, pen, r * 0.12, r * 0.40, r * 0.62, r * 0.26, 1, '#6BA83A', '#2F5E1E', 2.8)
 
-  // 双层 24 圆瓣（v94 圆头宽瓣，参照附图）
-  const petal = (rad: number, len: number, wid: number, angle: number, fill: string, edge: string) => {
+  // 双层 24 圆瓣（v94 圆头宽瓣，参照附图；v98 花瓣根→尖渐变，与小程序同源）
+  const petal = (rad: number, len: number, wid: number, angle: number, fill: string | [string, string, string], edge: string) => {
     const px = Math.cos(angle) * rad
     const py = headY + Math.sin(angle) * rad
     ctx.save()
     ctx.translate(px, py)
     ctx.rotate(angle + Math.PI / 2)
     pvzLine(ctx, pen, edge, 1.9)
-    ctx.fillStyle = fill
+    if (Array.isArray(fill)) {
+      const pg = ctx.createLinearGradient(0, len * 0.30, 0, -len)
+      pg.addColorStop(0, fill[0])
+      pg.addColorStop(0.55, fill[1])
+      pg.addColorStop(1, fill[2])
+      ctx.fillStyle = pg
+    } else {
+      ctx.fillStyle = fill
+    }
     ctx.beginPath()
     ctx.moveTo(-wid, 0)
     ctx.bezierCurveTo(-wid * 1.10, -len * 0.52, -wid * 0.62, -len * 1.06, 0, -len)
@@ -1266,14 +1298,16 @@ function drawSunflower(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
     ctx.restore()
   }
   const petalRad = headR * 0.76, petalLen = headR * 0.50, petalWid = headR * 0.19
-  // v97: 外层暗瓣加深（#F0A81C→#E8940E）+ 外移加长，与亮层层次更分明
+  // v97 外层暗瓣（v98 改渐变：根深橙 → 尖中橙）
   for (let i = 0; i < 12; i++) {
     const angle = (i / 12) * Math.PI * 2 + Math.PI / 12 + wobble * 1.2
-    petal(petalRad + headR * 0.01, petalLen * 0.98, petalWid * 0.94, angle, '#E8940E', OUT)
+    petal(petalRad + headR * 0.01, petalLen * 0.98, petalWid * 0.94, angle,
+      ['#D98A0E', '#E8940E', '#F0A81C'], OUT)
   }
   for (let i = 0; i < 12; i++) {
     const angle = (i / 12) * Math.PI * 2 + wobble * 1.4
-    petal(petalRad, petalLen, petalWid, angle, i % 2 === 0 ? '#FFD53E' : '#FFC53E', OUT)
+    petal(petalRad, petalLen, petalWid, angle,
+      ['#FFC53E', '#FFD53E', '#FFE47A'], OUT)
   }
 
   // 花盘（v97 再加大 0.66→0.72 脸部更聚焦）
@@ -1287,11 +1321,17 @@ function drawSunflower(ctx: Ctx2D, pen: Pen, p: PlantPaintCtx, r: number) {
   ctx.beginPath()
   ctx.arc(0, headY, discR, 0, Math.PI * 2)
   ctx.fill(); ctx.stroke()
-  // v97 籽盘内环细线（盘面层次）
+  // v97 籽盘内环细线（盘面层次）+ v98 环缘籽点 ×5（与小程序同源）
   pvzLine(ctx, pen, 'rgba(199,119,0,0.38)', 1.5)
   ctx.beginPath()
   ctx.arc(0, headY, discR * 0.90, 0, Math.PI * 2)
   ctx.stroke()
+  ctx.fillStyle = 'rgba(178,100,0,0.42)'
+  ;[[-0.64, -0.50], [0.62, -0.48], [-0.74, -0.10], [0.74, -0.06], [0, -0.60]].forEach(([sx2, sy2]) => {
+    ctx.beginPath()
+    ctx.arc(sx2 * discR, headY + sy2 * discR, discR * 0.052, 0, Math.PI * 2)
+    ctx.fill()
+  })
   ctx.save()
   ctx.beginPath()
   ctx.arc(0, headY, discR, 0, Math.PI * 2)

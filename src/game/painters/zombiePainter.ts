@@ -566,10 +566,29 @@ function headgear(Z: ZState, pen: Pen) {
     ctx.quadraticCurveTo(0, rimY + hRY * 0.05, -halfBot, rimY - hRY * 0.06)
     ctx.closePath()
     ctx.fill(); ctx.stroke()
+    // v98 桶顶开口椭圆面（口朝上立体感：外环 + 深腔，与小程序同源）
+    ctx.fillStyle = COLORS.Z_BUCKET_DARK
+    ctx.beginPath()
+    ctx.ellipse(0, topY, halfTop, halfTop * 0.30, 0, 0, Math.PI * 2)
+    ctx.fill(); ctx.stroke()
+    ctx.fillStyle = '#372B55'
+    ctx.beginPath()
+    ctx.ellipse(0, topY + U * 0.02, halfTop * 0.78, halfTop * 0.20, 0, 0, Math.PI * 2)
+    ctx.fill()
     ctx.fillStyle = 'rgba(255,255,255,0.30)'
     ctx.beginPath()
     ctx.ellipse(-halfBot * 0.44, topY + U * 0.28, hRX * 0.10, U * 0.20, -0.06, 0, Math.PI * 2)
     ctx.fill()
+    // v98 桶身磨损划痕 ×2（旧桶质感，与小程序同源）
+    pen.set(ctx, 'rgba(255,255,255,0.28)', pen.w(STROKE.THIN) * 0.7)
+    ctx.beginPath()
+    ctx.moveTo(halfBot * 0.10, topY + U * 0.30)
+    ctx.lineTo(halfBot * 0.30, topY + U * 0.52)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo(-halfBot * 0.34, rimY - U * 0.16)
+    ctx.lineTo(-halfBot * 0.14, rimY - U * 0.34)
+    ctx.stroke()
     ctx.fillStyle = COLORS.Z_BUCKET_DARK
     ctx.beginPath()
     ctx.moveTo(-halfBot * 1.04, rimY - hRY * 0.10)
@@ -669,6 +688,15 @@ function headgear(Z: ZState, pen: Pen) {
     ctx.beginPath()
     safeRoundRect(ctx, -cHalf * 1.01, -cH * 0.30, cHalf * 2.02, cH * 0.15, hRX * 0.02)
     ctx.fill()
+    // v98 金色方扣（缎带正中，与小程序同源）
+    ctx.fillStyle = '#E6B84C'
+    ctx.beginPath()
+    safeRoundRect(ctx, -cHalf * 0.30, -cH * 0.355, cHalf * 0.60, cH * 0.21, hRX * 0.03)
+    ctx.fill(); ctx.stroke()
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'
+    ctx.beginPath()
+    safeRoundRect(ctx, -cHalf * 0.22, -cH * 0.325, cHalf * 0.18, cH * 0.12, hRX * 0.02)
+    ctx.fill()
     ctx.fillStyle = 'rgba(255,255,255,0.20)'
     ctx.beginPath()
     ctx.ellipse(-cHalf * 0.52, -cH * 0.46, hRX * 0.09, cH * 0.28, 0.10, 0, Math.PI * 2)
@@ -717,6 +745,11 @@ function headgear(Z: ZState, pen: Pen) {
     ctx.beginPath()
     ctx.ellipse(-hRX * 0.40, domeCY - hRY * 0.55, hRX * 0.10, hRY * 0.18, -0.50, 0, Math.PI * 2)
     ctx.fill()
+    // v98 头盔弧形反光带（盔体光泽，与小程序同源）
+    pen.set(ctx, 'rgba(255,255,255,0.34)', pen.w(STROKE.THIN) * 1.5)
+    ctx.beginPath()
+    ctx.arc(0, domeCY, domeRX * 0.80, Math.PI * 1.16, Math.PI * 1.52)
+    ctx.stroke()
     // 盔顶红旗（附图特征：旗杆 + 右飘红旗，v96 加大醒目）
     const poleX = hRX * 0.38
     const poleTopY = domeCY - domeRY * 1.76
@@ -783,6 +816,15 @@ function headgear(Z: ZState, pen: Pen) {
     ctx.beginPath()
     safeRoundRect(ctx, -crW * 1.06, -crH * 0.30, crW * 2.12, crH * 0.34, hRX * 0.05)
     ctx.fill(); ctx.stroke()
+    // v98 冠带中央菱形亮金扣（与小程序同源）
+    ctx.fillStyle = '#FFF3C2'
+    ctx.beginPath()
+    ctx.moveTo(0, -crH * 0.24)
+    ctx.lineTo(crW * 0.10, -crH * 0.13)
+    ctx.lineTo(0, -crH * 0.02)
+    ctx.lineTo(-crW * 0.10, -crH * 0.13)
+    ctx.closePath()
+    ctx.fill()
     ctx.restore()
     mainStroke(ctx, pen)
   }

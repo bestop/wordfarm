@@ -1340,13 +1340,14 @@ class Renderer {
     ctx.closePath();
   }
 
-  /** 三层火苗：外深橙红 / 中橙 / 内亮黄（火焰射手炮口 + 头冠共用） */
+  /** 四层火苗：外深橙红 / 中橙 / 内亮黄 / 白热芯（v98 +白芯，火焰射手炮口 + 头冠共用） */
   _drawFlame(ctx, cx, cy, w, h, sway) {
     const C = this.T.COLORS;
     const layers = [
       [C.FIRE_BODY_DARK, w, h, sway],
       [C.FIRE_FLAME,     w * 0.70, h * 0.70, sway * 0.55],
-      [C.FIRE_CORE,      w * 0.40, h * 0.42, sway * 0.30]
+      [C.FIRE_CORE,      w * 0.40, h * 0.42, sway * 0.30],
+      ['#FFFDE7',        w * 0.24, h * 0.26, sway * 0.15]
     ];
     ctx.save();
     ctx.translate(cx, cy);
@@ -1470,6 +1471,12 @@ class Renderer {
     ctx.beginPath();
     ctx.ellipse(cannonLen, 0, cannonR * 0.30, cannonR * 0.68, 0, 0, Math.PI * 2);
     ctx.fill();
+    // v98 口环前沿亮弧（喇叭口金属反光）
+    this._pvzLine(ctx, 'rgba(255,255,255,0.42)', 1.3);
+    ctx.beginPath();
+    ctx.arc(cannonLen, 0, cannonR * 0.74, Math.PI * 1.08, Math.PI * 1.82);
+    ctx.stroke();
+    this._pvzLine(ctx, OUT, 3.0);
     // v64 炮口闪光（后坐力期）
     if (fx > 0.12) {
       ctx.save();
@@ -1708,12 +1715,19 @@ class Renderer {
     ctx.beginPath();
     ctx.ellipse(headR * 0.20, headY + headR * 0.72, headR * 0.85, headR * 0.52, 0.1, 0, Math.PI * 2);
     ctx.fill();
-    // 纵向沟纹 ×3（从顶向下弧线）
+    // 纵向沟纹 ×3（从顶向下弧线）+ v98 右缘副亮线（雕刻立体感）
     this._pvzLine(ctx, 'rgba(93,58,26,0.38)', 2.2);
     for (const gx of [-headR * 0.42, 0, headR * 0.42]) {
       ctx.beginPath();
       ctx.moveTo(gx, headY - headR * 1.00);
       ctx.quadraticCurveTo(gx * 1.30, headY, gx, headY + headR * 1.00);
+      ctx.stroke();
+    }
+    this._pvzLine(ctx, 'rgba(255,235,200,0.30)', 1.4);
+    for (const gx of [-headR * 0.42, 0, headR * 0.42]) {
+      ctx.beginPath();
+      ctx.moveTo(gx + headR * 0.085, headY - headR * 0.92);
+      ctx.quadraticCurveTo(gx * 1.30 + headR * 0.085, headY, gx + headR * 0.085, headY + headR * 0.92);
       ctx.stroke();
     }
     // 雀斑 ×6（v97 +2 小点）
@@ -1972,6 +1986,10 @@ class Renderer {
     drawCrystal(headR * 0.30, headR * 0.58, -0.34);
     drawCrystal(headR * 0.34, headR * 0.66,  0.34);
     drawCrystal(headR * 0.38, headR * 0.92,  0);
+    // v98 主冰晶尖四角星光（晶莹闪烁）
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    this._drawStarShape(ctx, 0, -headR * 0.94, headR * 0.12, 4, 0.30);
+    ctx.fill();
     ctx.restore();
 
     // ---- 6. 表情：大白眼珠 + 倒八字怒眉 + 冰蓝腮（参照附图寒冰射手）----
@@ -2255,6 +2273,11 @@ class Renderer {
     if (mH > headR * 0.20) {
       ctx.save();
       cavPath(); ctx.clip();
+      // v98 口腔顶部暗弧（内腔深度感）
+      ctx.fillStyle = 'rgba(18,4,28,0.50)';
+      ctx.beginPath();
+      ctx.ellipse(0, mCY - mH / 2 + inPad * 0.5, mW * 0.42, mH * 0.16, 0, 0, Math.PI * 2);
+      ctx.fill();
       const toothH = Math.min(mH * 0.40, headR * 0.20);
       const topY = mCY - mH / 2 + inPad;
       const botY = mCY + mH / 2 - inPad;
@@ -2355,6 +2378,7 @@ class Renderer {
     this._pvzLeaf(ctx,  r * 0.12, r * 0.40, r * 0.62, r * 0.26,  1, '#6BA83A', '#2F5E1E', 2.8);
 
     // ---- 2. 外层 24 圆瓣（双层：暗层错位打底 + 亮层；v94 圆头宽瓣，参照附图）----
+    // v98: 花瓣改用根→尖线性渐变（根部暖橙 → 瓣尖亮黄），立体锥形光感替代单色平涂
     const petal = (rad, len, wid, angle, fill, edge) => {
       const px = Math.cos(angle) * rad;
       const py = headY + Math.sin(angle) * rad;
@@ -2362,7 +2386,15 @@ class Renderer {
       ctx.translate(px, py);
       ctx.rotate(angle + Math.PI / 2);
       this._pvzLine(ctx, edge, 1.9);
-      ctx.fillStyle = fill;
+      if (Array.isArray(fill)) {
+        const pg = ctx.createLinearGradient(0, len * 0.30, 0, -len);
+        pg.addColorStop(0, fill[0]);
+        pg.addColorStop(0.55, fill[1]);
+        pg.addColorStop(1, fill[2]);
+        ctx.fillStyle = pg;
+      } else {
+        ctx.fillStyle = fill;
+      }
       ctx.beginPath();
       ctx.moveTo(-wid, 0);
       ctx.bezierCurveTo(-wid * 1.10, -len * 0.52, -wid * 0.62, -len * 1.06, 0, -len);
@@ -2373,14 +2405,16 @@ class Renderer {
       ctx.restore();
     };
     const petalRad = headR * 0.76, petalLen = headR * 0.50, petalWid = headR * 0.19;
-    // v97: 外层暗瓣加深（#F0A81C→#E8940E）+ 外移加长，与亮层层次更分明
+    // v97 外层暗瓣（v98 改渐变：根深橙 → 尖中橙）
     for (let i = 0; i < 12; i++) {
       const angle = (i / 12) * Math.PI * 2 + Math.PI / 12 + wobble * 1.2;
-      petal(petalRad + headR * 0.01, petalLen * 0.98, petalWid * 0.94, angle, '#E8940E', OUT);
+      petal(petalRad + headR * 0.01, petalLen * 0.98, petalWid * 0.94, angle,
+        ['#D98A0E', '#E8940E', '#F0A81C'], OUT);
     }
     for (let i = 0; i < 12; i++) {
       const angle = (i / 12) * Math.PI * 2 + wobble * 1.4;
-      petal(petalRad, petalLen, petalWid, angle, i % 2 === 0 ? '#FFD53E' : '#FFC53E', OUT);
+      petal(petalRad, petalLen, petalWid, angle,
+        ['#FFC53E', '#FFD53E', '#FFE47A'], OUT);
     }
 
     // ---- 3. 花盘（暖橙径向渐变，占花头主体；v97 再加大 0.66→0.72 脸部更聚焦）----
@@ -2394,11 +2428,17 @@ class Renderer {
     ctx.beginPath();
     ctx.arc(0, headY, discR, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
-    // v97 籽盘内环细线（盘面层次）
+    // v97 籽盘内环细线（盘面层次）+ v98 环缘籽点 ×5（花盘颗粒质感，避让脸部）
     this._pvzLine(ctx, 'rgba(199,119,0,0.38)', 1.5);
     ctx.beginPath();
     ctx.arc(0, headY, discR * 0.90, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.fillStyle = 'rgba(178,100,0,0.42)';
+    [[-0.64, -0.50], [0.62, -0.48], [-0.74, -0.10], [0.74, -0.06], [0, -0.60]].forEach(([sx2, sy2]) => {
+      ctx.beginPath();
+      ctx.arc(sx2 * discR, headY + sy2 * discR, discR * 0.052, 0, Math.PI * 2);
+      ctx.fill();
+    });
     // 花盘底部暗弧
     ctx.save();
     ctx.beginPath();
