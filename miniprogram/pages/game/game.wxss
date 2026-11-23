@@ -307,30 +307,30 @@
 /* v77：商店栏 → 薄荷果冻货架（白描边+薄荷挤出投影，与首页白果冻条同源） */
 .shop-bar {
   flex-shrink: 0;
-  height: 96rpx;
+  height: 104rpx;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 251, 234, 0.88) 100%);
   border-top: 3rpx solid #FFFFFF;
   border-bottom: 3rpx solid #FFFFFF;
   box-shadow: 0 6rpx 0 rgba(126, 224, 168, 0.28),
               0 12rpx 20rpx rgba(126, 224, 168, 0.16),
               inset 0 4rpx 10rpx rgba(255, 255, 255, 0.9);
-  padding: 6rpx 10rpx 6rpx;
+  padding: 8rpx 10rpx 8rpx;
   box-sizing: border-box;
   position: relative;
 }
 .shop-scroll {
   white-space: nowrap;
-  height: 72rpx;
+  height: 80rpx;
 }
 .shop-item {
-  /* v87: 横向卡片 —— 左头像右信息（名称+费用竖排），头像 40→46rpx 更醒目 */
+  /* v101: 横向卡片头像再放大 —— 56rpx 头像 + 卡片加高加宽避免装饰裁切 */
   display: inline-flex;
   flex-direction: row;
   align-items: center;
-  width: 140rpx;
-  height: 72rpx;
+  width: 152rpx;
+  height: 80rpx;
   margin-right: 8rpx;
-  padding: 0 10rpx;
+  padding: 0 12rpx;
   box-sizing: border-box;
   /* v77：白果冻种子卡（白描边+内发光+淡粉挤出，选中态换本命色描边） */
   border-radius: 18rpx;
@@ -370,45 +370,45 @@
    选中态复用 .shop-item.selected（currentColor 边线+落影+抬起） */
 .shop-item-shovel    { color: #546E7A; background: linear-gradient(180deg, #F4F7F9 0%, #E3EBEF 100%); box-shadow: inset 0 5rpx 0 rgba(84, 110, 122, 0.28), 0 4rpx 0 rgba(84, 110, 122, 0.4), inset 0 2rpx 6rpx rgba(255, 255, 255, 0.85); }
 .shop-cost-shovel    { color: #546E7A; font-size: 11rpx; }
-/* 铲子纯 CSS 图形：木柄 + 握把 + 金属铲头 + 星光（48rpx 画布内，v87 随头像同步放大 ×1.2） */
+/* 铲子纯 CSS 图形：木柄 + 握把 + 金属铲头 + 星光（56rpx 画布内，v101 随头像同步放大 ×1.4） */
 .shop-avatar-shovel .sv-handle {
   position: absolute;
-  left: 20rpx;
-  top: 5rpx;
-  width: 7rpx;
-  height: 22rpx;
+  left: 24rpx;
+  top: 6rpx;
+  width: 8rpx;
+  height: 25rpx;
   border-radius: 4rpx;
   background: linear-gradient(90deg, #C8894E 0%, #A96B34 100%);
   box-shadow: inset 0 -2rpx 0 rgba(63, 38, 20, 0.25);
 }
 .shop-avatar-shovel .sv-grip {
   position: absolute;
-  left: 14rpx;
-  top: 2rpx;
-  width: 19rpx;
-  height: 6rpx;
-  border-radius: 3rpx;
+  left: 17rpx;
+  top: 3rpx;
+  width: 22rpx;
+  height: 7rpx;
+  border-radius: 4rpx;
   background: linear-gradient(180deg, #C8894E 0%, #A96B34 100%);
 }
 .shop-avatar-shovel .sv-blade {
   position: absolute;
-  left: 15rpx;
-  top: 25rpx;
-  width: 17rpx;
-  height: 16rpx;
-  border-radius: 4rpx 4rpx 9rpx 9rpx;
+  left: 18rpx;
+  top: 29rpx;
+  width: 20rpx;
+  height: 18rpx;
+  border-radius: 5rpx 5rpx 10rpx 10rpx;
   background: linear-gradient(180deg, #B7C9D3 0%, #7E97A5 100%);
   border: 2rpx solid rgba(63, 38, 20, 0.35);
   box-shadow: inset -3rpx -3rpx 0 rgba(0, 0, 0, 0.10);
 }
 .shop-avatar-shovel .sv-spark {
   position: absolute;
-  left: 32rpx;
-  top: 7rpx;
-  width: 8rpx;
-  height: 8rpx;
+  left: 38rpx;
+  top: 8rpx;
+  width: 10rpx;
+  height: 10rpx;
   background: #FFC733;
-  border-radius: 2rpx;
+  border-radius: 3rpx;
   transform: rotate(45deg);
   opacity: 0.9;
 }
@@ -420,12 +420,13 @@
   to   { transform: rotate(45deg) scale(1.25); opacity: 1; }
 }
 /* ===== v90: 商店栏真实角色形象头像（avatarPainter 离屏 dataURL）
-   与游戏内 Canvas 角色 / 角色图鉴 1:1 同源；44rpx 圆盘略大于旧 CSS 头像（40rpx），
+   与游戏内 Canvas 角色 / 角色图鉴 1:1 同源；v101 横排卡片放大 44→56rpx
+   （与 CSS 兜底头像 .shop-avatar 同尺寸），去掉竖排遗留的 margin auto 改左置，
    选中态随 .shop-item 现有 transform 整体抬起，无需额外样式 ===== */
 .shop-avatar-img {
-  width: 44rpx;
-  height: 44rpx;
-  margin: 0 auto;
+  width: 56rpx;
+  height: 56rpx;
+  flex-shrink: 0;
   border-radius: 50%;
   /* 头像盘自带白描边环，这里只加一层柔和落影增强「贴纸」质感 */
   filter: drop-shadow(0 2rpx 3rpx rgba(120, 60, 30, 0.18));
@@ -441,8 +442,8 @@
 /* ---- 1. 共用头部（与 Canvas head ellipse 同色板） ---- */
 .shop-avatar {
   position: relative;
-  width: 48rpx;
-  height: 48rpx;
+  width: 56rpx;
+  height: 56rpx;
   flex-shrink: 0;
 }
 /* v87: 右侧信息列（名称+费用竖排，左对齐） */
@@ -557,7 +558,7 @@
   height: 26%;
   border-radius: 50%;
   background: #FFFFFF;
-  box-shadow: 17rpx 26rpx 0 -2rpx #FFFFFF;   /* 第二颗小高光（v87 随头像 48rpx 同步放大偏移） */
+  box-shadow: 20rpx 30rpx 0 -2rpx #FFFFFF;   /* 第二颗小高光（v101 随头像 56rpx 同步放大偏移） */
 }
 
 /* ---- 4. 腮红：v3 爱心 → 实心圆（56rpx 下 before/after 爱心边缘糊成锯齿，平涂圆更干净）
@@ -1231,7 +1232,7 @@
 }
 
 .shop-name {
-  font-size: 15rpx;
+  font-size: 16rpx;
   color: #7A4E22;
   font-weight: 700;
   line-height: 1.1;
