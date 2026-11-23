@@ -79,10 +79,13 @@
           <view class="sa-blush sa-blush-r"></view>
           <view class="sa-mouth"></view>
         </view>
-        <view class="shop-name">{{item.name}}</view>
-        <view class="shop-cost">
-          <text class="shop-cost-icon">☀️</text>
-          <text>{{item.cost}}</text>
+        <!-- v87: 横向卡片 —— 左头像右信息（名称+费用竖排），头像放大更醒目 -->
+        <view class="shop-info">
+          <view class="shop-name">{{item.name}}</view>
+          <view class="shop-cost">
+            <text class="shop-cost-icon">☀️</text>
+            <text>{{item.cost}}</text>
+          </view>
         </view>
       </view>
 
@@ -97,8 +100,10 @@
           <view class="sv-blade"></view>
           <view class="sv-spark"></view>
         </view>
-        <view class="shop-name">铲子</view>
-        <view class="shop-cost shop-cost-shovel"><text>回收50%</text></view>
+        <view class="shop-info">
+          <view class="shop-name">铲子</view>
+          <view class="shop-cost shop-cost-shovel"><text>回收50%</text></view>
+        </view>
       </view>
     </scroll-view>
     </view>

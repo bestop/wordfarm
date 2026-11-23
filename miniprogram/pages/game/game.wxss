@@ -323,13 +323,15 @@
   height: 72rpx;
 }
 .shop-item {
+  /* v87: 横向卡片 —— 左头像右信息（名称+费用竖排），头像 40→46rpx 更醒目 */
   display: inline-flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  width: 128rpx;
+  width: 140rpx;
   height: 72rpx;
   margin-right: 8rpx;
+  padding: 0 10rpx;
+  box-sizing: border-box;
   /* v77：白果冻种子卡（白描边+内发光+淡粉挤出，选中态换本命色描边） */
   border-radius: 18rpx;
   background: linear-gradient(180deg, #FFFFFF 0%, #FFF7EA 100%);
@@ -368,43 +370,43 @@
    选中态复用 .shop-item.selected（currentColor 边线+落影+抬起） */
 .shop-item-shovel    { color: #546E7A; background: linear-gradient(180deg, #F4F7F9 0%, #E3EBEF 100%); box-shadow: inset 0 5rpx 0 rgba(84, 110, 122, 0.28), 0 4rpx 0 rgba(84, 110, 122, 0.4), inset 0 2rpx 6rpx rgba(255, 255, 255, 0.85); }
 .shop-cost-shovel    { color: #546E7A; font-size: 11rpx; }
-/* 铲子纯 CSS 图形：木柄 + 握把 + 金属铲头 + 星光（40rpx 画布内） */
+/* 铲子纯 CSS 图形：木柄 + 握把 + 金属铲头 + 星光（48rpx 画布内，v87 随头像同步放大 ×1.2） */
 .shop-avatar-shovel .sv-handle {
   position: absolute;
-  left: 17rpx;
-  top: 4rpx;
-  width: 6rpx;
-  height: 18rpx;
-  border-radius: 3rpx;
+  left: 20rpx;
+  top: 5rpx;
+  width: 7rpx;
+  height: 22rpx;
+  border-radius: 4rpx;
   background: linear-gradient(90deg, #C8894E 0%, #A96B34 100%);
   box-shadow: inset 0 -2rpx 0 rgba(63, 38, 20, 0.25);
 }
 .shop-avatar-shovel .sv-grip {
   position: absolute;
-  left: 12rpx;
+  left: 14rpx;
   top: 2rpx;
-  width: 16rpx;
-  height: 5rpx;
+  width: 19rpx;
+  height: 6rpx;
   border-radius: 3rpx;
   background: linear-gradient(180deg, #C8894E 0%, #A96B34 100%);
 }
 .shop-avatar-shovel .sv-blade {
   position: absolute;
-  left: 13rpx;
-  top: 21rpx;
-  width: 14rpx;
-  height: 13rpx;
-  border-radius: 3rpx 3rpx 8rpx 8rpx;
+  left: 15rpx;
+  top: 25rpx;
+  width: 17rpx;
+  height: 16rpx;
+  border-radius: 4rpx 4rpx 9rpx 9rpx;
   background: linear-gradient(180deg, #B7C9D3 0%, #7E97A5 100%);
   border: 2rpx solid rgba(63, 38, 20, 0.35);
   box-shadow: inset -3rpx -3rpx 0 rgba(0, 0, 0, 0.10);
 }
 .shop-avatar-shovel .sv-spark {
   position: absolute;
-  left: 27rpx;
-  top: 6rpx;
-  width: 7rpx;
-  height: 7rpx;
+  left: 32rpx;
+  top: 7rpx;
+  width: 8rpx;
+  height: 8rpx;
   background: #FFC733;
   border-radius: 2rpx;
   transform: rotate(45deg);
@@ -439,9 +441,18 @@
 /* ---- 1. 共用头部（与 Canvas head ellipse 同色板） ---- */
 .shop-avatar {
   position: relative;
-  width: 40rpx;
-  height: 40rpx;
-  margin: 0 auto;
+  width: 48rpx;
+  height: 48rpx;
+  flex-shrink: 0;
+}
+/* v87: 右侧信息列（名称+费用竖排，左对齐） */
+.shop-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  margin-left: 6rpx;
+  min-width: 0;
 }
 .shop-avatar .sa-head {
   position: absolute;
@@ -546,7 +557,7 @@
   height: 26%;
   border-radius: 50%;
   background: #FFFFFF;
-  box-shadow: 14rpx 22rpx 0 -2rpx #FFFFFF;   /* 第二颗小高光 */
+  box-shadow: 17rpx 26rpx 0 -2rpx #FFFFFF;   /* 第二颗小高光（v87 随头像 48rpx 同步放大偏移） */
 }
 
 /* ---- 4. 腮红：v3 爱心 → 实心圆（56rpx 下 before/after 爱心边缘糊成锯齿，平涂圆更干净）
@@ -1220,23 +1231,23 @@
 }
 
 .shop-name {
-  font-size: 14rpx;
+  font-size: 15rpx;
   color: #7A4E22;
   font-weight: 700;
   line-height: 1.1;
-  margin-top: 1rpx;
+  white-space: nowrap;
 }
 .shop-cost {
   display: flex;
   align-items: center;
   gap: 2rpx;
-  font-size: 13rpx;
+  font-size: 12rpx;
   color: #EF8F00;
   font-weight: 800;
   line-height: 1;
-  margin-top: 1rpx;
+  margin-top: 3rpx;
 }
-.shop-cost-icon { font-size: 14rpx; }
+.shop-cost-icon { font-size: 13rpx; }
 /* 植物选择提示浮层：v77 白果冻胶囊 + 双糖珠（左柠黄右莓粉），悬浮于 canvas 顶部居中 */
 .plant-tip-toast {
   position: absolute;
